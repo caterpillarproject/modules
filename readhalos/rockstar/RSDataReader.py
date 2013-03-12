@@ -205,6 +205,12 @@ class HaloData:
         
         return self.data.ix[self.get_all_subs_recurse(haloID)]
 
+    def get_all_particles_from_halo(self,id):
+        idlist = np.array([])
+        subids = self.get_all_subhalos_from_halo(id)
+        for sid in subids:
+            idlist = np.concatenate(idlist, self.get_particles_from_halo(sid))
+        return idlist
 
 ## Hard defined constants corresponding to data description and its column
 """
