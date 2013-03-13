@@ -32,7 +32,7 @@ particle_offset = 39
 
 num_columns = 40
 
-class HaloData:    
+class RSDataReader:    
     """
     Create a Halo Catalogue for a particular snapshot
     """
