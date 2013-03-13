@@ -212,11 +212,7 @@ class RSDataReader:
             idlist = np.concatenate(idlist, self.get_particles_from_halo(sid))
         return idlist
 
-    def get_particle_info_from_halo(self,haloID,gadgetfilepath):
-        import readsnap as rgadget
-        particleIDs = np.array(self.get_particles_from_halo(haloID))
-
-    def get_all_particle_info_from_halo(haloID,gadgetfilepath):
+    def get_all_particle_info_from_halo(self,haloID,gadgetfilepath):
         import readsnap as rgadget
         particleIDs = np.array(self.get_all_particles_from_halo(haloID))
 
