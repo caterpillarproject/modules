@@ -212,6 +212,37 @@ class RSDataReader:
             idlist = np.concatenate(idlist, self.get_particles_from_halo(sid))
         return idlist
 
+    def get_particle_info_from_halo(self,haloID,gadgetfilepath):
+        import readsnap as rgadget
+        particleIDs = np.array(self.get_particles_from_halo(haloID))
+
+    def get_all_particle_info_from_halo(self,haloID,gadgetfilepath):
+        import readsnap as rgadget
+        particleIDs = np.array(self.get_all_particles_from_halo(haloID))
+
+        snapIDS = rgadget.read_block(gadgetfilepath, "ID  ",parttype=1)
+        index = snapIDS.argsort()
+        print "Index Complete"
+        del snapIDS
+
+        newindex = np.take(index,particleIDs)
+        del index
+
+        snapPOS = rgadget.read_block(gadgetfilepath, "POS ",parttype=1)
+        x = np.take(snapPOS[:,0],newindex)
+        y = np.take(snapPOS[:,1],newindex)
+        z = np.take(snapPOS[:,2],newindex)
+        print "Positions Aquired"
+
+        snapVEL = rgadget.read_block(gadgetfilepath, "VEL ",parttype=1)
+        vx = np.take(snapVEL[:,0],newindex)
+        vy = np.take(snapVEL[:,1],newindex)
+        vz = np.take(snapVEL[:,2],newindex)
+        print "Velocities Aquired"
+
+        return x,y,z,vx,vy,vz
+       
+
 ## Hard defined constants corresponding to data description and its column
 """
 id = 0
