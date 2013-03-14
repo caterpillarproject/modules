@@ -177,19 +177,36 @@ class RSDataReader:
 
     # for multiple halos, returns the subhalos of each halo as an array of arrays.
     def get_subhalos_from_halos(self,haloIDs):
+        """
+        returns an array of pandas data frames of subhalos. one data frame
+        for each host halo. returns only first level of subhalos.
+        """
         if type(haloIDs) == list or type(haloIDs) == np.ndarray:
             return np.array([ self.data[self.data['hostID']==ID] for ID in haloIDs])
         else:
             return self.data[self.data['hostID']==haloIDs] 
+
+    def get_subhalos_from_halos_flat(self,haloIDs):
+        """
+        returns a flattened pandas data frame of all subhalos within
+        the hosts given by haloIDs. Returns only first level of subhalos.
+        """
+        subs = self.get_subhalo_ids_from_halos(haloIDs)
+        subIDs = [item for sublist in subs for item in sublist]
+        return self.data.ix[subIDs]
     
     def get_hosts(self):
         return self.data[self.data['hostID']==-1]
+
+    def get_subs(self):
+        return self.data[self.data['hostID']!=-1]
 
     def get_subhalo_ids_from_halos(self,haloIDs):
         if type(haloIDs) == list or type(haloIDs) == np.ndarray:
             return np.array([ np.array(self.data[self.data['hostID']==ID]['id']) for ID in haloIDs])
         else:
             return np.array([self.data[self.data['hostID']==haloIDs]['id']])
+
     # Retrieve all subhalos: sub and sub-sub, etc. 
     def get_all_subs_recurse(self,haloID):
         # just need mask of all subhalos, then return data frame subset
@@ -202,12 +219,11 @@ class RSDataReader:
                                        
     # Retrieve all subhalos: sub and sub-sub, etc. 
     def get_all_subhalos_from_halo(self,haloID):
-        
         return self.data.ix[self.get_all_subs_recurse(haloID)]
 
-    def get_all_particles_from_halo(self,id):
+    def get_all_particles_from_halo(self,haloID):
         idlist = np.array([])
-        subids = self.get_all_subhalos_from_halo(id)
+        subids = self.get_all_subhalos_from_halo(haloID)
         for sid in subids:
             idlist = np.concatenate(idlist, self.get_particles_from_halo(sid))
         return idlist
