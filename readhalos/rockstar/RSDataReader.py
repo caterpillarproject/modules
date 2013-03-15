@@ -217,16 +217,28 @@ class RSDataReader:
         else:
             return np.append(subs,self.get_all_subs_recurse(subs))
                                        
-    # Retrieve all subhalos: sub and sub-sub, etc. 
+    # Retrieve all subhalos: sub and sub-sub, etc.
+    # return pandas data fram of subhalos
     def get_all_subhalos_from_halo(self,haloID):
         return self.data.ix[self.get_all_subs_recurse(haloID)]
 
-    def get_all_particles_from_halo(self,haloID):
+    def get_all_sub_particles_from_halo(self,haloID):
+        """
+        returns list of particle IDs belonging to all substructure
+        within host of haloID
+        """
         idlist = np.array([])
-        subids = self.get_all_subhalos_from_halo(haloID)
+        subids = self.get_all_subhalos_from_halo(haloID)['id']
         for sid in subids:
-            idlist = np.concatenate(idlist, self.get_particles_from_halo(sid))
-        return idlist
+            idlist = np.append(idlist, self.get_particles_from_halo(sid))
+        return idlist.astype(int)
+
+    def get_all_particles_from_halo(self,haloID):
+        """
+        returns list of all particles belonging to haloID
+        """
+        return np.append(self.get_particles_from_halo(haloID), self.get_all_sub_particles_from_halo(haloID)).astype(int)
+        
 
  #   def get_all_particle_info_from_halo(self,haloID,gadgetfilepath):
  #       import readsnap as rgadget
