@@ -13,7 +13,14 @@ def readParents(dir, file, numhalos):
 		raise IOError('file not found: '+file_name)
     f = open(file_name)
     data = np.zeros((numhalos,2))
-    f.readline() # read the header
+
+    # read header
+    char = f.readline()[0]
+    while char=='#':
+        lastpos = f.tell()
+        char = f.readline()[0]
+    f.seek(lastpos)
+    
     i = 0
     for line in f:
         a = line.split()
@@ -32,4 +39,4 @@ def readParents(dir, file, numhalos):
         print 'numhalos does not match number of lines in readParentsList.py'
     #sortedIndices = data[:,0].argsort()
     #data = data[sortedIndices]
-    return data
+    return data.astype('int')
