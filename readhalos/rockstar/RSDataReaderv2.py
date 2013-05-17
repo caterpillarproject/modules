@@ -9,11 +9,29 @@ import os
 import sys
 import copy
 import operator
-#import readParentsList2 as rp
 import readParentsList as rp
 import pandas
 import time
 import struct
+
+varlist = ['id','posX','posY','posZ','corevelx','corevely','corevelz', \
+          'pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ','mvir',\
+          'rvir','child_r','dummy1','mgrav','vmax','rvmax','rs','rs_klypin',\
+          'vrms','Jx','Jy','Jz','Epot','spin','dummy2','m200c','m500c','m2500c', \
+          'Xoff','Voff','b_to_a','c_to_a','A[x]','A[y]','A[z]','spin_bullock','T/|U|','npart',\
+          'num_cp','numstart','desc','flags','n_core','min_pos_err','min_vel_err','min_bulkvel_err','dummy3', \
+          'hostID','offset','particle_offset']
+
+          #'dummy8','dummy9','dummy10','dummy11','dummy12','dummy13','dummy14','dummy15','dummy16','dummy17','dummy18',\
+          #'dummy19','dummy20','dummy21']
+
+
+          #,'npart',\
+
+
+          #'num_child_p','p_start','desc','flags','n_core','min_pos_err','min_vel_err',\
+          #'min_bulkvel_err','hostID','offset','particle_offset']
+
 
 BinaryHeaderSize = 256 #: in bytes
 HeaderInfoSize = 96  #: in bytes
@@ -21,17 +39,25 @@ HaloSize = 176  #: in bytes
 ParticleSize = 8 #: in bytes
 KpcToMpc = 1.0/1000
 
-datatypesstr = "q"+("f" * 26)+ ("q"*6)+"ffff"
-numbytes = 30*4+7*8
+#######################
+numextras = 9
+nfloats = len(varlist) - numextras - 3  #33
+print "nfloats:",nfloats
+datatypesstr = "q"+("f" * nfloats)+"qqqqqqff" #change
+numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
+#numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
+print "numbytes:",numbytes
+num_columns = len(varlist) #change
+print "num_columns:",num_columns
+#######################
 
-id = 0
+id = 0 
 mvir = 13
-npart = 27
-hostID = 37
-offset = 38
-particle_offset = 39
+npart = 30 #change
+hostID = num_columns - 3 #change
+offset = num_columns - 2 #change
+particle_offset = num_columns - 1 #change
 
-num_columns = 40
 
 class RSDataReader:    
     """
@@ -116,7 +142,14 @@ class RSDataReader:
             # Produce array of Halo objects
             for j in range(0,num_halos):
                 line = f.read(numbytes)
-                data[i,0:37] = struct.unpack(datatypesstr, line)
+                tmpinx = num_columns -3
+                data[i,0:tmpinx] = struct.unpack(datatypesstr, line) #change
+                #for i in xrange(0,tmpinx):
+                #    print data[0,i]
+                #print data[0,0:10] 
+                #print data[0,10:20]
+                #print data[0,20:30]
+                #print data[0,30:39] #change
                 # info to read particle IDs for halo
                 data[i,offset] = particleID_start
                 data[i,particle_offset] = particleID_start2
@@ -141,8 +174,9 @@ class RSDataReader:
         #print data.shape, 'shape of data'
         #print data[:,id].shape
         
-        self.data = pandas.DataFrame(data,index=data[:,id].astype(int),columns=['id','posX','posY','posZ','corevelx','corevely','corevelz','pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ', 'mvir','rvir','child_r','mgrav','vmax','rvmax','rs','vrms','Jx','Jy','Jz','Epot','spin','blank1','npart','num_child_p','p_start','desc','flags','n_core','min_pos_err','min_vel_err','min_bulkvel_err','blank2','hostID','offset','particle_offset'])
-        
+        self.data = pandas.DataFrame(data,index=data[:,id].astype(int),columns=varlist) #change
+        #print self.data
+        #sys.exit()
         self.particles = self.particles.astype(int)
         ## add column of hostID
         file = 'parents'+'.list'
