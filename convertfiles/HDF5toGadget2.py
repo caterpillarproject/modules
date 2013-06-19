@@ -3,9 +3,9 @@ HDF5toGadget2.py - Convert .hdf5 files to fileformat 1 Gadget2 output files
 @author: Greg Dooley gdooley@mit.edu
 @data: 06/15/2012
 """
-import readsnapHDF5 as rs
+import readsnapshots.readsnapHDF5 as rs
 import struct
-import readsnap
+import readsnapshots.readsnap
 import numpy as np
 import itertools
 import sys
