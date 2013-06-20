@@ -187,7 +187,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     print "and:", curfilename
     sys.exit()
 
-  print curfilename
+  #print curfilename
   
   head = snapshot_header(curfilename)
   format = head.format
