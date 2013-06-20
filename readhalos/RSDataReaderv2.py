@@ -42,13 +42,13 @@ KpcToMpc = 1.0/1000
 #######################
 numextras = 9
 nfloats = len(varlist) - numextras - 3  #33
-print "nfloats:",nfloats
+#print "nfloats:",nfloats
 datatypesstr = "q"+("f" * nfloats)+"qqqqqqff" #change
 numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
 #numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
-print "numbytes:",numbytes
+#print "numbytes:",numbytes
 num_columns = len(varlist) #change
-print "num_columns:",num_columns
+#print "num_columns:",num_columns
 #######################
 
 id = 0 
