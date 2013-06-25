@@ -184,7 +184,7 @@ class RSDataReader:
         self.data['hostID'].ix[parents[:,0]] = parents[:,1] # fill in hostID column
         #print self.data['id'].ix[0], 'ix method'
         #print self.data['id'][0], 'no ix method'
-        print time.clock()-start_time, ' time'
+        #print time.clock()-start_time, ' time'
         
     def get_particles_from_halo(self, haloID):
         """
