@@ -30,6 +30,6 @@ def getScaleFactors(path):
     return scale_list
 
 
-path = '/spacebase/data/AnnaGroup/cosm1/rockstar'
-scales = getScaleFactors(path)
-print scales
+#path = '/spacebase/data/AnnaGroup/cosm1/rockstar'
+#scales = getScaleFactors(path)
+#print scales

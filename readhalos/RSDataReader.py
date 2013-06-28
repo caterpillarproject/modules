@@ -2,6 +2,8 @@
 Read in all data from Rockstar Halo Finder into a large matrix.
 Rows correspond to halos, columns correspond to halo properties.
 Much faster access to data than object approach.
+
+Works for Rockstar version 0.98.5 and 0.99.
 """
 
 import numpy as np
@@ -9,7 +11,6 @@ import os
 import sys
 import copy
 import operator
-#import readParentsList2 as rp
 import readParentsList as rp
 import pandas
 import time
@@ -37,7 +38,7 @@ class RSDataReader:
     """
     Create a Halo Catalogue for a particular snapshot
     """
-    def __init__(self, dir, snap_num, base='halos_', digits=2, AllParticles=False):
+    def __init__(self, dir, snap_num, base='halos_', digits=2, AllParticles=False,time_me=False):
         start_time = time.clock()
         """
          @param dir: base directory containing binary files from Rockstar Halo Finder. ex: \"/home/gdooley/Rockstar-0.99/Output2\"
@@ -150,7 +151,8 @@ class RSDataReader:
         self.data['hostID'].ix[parents[:,0]] = parents[:,1] # fill in hostID column
         #print self.data['id'].ix[0], 'ix method'
         #print self.data['id'][0], 'no ix method'
-        print time.clock()-start_time, ' time'
+        if time_me:
+            print time.clock()-start_time, ' time'
         
     def get_particles_from_halo(self, haloID):
         """

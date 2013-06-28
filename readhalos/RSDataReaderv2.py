@@ -2,6 +2,9 @@
 Read in all data from Rockstar Halo Finder into a large matrix.
 Rows correspond to halos, columns correspond to halo properties.
 Much faster access to data than object approach.
+
+RSDataReaderv2 reads in Rockstar version 0.99.9
+use RSDataReader for previous Rockstar version.
 """
 
 import numpy as np
@@ -42,13 +45,13 @@ KpcToMpc = 1.0/1000
 #######################
 numextras = 9
 nfloats = len(varlist) - numextras - 3  #33
-print "nfloats:",nfloats
+#print "nfloats:",nfloats
 datatypesstr = "q"+("f" * nfloats)+"qqqqqqff" #change
 numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
 #numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
-print "numbytes:",numbytes
+#print "numbytes:",numbytes
 num_columns = len(varlist) #change
-print "num_columns:",num_columns
+#print "num_columns:",num_columns
 #######################
 
 id = 0 
@@ -63,7 +66,7 @@ class RSDataReader:
     """
     Create a Halo Catalogue for a particular snapshot
     """
-    def __init__(self, dir, snap_num, base='halos_', digits=2, AllParticles=False):
+    def __init__(self, dir, snap_num, base='halos_', digits=2, AllParticles=False,time_me=False):
         start_time = time.clock()
         """
          @param dir: base directory containing binary files from Rockstar Halo Finder. ex: \"/home/gdooley/Rockstar-0.99/Output2\"
@@ -184,7 +187,8 @@ class RSDataReader:
         self.data['hostID'].ix[parents[:,0]] = parents[:,1] # fill in hostID column
         #print self.data['id'].ix[0], 'ix method'
         #print self.data['id'][0], 'no ix method'
-        print time.clock()-start_time, ' time'
+        if time_me:
+            print time.clock()-start_time, ' time'
         
     def get_particles_from_halo(self, haloID):
         """
