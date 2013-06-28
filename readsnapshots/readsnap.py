@@ -192,7 +192,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
   head = snapshot_header(curfilename)
   format = head.format
 
-  print "FORMAT=", format
+  #print "FORMAT=", format
   swap = head.swap
   npart = head.npart
   massarr = head.massarr
