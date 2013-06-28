@@ -1,0 +1,11 @@
+Running Rockstar Halo Finder, Merger Trees, and make parents.
+
+1) Create configuration file appropriate for your rockstar run in
+   Rockstar folder
+2) Update file paths in file directories
+3*) run ./RunAll.sh
+
+Wait until it all finishes!
+
+* suggested you use screen, or qsub as you may have to start all over
+ again if the job is halted due to loss of internet.
