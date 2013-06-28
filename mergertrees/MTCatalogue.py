@@ -153,8 +153,8 @@ def writeline_old(line,fout,fmt):
 
 def convertmt(dir,time_me=False,oldversion=False):
     filenamein = dir+"/tree_0_0_0.dat"
-    filenameout = dir+"/tree.bin"
-    fileindexname = dir+"/treeindex.csv"
+    filenameout = dir+"/tree-alextest.bin"
+    fileindexname = dir+"/treeindex-alextest.csv"
 
     if time_me:
         print "Reading subhalo positions"
@@ -290,9 +290,8 @@ class MTCatalogue:
      to haloid and read in that host halo with all the subhalos as the catalogue.
     """
 
-    def __init__(self,file,
-                 indexfile=None,haloids=[],oldversion=False,numHosts=np.infty,index_rsid=False):
-        self.file = file
+    def __init__(self,dir,haloids=[],oldversion=False,numHosts=np.infty,index_rsid=False):
+        self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.index_rsid = index_rsid
         if oldversion:
@@ -332,8 +331,8 @@ class MTCatalogue:
                                      ('T/|U|','<f8')])
         self.fmtsize = struct.calcsize(self.fmt)
 
-        f = open(file,'rb')
-        if indexfile==None and haloids==[]:
+        f = open(dir+"/tree-alextest.bin",'rb')
+        if haloids==[]:
             #Read everything!
             print "Reading whole catalogue"
             start = time.time()
@@ -361,7 +360,7 @@ class MTCatalogue:
             print "Time to finish reading:",time.time()-start
         else:
             #Read just the host halos and their subs
-            reader = csv.reader(open(indexfile,'r'))
+            reader = csv.reader(open(dir+"/treeindex-alextest.csv",'r'))
             index = dict(x for x in reader)
             print "Reading these IDs:",haloids
             if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
