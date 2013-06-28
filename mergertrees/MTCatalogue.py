@@ -360,12 +360,16 @@ class MTCatalogue:
                     counter+=1
             print "Time to finish reading:",time.time()-start
         else:
-            #Read just the host halo and its subs
+            #Read just the host halos and their subs
             reader = csv.reader(open(indexfile,'r'))
             index = dict(x for x in reader)
+            print "Reading these IDs:",haloids
+            if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
             try:
                 file_locs = [int(index[str(x)]) for x in haloids] #raises KeyError if problem
                 #Read in tree for host halos
+                if ~index_rsid:
+                    counter=0
                 for file_loc,haloid in itertools.izip(file_locs,haloids):
                     f.seek(file_loc)
                     tag = f.read(8)
@@ -376,16 +380,28 @@ class MTCatalogue:
                     rsid = hosttree.rockstar_id
                     if rsid != haloid:
                         raise ValueError
-                    self.Trees[haloid]=hosttree
+                    if index_rsid:
+                        self.Trees[haloid]=hosttree
+                    else:
+                        self.Trees[counter]=hosttree
+                        counter+=1
                     tag = f.read(8)
                     halotype,nrow = struct.unpack("ii",tag)
                     #Read in trees for all subhalos
-                    while halotype==1:
-                        thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
-                        rsid = thistree.rockstar_id
-                        self.Trees[rsid] = thistree
-                        tag = f.read(8)
-                        halotype,nrow = struct.unpack("ii",tag)
+                    if index_rsid: #index by rsid
+                        while halotype==1:
+                            thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            rsid = thistree.rockstar_id ##use rsid
+                            self.Trees[rsid] = thistree
+                            tag = f.read(8)
+                            halotype,nrow = struct.unpack("ii",tag)
+                    else: #index by mass order
+                        while halotype==1:
+                            thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            self.Trees[counter] = thistree ##use counter instead of rsid
+                            counter+=1
+                            tag = f.read(8)
+                            halotype,nrow = struct.unpack("ii",tag)
             except KeyError:
                 print "ERROR: No halo with this ID in the listed index!"
                 print "Did you put in the ID of a host halo? The index Alex made only has host halos"
@@ -395,4 +411,3 @@ class MTCatalogue:
                 print "or did not point to a host halo that corresponded to the input halo"
                 print "(Catalogue object is still created but empty)"
         f.close()
-
