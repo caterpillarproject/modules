@@ -6,15 +6,75 @@ from matplotlib import rc
 from scipy.optimize import leastsq
 from math import *
 import numpy.random as nprnd
-#import MTCatalogue3 as MTC3
+import matplotlib.colors as col
+import math
 
-#def getMT3(basepath, numTrees):
-#    """
-#    Get Merger Tree Catalogue for box, with numTrees # of trees.
-#    """
-#    #base = rsdir[box-1]
-#    return MTC3.MTCatalogue3(basepath + 'tree_0_0_0.dat',numTrees)
+def plotquantl(ax,x,y,label):
+    ax.plot(x,y,linestyle='-',linewidth=2,label=str(label))
 
+def plotquant(ax,x,y):
+    ax.plot(x,y,linestyle='-',linewidth=2)
+
+def plotlegend(ax,legendfontsize,location=1):
+    handles, labels = ax.get_legend_handles_labels()
+    leg = ax.legend(handles, labels,prop={'size':legendfontsize},ncol=1,loc=location)
+    leg.draw_frame(False)
+
+def tick_function(X):
+    V = (1/X)-1
+    return ["%.1f" % z for z in V]
+
+def calcT(p):
+    return 1 - (1./p)**2
+
+def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
+    xpos = float(xpos)
+    ypos = float(ypos)
+    ax.text(xpos, ypos,teststr,
+        horizontalalignment='left',
+        verticalalignment='center',
+        color='black',
+        fontsize=fontsize,
+        weight=fontweight,
+        transform = ax.transAxes)
+
+def getxyzdeltamcut(resolution,icgeometry):
+    if icgeometry == 'ellipsoid':
+        if resolution == 'l11':
+            x = 51.24
+            y = 48.28
+            z = 47.30
+            m = 1.2E12
+            mgroup = 1.4e12
+
+        if resolution == 'l12':
+            pass
+
+    if icgeometry == 'box':
+        if resolution == 'l11':
+            x = 50.16
+            y = 48.51
+            z = 47.05
+            m = 1.2E12
+            mgroup = 1.4e12
+
+        if resolution == 'l12':
+            pass
+
+    return x,y,z,m,mgroup
+
+def getcandidatelist(filename):
+    listin = []
+    for line in open(filename,'r'):
+         li=line.strip()
+         if not li.startswith("#"):
+             line = line.partition('#')[0]
+             listin.append(np.array(line.split(' ')[0:6]))
+    
+    listin = np.array(listin)
+    listin = listin.astype(np.float)
+    return listin
+    
 def load_matrix_from_file(f):
     """
     This function is to load an ascii format matrix (float numbers separated by
@@ -208,7 +268,25 @@ def scatterxy(x,y,s=1,c='black',xmin=0.0, xmax=0.0, ymin=0.0, ymax=0.0):
         ax.set_xlim([xmin,xmax])
         ax.set_ylim([ymin,ymax])
         plt.show()
-        
+
+def addsubtitle(ax,string,color='black',box=False,boxcolor='white'):
+    if box:
+        ax.text(0.95, 0.05,string,
+            horizontalalignment='right',
+            verticalalignment='bottom',
+            color=color,
+            weight='bold',
+            transform = ax.transAxes,
+            bbox={'facecolor':boxcolor, 'alpha':0.5, 'pad':10})
+    else:
+        ax.text(0.95, 0.05,string,
+            horizontalalignment='right',
+            verticalalignment='bottom',
+            color=color,
+            weight='bold',
+            transform = ax.transAxes)
+
+
 def create31fig(size,xmin,xmax,ymin,ymax,xlabel,ylabel,title=None):
     fig = plt.figure(figsize=(size,size))
     ax1 = fig.add_subplot(311)
@@ -337,3 +415,29 @@ def makelegend(ax,line=0,location=1):
     ax.legend(handles, labels, loc=location,numpoints=1,prop={'size':16})
     # test1.py executed as script
     # do something
+    
+def forceAspect(ax,aspect=1):
+    im = ax.get_images()
+    extent =  im[0].get_extent()
+    ax.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/aspect)
+
+
+def makecolormap():
+    vals=5020
+    rgbg=np.zeros([vals,4])
+    rgbg[:,3]=1.0
+    lambda2 = np.zeros(vals)
+    lambda2 = np.arange(0.0,1.0,1.0/(vals))
+    s=1.5
+    gamma=0.90
+    h=1.0
+    r=1.5
+    phi = 2*(3.14159)*(s/3.0 + r*lambda2)
+    a = h*lambda2**gamma *( 1 - lambda2**gamma) / 2.0
+
+    for color in range(0, vals):
+        rgbg[color,0] = lambda2[color]**gamma - a[color] * 0.14871 * math.cos(phi[color]) + a[color] * 1.78277 * math.sin(phi[color])
+        rgbg[color,1] = lambda2[color]**gamma - a[color] * 0.29227 * math.cos(phi[color]) - a[color] * 0.90649 * math.sin(phi[color])
+        rgbg[color,2] = lambda2[color]**gamma + a[color] * 1.97249 * math.cos(phi[color])
+
+    return col.LinearSegmentedColormap.from_list('newmap',rgbg,N=vals)
