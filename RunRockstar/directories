@@ -1,0 +1,4 @@
+outfile="/spacebase/data/gdooley/testRockstar"
+rsdir="/spacebase/data/AnnaGroup/Rockstar-0.99.9"
+ctrees="/spacebase/data/AnnaGroup/consistent_trees-0.99.9.2"
+config="/cfgs/Test.cfg"

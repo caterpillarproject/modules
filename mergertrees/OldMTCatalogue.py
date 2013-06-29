@@ -1,6 +1,8 @@
 """
 Read Merger Tree data from ascii file and produce merger trees
 @author: Greg Dooley
+
+6/28/2013 - added verbose option to print to stdout. default prints nothing.
 """
 import numpy as np
 import MTHalo as MTH
@@ -9,7 +11,7 @@ import os
 import operator
 import time
 
-class MTCatalogue2:
+class OldMTCatalogue:
     """
     Create a Merger Tree Catalogue for Rockstar output
     @param file: ascii file from Rockstar Consistent Tree code ex: \"/home/gdooley/Rockstar-0.99/Output2\tree\tree_0_0_0.dat\"
@@ -19,12 +21,18 @@ class MTCatalogue2:
     NOTE** In this version, halo.fullParents gives all parents EXCEPT most massive parent. Should be renamed halo.otherParents, but MTHalo is read only for me (Greg).
     """
     
-    def __init__(self, file, numTrees=-1):
+    def __init__(self, file, numTrees=-1, verbose=False):
         self.file = file #: input file name
         self.Trees = [] #: List of all Merger Trees in data file
         start = time.time()
+        if verbose==True:
+            print 'finding z=0 host-sub match ups'
+        host2sub = storeSubInfo(file)
+        if verbose==True:
+            print 'done with match ups. Time = ', time.time()-start
+        
         f = open(file, 'r')
-
+        g = open(file, 'r')
         # Read Merger Tree information
         i = 0 #used only for printing progress updates
         line = f.readline()
@@ -34,7 +42,7 @@ class MTCatalogue2:
                 i +=1
                 tree = MT.MergerTree(file, int(line[6::]))
                 line = f.readline()
-                index = 0
+                index = 0 # line number within a tree
                 while line != '' and line[0:5] != '#tree':
                     #Create Halo for input line
                     halo = MTH.MTHalo(line)
@@ -47,14 +55,16 @@ class MTCatalogue2:
                     line = f.readline()
                     index += 1
                     if index%10000==0:
-                        print 'finished item # ', index, ' in tree ', i
-                # finished tree information.
+                        if verbose==True:
+                            print 'finished item # ', index, ' in tree ', i
                 # Now find all subhalos of z=0 root halo if its a strict host.
                 if tree.haloList[0].pid == -1:
-                    print 'about to find subhalos'
-                    updateSubhalos(tree.haloList[0],file)
+                    #print 'about to find subhalos'
+                    updateSubhalos(tree.haloList[0],file,host2sub)
                 self.Trees.append(tree)
-                print 'finished tree', i, ' at ', time.time()-start,' seconds'
+                if i < 50 or i%100 == 0:
+                    if verbose==True:
+                        print 'finished tree ', i, ' at ', time.time()-start, ' seconds'
             else:
                 line = f.readline()
         f.close()
@@ -81,7 +91,79 @@ def updateLinks(haloList, index):
             index -= 1
     return haloList
 
-def updateSubhalos(host, file):
+## Want to re-write the updateSubhalos routine.
+## Need to read in entire file at once, store links
+def storeSubInfo(file):
+    #search linearly, get line number and host halo ID for all a=0 halos.
+    #then sort host halo IDs, and for each has a corresponding list of line
+    # numbers of its hosts.
+
+    #file = '/spacebase/data/AnnaGroup/cosm1/rockstar/trees/tree_0_0_0.dat'
+    lines = []
+    hostIDs = []
+    f = open(file,'r')
+    line = f.readline()
+    while line!='':
+        if line[0:5] == "#tree":
+            num = int(line[6::])
+            loc = f.tell()
+            line = f.readline()
+            sub = MTH.MTHalo(line)
+            if sub.pid != -1:
+                #print sub.pid, sub.scale
+                hostIDs.append(sub.pid)
+                lines.append(loc)
+        line = f.readline()
+    f.close()
+    # Now create python dictionary (hash table) of hosts and sub locations
+    host2sub = {}
+    for i in range(len(hostIDs)):
+        if hostIDs[i] in host2sub:
+            host2sub[hostIDs[i]].append(lines[i])
+        else:
+            host2sub[hostIDs[i]]=[lines[i]]
+    #print lines[0:10]
+    #print hostIDs[0:10]
+    return host2sub
+
+
+def updateSubhalos(host,file, host2sub):
+    """
+    Use the host2sub dictionary to find subhalos of host
+    in Merger Tree text output.
+    Run tree creation on all subhalos to get their information.
+
+    @param host: host halo (MTHalo object)
+    @param g: file descriptor of already opened file.
+    """
+    if not (host.ID in host2sub):
+        return
+    g = open(file,'r')
+    for posn in host2sub[host.ID]:
+        g.seek(posn)
+        line = g.readline()
+        sub = MTH.MTHalo(line)
+        if sub.pid != host.ID:
+            print 'WARNING: ERROR: halo not sub of host! Proceeding anyway'
+        tree = MT.MergerTree(file,sub.ID)
+        tree.haloList.append(sub)
+        if sub.num_prog==0:
+            tree.progenitors.append(sub)
+        # Now deal with all other halos in the tree
+        index = 1
+        line = g.readline()
+        while line !='' and line[0:5] != '#tree':
+            halo = MTH.MTHalo(line)
+            tree.haloList.append(halo)
+            if halo.num_prog ==0:
+                tree.progenitors.append(halo)
+            updateLinks(tree.haloList, index)
+            line = g.readline()
+            index += 1
+        host.subhalos.append(sub)
+    g.close()
+
+def updateSubhalos_old(host, file):
     """
     Search entire Merger Tree text output for subhalos of host.
     Add subhalos MTHalo subhalos list.
