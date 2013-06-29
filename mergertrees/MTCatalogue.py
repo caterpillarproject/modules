@@ -28,47 +28,14 @@ a python dictionary matching them to their host. Write this data to file in bina
 5) Load binary file. Read 
 
 read in ascii file line by line building tree.
+
 Items kept:
-Scale
-id
-desc_id
-num_prog
-pid
-upid
-SAM_Mvir
-mvir
-rvir
-rs
-vrms
-mmp?
-scale_of_last_MM
-vmax
-x
-y
-z
-vx
-vy
-vz
-Jx/Jy/Jz
-Spin
-Breadth First ID
-Depth First ID
-Orig_halo_ID
-Xoff
-Voff
-Spin_Bullock
-
-
+Scale,id,desc_id,num_prog,pid,upid,SAM_Mvir,mvir,rvir,rs,vrms,mmp?,scale_of_last_MM,
+vmax,x,y,z,vx,vy,vz,Jx/Jy/Jz,Spin,Breadth First ID,Depth First ID,Orig_halo_ID,
+Xoff,Voff,Spin_Bullock
 
 Items discarded:
-desc_scale
-desc_pid
-Tree_root_ID
-Next_copogenitor_depthfirst_ID
-M200c
-M500c
-M2500c
-Rs_klypin
+desc_scale,desc_pid,Tree_root_ID,Next_copogenitor_depthfirst_ID,M200c,M500c,M2500c,Rs_klypin
 """
 
 import time
@@ -76,6 +43,7 @@ import struct
 import csv
 import sys
 import numpy as np
+import itertools
 
 def storeSubInfo(file):
     """
@@ -183,14 +151,13 @@ def writeline_old(line,fout,fmt):
                        int(s[30]))  #Orig_halo_ID
     fout.write(data)
 
-
-def convertmt(dir,time_me=False,oldversion=False,verbose=False):
+def convertmt(dir,time_me=False,oldversion=False):
     """
-    
+
     """
     filenamein = dir+"/tree_0_0_0.dat"
-    filenameout = dir+"/tree.bin"
-    fileindexname = dir+"/treeindex.csv"
+    filenameout = dir+"/tree-alextest.bin"
+    fileindexname = dir+"/treeindex-alextest.csv"
 
     if time_me:
         print "Reading subhalo positions"
@@ -206,11 +173,12 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
 
     if oldversion:
         fmt = "fiiiiifffffiffffffffffffiii"
+        mywriteline = writeline_old
     else:
         fmt = "fiiiiifffffiffffffffffffiiiifffffffffff"
+        mywriteline = writeline
     fmtsize = struct.calcsize(fmt)
-    if verbose==True:
-        print "Bytes per line:",fmtsize
+    if verbose: print "Bytes per line:",fmtsize
 
     line = fin.readline()
     i = 0
@@ -232,10 +200,7 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                 #write host tree
                 start2 = time.time()
                 while line != '' and line[0:5] != "#tree":
-                    if oldversion:
-                        writeline_old(line,fout,fmt)
-                    else:
-                        writeline(line,fout,fmt)
+                    mywriteline(line,fout,fmt)
                     numlines = numlines+1
                     line = fin.readline()
                 #seek back and fill in numlines
@@ -260,10 +225,7 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                         line = fin.readline()
                         while line != '' and line[0:5] != "#tree":
                             numlines = numlines+1
-                            if oldversion:
-                                writeline_old(line,fout,fmt)
-                            else:
-                                writeline(line,fout,fmt)
+                            mywriteline(line,fout,fmt)
                             line = fin.readline()
                         #seek back and fill in num lines
                         fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
@@ -280,7 +242,8 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                 while line != '' and line[0:5] != "#tree":
                     line = fin.readline()
             i = i+1
-            if i % 5000 == 0 and verbose==True:
+
+            if i % 5000 == 0 and verbose:
                 print i,"host halos completed"
         else:
             line = fin.readline()
@@ -288,11 +251,11 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
     fout.close()
     findex.close()
 
-class NewMTCatalogueTree:
+class MTCatalogueTree:
     """
     Creates a Tree
     Either from an input datatable (e.g. used internally to make subtrees)
-    Or from a file that is already pointing to the right place (e.g. from NewMTCatalogue)
+    Or from a file that is already pointing to the right place (e.g. from MTCatalogue)
     """
     def __init__(self,
                  datatable=np.dtype([]),
@@ -317,6 +280,7 @@ class NewMTCatalogueTree:
                 self.data[i] = struct.unpack(fmt,f.read(fmtsize))
             self.rockstar_id = self.data[0]['origid']
 
+    ## TODO fix these three methods to make them fast and nice
     def getMainBranch(self, row):
         """
         repeatedly call getMMP until end is reached.
@@ -348,6 +312,9 @@ class NewMTCatalogueTree:
 
     def __getitem__(self,key):
         return self.data[key]
+
+    def __repr__(self):
+        return "MTCatalogueTree for RSid: "+str(self.rockstar_id)+", "+str(self.nrow)+" rows."
     
 class MTCatalogue:
     """
@@ -356,28 +323,21 @@ class MTCatalogue:
     Two ways of creating this object.
     The first way is to read in the first N hosts (and their subs).
     Specify numHosts = N (default reads in everything) to read N hosts.
-    Also specify byID=False to access trees in mass order (i.e. self.trees[0]
-    self.trees[1], self.trees[2] for 3 most massive hosts)
-    By default trees must be accessed by their rockstar halo ID.
+    Also specify indexbyrsid=True to access trees by rsid instead of mass order
+    By default trees are accessed by their mass order
     
     The second way is to specify the indexfile (csv file) and a haloid.
     This will use indexfile to pinpoint the location in datafile corresponding
     to haloid and read in that host halo with all the subhalos as the catalogue.
     """
-    # need array pointing to location of hosts.
-    def __init__(self,file,
-                 indexfile=None,hostid=-1,oldversion=False,numHosts=np.infty,byID=True,verbose=False):
-        self.file = file
-        self.Trees = {} #key: rockstar halo ID; value: MT file
-	if oldversion:
-	    self.fmt = "fiiiiifffffiffffffffffffiii"
-	else:	        
-	    self.fmt = "fiiiiifffffiffffffffffffiiiifffffffffff" 
-        self.fmtsize = struct.calcsize(self.fmt)	
-        ## Create structured dtype
 
+    def __init__(self,dir,haloids=[],oldversion=False,numHosts=np.infty,indexbyrsid=False,verbose=False):
+        self.dir = dir
+        self.Trees = {} #key: rockstar halo ID; value: MT file
+        self.indexbyrsid = indexbyrsid
         if oldversion:
-             self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
+            self.fmt = "fiiiiifffffiffffffffffffiii"
+            self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
                                      ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
                                      ('mvir','<f8'),('orig_mvir','<f8'),
                                      ('rvir','<f8'),('rs','<f8'),
@@ -390,7 +350,8 @@ class MTCatalogue:
                                      ('dfid','<i8'), #depth first ID
                                      ('origid','<i8')]) #rockstar cat ID
         else:
-	    self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
+            self.fmt = "fiiiiifffffiffffffffffffiiiifffffffffff"
+            self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
                                      ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
                                      ('sam_mvir','<f8'),('mvir','<f8'),
                                      ('rvir','<f8'),('rs','<f8'),
@@ -409,59 +370,85 @@ class MTCatalogue:
                                      ('b_to_a','<f8'),('c_to_a','<f8'),
                                      ('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),
                                      ('T/|U|','<f8')])
+        self.fmtsize = struct.calcsize(self.fmt)
 
-        f = open(file,'rb')
-        if indexfile==None and hostid==-1:
-            #Read everything!
-            if verbose:
-                print "Reading whole catalogue"
+        ## NOTE: the reason I have separated the while loops is to speed up
+        ## the reading (don't have to call if every single time)
+        f = open(dir+"/tree.bin",'rb')
+        if haloids==[]:
+            ## TODO reads one extra host halo tree! Gotta fix that.
+            if verbose: print "Reading whole catalogue"
             start = time.time()
             tag = f.read(8)
-            counter = 0
             nhosts = 0
-            self.HostLocs = []
-            while tag != '' and nhosts <= numHosts:
-                halotype,nrow = struct.unpack("ii",tag)
-                thistree = NewMTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
-                if byID: #Good for retrieving known trees.
-                    # bad for computing averages of trees.
-                    rsid = thistree.rockstar_id
-                    self.Trees[rsid] = thistree
-                else:
-                    self.Trees[counter] = thistree
-                tag = f.read(8)
-                if halotype == 0:
-                    self.HostLocs.append(counter)
-                    nhosts+=1
-                counter+=1
-            if verbose:
-                print "Time to finish reading:",time.time()-start
-        else:
-            #Read just the host halo and its subs
-            reader = csv.reader(open(indexfile,'r'))
-            index = dict(x for x in reader)
-            try:
-                file_loc = int(index[str(hostid)]) #raises KeyError if problem
-                #Read in tree for host halo
-                f.seek(file_loc)
-                tag = f.read(8)
-                halotype,nrow = struct.unpack("ii",tag)
-                if halotype != 0:
-                    raise ValueError
-                hosttree = NewMTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
-                rsid = hosttree.rockstar_id
-                if rsid != hostid:
-                    raise ValueError
-                self.Trees[hostid]=hosttree
-                tag = f.read(8)
-                halotype,nrow = struct.unpack("ii",tag)
-                #Read in trees for all subhalos
-                while halotype==1:
-                    thistree = NewMTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
-                    rsid = thistree.rockstar_id
-                    self.Trees[rsid] = thistree
+            if indexbyrsid: #index by rsid
+                while tag != '' and nhosts <= numHosts:
+                    halotype,nrow = struct.unpack("ii",tag)
+                    thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                    rsid = thistree.rockstar_id ##use rsid
+                    self.Trees[rsid] = thistree 
                     tag = f.read(8)
-                    halotype,nrow = struct.unpack("ii",tag)                    
+                    if halotype == 0:
+                        nhosts+=1
+            else: #index by mass order
+                counter = 0
+                self.HostLocs = []
+                while tag != '' and nhosts <= numHosts:
+                    halotype,nrow = struct.unpack("ii",tag)
+                    thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                    self.Trees[counter] = thistree ##use counter instead of rsid
+                    tag = f.read(8)
+                    if halotype == 0:
+                        self.HostLocs.append(counter)
+                        nhosts+=1
+                    counter+=1
+            if verbose: print "Time to finish reading:",time.time()-start
+        else:
+            #Read just the host halos and their subs
+            reader = csv.reader(open(dir+"/treeindex.csv",'r'))
+            index = dict(x for x in reader)
+            print "Reading these IDs:",haloids
+            if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
+            try:
+                file_locs = [int(index[str(x)]) for x in haloids] #raises KeyError if problem
+                #Read in tree for host halos
+                if ~indexbyrsid:
+                    counter=0
+                    self.HostLocs = []
+                for file_loc,haloid in itertools.izip(file_locs,haloids):
+                    f.seek(file_loc)
+                    tag = f.read(8)
+                    halotype,nrow = struct.unpack("ii",tag)
+                    if halotype != 0:
+                        raise ValueError
+                    hosttree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                    rsid = hosttree.rockstar_id
+                    if rsid != haloid:
+                        raise ValueError
+                    if indexbyrsid:
+                        self.Trees[haloid]=hosttree
+                    else:
+                        self.Trees[counter]=hosttree
+                        self.HostLocs.append(counter)
+                        counter+=1
+                    tag = f.read(8)
+                    if len(tag)==0: continue #last host halo in the list, no subs
+                    halotype,nrow = struct.unpack("ii",tag)
+                    #Read in trees for all subhalos
+                    if indexbyrsid: #index by rsid                        
+                        while halotype==1:
+                            thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            rsid = thistree.rockstar_id ##use rsid
+                            self.Trees[rsid] = thistree
+                            tag = f.read(8)
+                            halotype,nrow = struct.unpack("ii",tag)
+                    else: #index by mass order
+                        while halotype==1:
+                            thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            self.Trees[counter] = thistree ##use counter instead of rsid
+                            counter+=1
+                            tag = f.read(8)
+                            halotype,nrow = struct.unpack("ii",tag)
             except KeyError:
                 print "ERROR: No halo with this ID in the listed index!"
                 print "Did you put in the ID of a host halo? The index Alex made only has host halos"
@@ -472,7 +459,7 @@ class MTCatalogue:
                 print "(Catalogue object is still created but empty)"
         f.close()
 
-
+    ## TODO maybe edit this guy too
     def getSubTrees(self,treenum):
         """
         returns list of indices of subhalo trees of tree given by treenum
@@ -485,18 +472,13 @@ class MTCatalogue:
             row+=1
         return np.arange(treenum+1, row)
 
+    def __getitem__(self,key):
+        return self.Trees[key]
 
-## if __name__ == "__main__":
-##     convertmt(time_me=False)
-
-## Read file once to get subhalo position information in dictionary.
-
-## treefile ='/spacebase/data/AnnaGroup/caterpillarparent/RockstarData/trees/tree_0_0_0.dat'
-
-## print 'Getting subhalo positions'
-## start = time.time()
-## host2sub = storeSubInfo(treefile)
-## print time.time()-start, 'Time to get subhalo positions'
-
-## f = open(treefile)
-## [f.seek(posn) for posn in host2sub[host] for host in host2sub.keys()[0:1]]
+    def __repr__(self):
+        out = "MTCatalogue from directory: "+self.dir+"\n"
+        out = out + "Number of trees: "+str(len(self.Trees))+"\n"
+        if self.indexbyrsid:
+            return out+"Indexed by Rockstar halo ids"
+        else:
+            return out+"Indexed by sequential integers in order of mass"
