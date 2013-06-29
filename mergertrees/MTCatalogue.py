@@ -278,6 +278,9 @@ class MTCatalogueTree:
 
     def __getitem__(self,key):
         return self.data[key]
+
+    def __repr__(self):
+        return "MTCatalogueTree for RSid: "+str(self.rockstar_id)+", "+str(self.nrow)+" rows."
     
 class MTCatalogue:
     """
@@ -331,7 +334,7 @@ class MTCatalogue:
                                      ('T/|U|','<f8')])
         self.fmtsize = struct.calcsize(self.fmt)
 
-        f = open(dir+"/tree-alextest.bin",'rb')
+        f = open(dir+"/tree.bin",'rb')
         if haloids==[]:
             #Read everything!
             print "Reading whole catalogue"
@@ -360,7 +363,7 @@ class MTCatalogue:
             print "Time to finish reading:",time.time()-start
         else:
             #Read just the host halos and their subs
-            reader = csv.reader(open(dir+"/treeindex-alextest.csv",'r'))
+            reader = csv.reader(open(dir+"/treeindex.csv",'r'))
             index = dict(x for x in reader)
             print "Reading these IDs:",haloids
             if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
@@ -410,3 +413,15 @@ class MTCatalogue:
                 print "or did not point to a host halo that corresponded to the input halo"
                 print "(Catalogue object is still created but empty)"
         f.close()
+
+    def __getitem__(self,key):
+        return self.Trees[key]
+
+    def __repr__(self):
+        out = "MTCatalogue from directory: "+self.dir+"\n"
+        out = out + "Number of trees: "+str(len(self.Trees))+"\n"
+        if self.index_rsid:
+            return out+"Indexed by Rockstar halo ids"
+        else:
+            return out+"Indexed by sequential integers in order of mass"
+        
