@@ -336,7 +336,7 @@ class MTCatalogue:
 
         f = open(dir+"/tree.bin",'rb')
         if haloids==[]:
-            #Read everything!
+            ## TODO reads one extra host halo tree! Gotta fix that.
             print "Reading whole catalogue"
             start = time.time()
             tag = f.read(8)
@@ -348,9 +348,11 @@ class MTCatalogue:
                     rsid = thistree.rockstar_id ##use rsid
                     self.Trees[rsid] = thistree 
                     tag = f.read(8)
+                    if halotype == 0:
+                        nhosts+=1
             else: #index by mass order
                 counter = 0
-                self.HostLocs = []                
+                self.HostLocs = []
                 while tag != '' and nhosts <= numHosts:
                     halotype,nrow = struct.unpack("ii",tag)
                     thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
@@ -372,6 +374,7 @@ class MTCatalogue:
                 #Read in tree for host halos
                 if ~index_rsid:
                     counter=0
+                    self.HostLocs = []
                 for file_loc,haloid in itertools.izip(file_locs,haloids):
                     f.seek(file_loc)
                     tag = f.read(8)
@@ -386,11 +389,13 @@ class MTCatalogue:
                         self.Trees[haloid]=hosttree
                     else:
                         self.Trees[counter]=hosttree
+                        self.HostLocs.append(counter)
                         counter+=1
                     tag = f.read(8)
+                    if len(tag)==0: continue #last host halo in the list, no subs
                     halotype,nrow = struct.unpack("ii",tag)
                     #Read in trees for all subhalos
-                    if index_rsid: #index by rsid
+                    if index_rsid: #index by rsid                        
                         while halotype==1:
                             thistree = MTCatalogueTree(f=f,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
                             rsid = thistree.rockstar_id ##use rsid
