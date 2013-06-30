@@ -6,10 +6,13 @@ def densityprofile(rarr,filepath,header,haloparts,halopos,verbose=False,power03=
     """
     @param rarr: radius array in Mpc
     @param filepath: filepath to read_block (see readsnap.py)
-    @param haloparts: SubIDs file (from readids.py, e.g. readids.subid_file(...)
+    @param haloparts: list of halo particle IDs
     @param halopos: halo position in Mpc
+    @param verbose: if True, prints things out
+    @param power03: if True, also returns power03 convergence radius
 
     @return rhoarr: at every r in rarr, returns rho(r) in 10^10Msun/Mpc^3/Mpc
+    @return p03rmin: if power03 is set to True, returns the power03 convergence radius (in Mpc)
     """
     rhoarr = np.zeros((len(rarr),5))
     if power03:
@@ -17,11 +20,9 @@ def densityprofile(rarr,filepath,header,haloparts,halopos,verbose=False,power03=
         marr = np.zeros(len(rarr))
 
     for parttype in [1,2,3,4,5]:
-        #snapIDs=rs.read_block(filepath,"ID  ",parttype=parttype,doubleprec=False,silent=(not verbose))
-        #snapPOS=rs.read_block(filepath,"POS ",parttype=parttype,doubleprec=False,silent=(not verbose))
         snapIDs=rs.read_block(filepath,"ID  ",parttype=parttype,doubleprec=False,silent=True)
         snapPOS=rs.read_block(filepath,"POS ",parttype=parttype,doubleprec=False,silent=True)
-        mask = np.in1d(snapIDs,haloparts.SubIDs,assume_unique=True)
+        mask = np.in1d(snapIDs,haloparts,assume_unique=True) #for large numbers of particles, this is slow
         dx=snapPOS[mask][:,0]-halopos[0]
         dy=snapPOS[mask][:,1]-halopos[1]
         dz=snapPOS[mask][:,2]-halopos[2]
