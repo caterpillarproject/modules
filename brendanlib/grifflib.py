@@ -11,6 +11,7 @@ import math
 
 def plotquantl(ax,x,y,label):
     ax.plot(x,y,linestyle='-',linewidth=2,label=str(label))
+    #ax.plot(x,y,marker='o',linewidth=10,label=str(label))
 
 def plotquant(ax,x,y):
     ax.plot(x,y,linestyle='-',linewidth=2)
