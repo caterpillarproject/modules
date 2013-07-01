@@ -30,12 +30,12 @@ a python dictionary matching them to their host. Write this data to file in bina
 read in ascii file line by line building tree.
 
 Items kept:
-Scale,id,desc_id,num_prog,pid,upid,SAM_Mvir,mvir,rvir,rs,vrms,mmp?,scale_of_last_MM,
-vmax,x,y,z,vx,vy,vz,Jx/Jy/Jz,Spin,Breadth First ID,Depth First ID,Orig_halo_ID,
-Xoff,Voff,Spin_Bullock
+Scale,id,desc_id,num_prog,pid,upid,SAM_Mvir,mvir,rvir,rs,vrms,mmp,scale_of_last_MM,
+vmax,x,y,z,vx,vy,vz,Jx/Jy/Jz,Spin,Breadth First ID,Depth First ID,Orig_halo_ID,Last_progenitor_depthfirst_ID
+M200c_all,M200b,Xoff,Voff,Spin_Bullock,b_to_a,c_to_a,A[X/Y/Z],T/|U|
 
 Items discarded:
-desc_scale,desc_pid,Tree_root_ID,Next_copogenitor_depthfirst_ID,M200c,M500c,M2500c,Rs_klypin
+desc_scale,desc_pid,phantom,Tree_root_ID,snapnum,Next_coprogenitor_depthfirst_ID,M200c,M500c,M2500c,Rs_klypin
 """
 
 import time
