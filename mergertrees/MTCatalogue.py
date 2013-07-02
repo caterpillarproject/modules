@@ -30,9 +30,9 @@ a python dictionary matching them to their host. Write this data to file in bina
 read in ascii file line by line building tree.
 
 Items kept:
-Scale,id,desc_id,num_prog,pid,upid,phantom,SAM_Mvir,mvir,rvir,rs,vrms,mmp,scale_of_last_MM,
-vmax,x,y,z,vx,vy,vz,Jx/Jy/Jz,Spin,Breadth First ID,Depth First ID,Orig_halo_ID,Last_progenitor_depthfirst_ID
-M200c_all,M200b,Xoff,Voff,Spin_Bullock,b_to_a,c_to_a,A[X/Y/Z],T/|U|
+Scale,id,desc_id,num_prog,pid,upid,phantom,sam_mvir,mvir,rvir,rs,vrms,mmp,scale_of_last_MM,
+vmax,posX,posY,posZ,pecVX,pecVY,pecVZ,Jx,Jy,Jz,spin,bfid,dfid,origid,lastprog_dfid,
+m200c_all,m200b,xoff,voff,spin_bullock,b_to_a,c_to_a,A[X/Y/Z],T/|U|
 
 Items discarded:
 desc_scale,desc_pid,Tree_root_ID,snapnum,Next_coprogenitor_depthfirst_ID,M200c,M500c,M2500c,Rs_klypin
@@ -73,6 +73,8 @@ def storeSubInfo(file):
     search linearly, get line number and host halo ID for all a=0 halos.
     then put information in dictionary. Each hostID has a corresponding
     list of line numbers of its hosts.
+
+    TODO add an option to store one level deeper!
     """
     lines = []
     hostIDs = []
@@ -126,15 +128,15 @@ def writeline(line,fout,fmt):
                        float(s[24]),#jy
                        float(s[25]),#jz
                        float(s[26]),#spin
-                       int(s[27]),  #Breadth_first_ID
-                       int(s[28]),  #Depth_first_ID
-                       int(s[30]),  #Orig_halo_ID
-                       int(s[33]),  #Last_progenitor_depthfirst_ID
-                       float(s[35]),#M200c_all
-                       float(s[36]),#M200b
-                       float(s[40]),#Xoff
-                       float(s[41]),#Voff
-                       float(s[42]),#Spin_Bullock
+                       int(s[27]),  #bfid [Breadth_first_ID]
+                       int(s[28]),  #dfid [Depth_first_ID]
+                       int(s[30]),  #origid [Orig_halo_ID]
+                       int(s[33]),  #lastprog_dfid [Last_progenitor_depthfirst_ID]
+                       float(s[35]),#m200c_all
+                       float(s[36]),#m200b
+                       float(s[40]),#xoff
+                       float(s[41]),#voff
+                       float(s[42]),#spin_bullock
                        float(s[43]),#b_to_a
                        float(s[44]),#c_to_a
                        float(s[45]),#A[x]
@@ -178,7 +180,9 @@ def writeline_old(line,fout,fmt):
 def convertmt(dir,time_me=False,oldversion=False,verbose=False):
     """
     Convert tree_0_0_0.dat ascii file to tree.bin binary file for
-    faster reading.
+    faster reading. Also outputs index file
+
+    TODO add option to store one level deeper (in the index)!
     """
     filenamein = dir+"/tree_0_0_0.dat"
     filenameout = dir+"/tree.bin"
@@ -207,7 +211,6 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
 
     line = fin.readline()
     i = 0
-    ##TODO save scale factor <-> snap number
     while line != '':
         if line[0:5] == "#tree":
             line = fin.readline()
@@ -283,10 +286,10 @@ class MTCatalogueTree:
     Either from an input datatable (e.g. used internally to make subtrees)
     Or from a file that is already pointing to the right place (e.g. from MTCatalogue)
     """
-    def __init__(self,scale_list,datatable=np.dtype([]),
+    def __init__(self,scale_list=[],datatable=np.array([]),
                  f=None,halotype=-1,nrow=-1,fmt="",fmttype=np.dtype([])):
         self.scale_list = scale_list
-        if datatable != np.dtype([]):
+        if datatable != np.array([]):
             self.fileloc = -1
             self.halotype = 2
             self.nrow = len(datatable)
@@ -306,34 +309,45 @@ class MTCatalogueTree:
                 self.data[i] = struct.unpack(fmt,f.read(fmtsize))
             self.rockstar_id = self.data[0]['origid']
 
-    ## TODO fix these three methods to make them fast and nice
+    def getSubTree(self,row):
+        """
+        Returns a MTCatalogueTree object that is the subtree of the halo specified by row
+        Uses depth-first ID to get the subtree
+        (and may be a shallow copy of the data, so don't delete the original tree)
+        """
+        dfid_base = self.data[row]['dfid']
+        dfid_last = self.data[row]['lastprog_dfid']
+        mask = np.logical_and(self.data['dfid']>=dfid_base, self.data['dfid']<=dfid_last)
+        return MTCatalogueTree(scale_list=self.scale_list,datatable=self.data[mask])
+
     def getMainBranch(self, row):
         """
-        repeatedly call getMMP until end is reached.
-        @return: all halos that are in the main branch of the halo
-        specified by row.
+        @param row: row of the halo you want the main branch for
+        Uses getSubTree, then finds the smallest dfid that has no progenitors
+        @return: all halos that are in the main branch of the halo specified by row (in a np structured array)
         """
-        rows = [row]
-        next = self.getMMP(row)
-        while next != None:
-            rows.append(next)
-            next = self.getMMP(next)
-        return self.data[rows]
+        subtree = self.getSubTree(row)
+        dfid_base = self.data[row]['dfid'] #==subtree[0]['dfid']
+        # Get the smallest dfid of the tree "leaves" (halos with no progenitors)
+        dfid_last = np.min(subtree[subtree['num_prog']==0]['dfid'])
+        return subtree[np.logical_and(subtree['dfid']>=dfid_base,subtree['dfid']<=dfid_last)]
 
     def getMMP(self, row):
         """
         @param row: row number (int) of halo considered
-        @ return: row number of the most massive parent.
+        @return: row number of the most massive parent, or None if no parent
         """
         parent = np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']==1))[0]
-        if len(parent) == 0:
-            return None # if it has no parent
-        else:
+        try:
             return parent[0]
+        except:
+            return None # if it has no parent
 
     def getNonMMPprogenitors(self,row):
-        # return row index of all progenitors that are not the most massive
-        # These are all the subhalos that were destroyed in the interval
+        """
+        return row index of all progenitors that are not the most massive
+        These are all the subhalos that were destroyed in the interval
+        """
         return np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']!=1))[0]
 
     def __getitem__(self,key):
