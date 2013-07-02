@@ -320,9 +320,9 @@ class MTCatalogueTree:
         mask = np.logical_and(self.data['dfid']>=dfid_base, self.data['dfid']<=dfid_last)
         return MTCatalogueTree(scale_list=self.scale_list,datatable=self.data[mask])
 
-    def getMainBranch(self, row):
+    def getMainBranch(self, row=0):
         """
-        @param row: row of the halo you want the main branch for
+        @param row: row of the halo you want the main branch for. Defaults to row 0
         Uses getSubTree, then finds the smallest dfid that has no progenitors
         @return: all halos that are in the main branch of the halo specified by row (in a np structured array)
         """
