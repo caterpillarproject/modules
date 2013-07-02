@@ -45,7 +45,8 @@ import sys
 import numpy as np
 import itertools
 import os
-
+import pydot
+import subprocess
 
 def getScaleFactors(path):
     snap_num = 7
@@ -308,6 +309,33 @@ class MTCatalogueTree:
             for i in xrange(nrow):
                 self.data[i] = struct.unpack(fmt,f.read(fmtsize))
             self.rockstar_id = self.data[0]['origid']
+
+    def plottree(self,filename='treegraph',makepdf=True):
+        """
+        http://www.graphviz.org/doc/info/attrs.html
+        """
+        if makepdf and filename[-4:] == '.pdf': filename = filename[:-4]
+        from mergertrees.GetScaleFactors import getsnap
+        getsnap = getsnap()
+        maxmass = np.max(np.log10(self.data['mvir']))
+
+        graph = pydot.Dot(graph_type='graph',size="8, 8")
+        for row in reversed(xrange(len(self.data))):
+            nodesize = 1.0*(np.log10(self.data[row]['mvir'])/maxmass)**2
+            graph.add_node(pydot.Node(self.data[row]['id'],
+                                      shape='circle',fixedsize="true",
+                                      width=nodesize,#height=nodesize,
+                                      label=" "
+                                      #label=str(getsnap(self.data[row]['scale']))+": "+str(self.data[row]['origid'])
+                                      ))
+            graph.add_edge(pydot.Edge(self.data[row]['id'],self.data[row]['desc_id']))
+        #Delete the extra last node
+        graph.del_edge(self.data[0]['id'],self.data[0]['desc_id'])
+        graph.del_node(self.data[0]['desc_id'])
+        graph.write_ps2(filename+'.ps2')
+        if makepdf:
+            subprocess.call(["convert",filename+'.ps2',filename+'.pdf'])
+            subprocess.call(["rm",filename+'.ps2'])
 
     def getSubTree(self,row):
         """
