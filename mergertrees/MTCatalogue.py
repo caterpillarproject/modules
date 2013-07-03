@@ -315,13 +315,13 @@ class MTCatalogueTree:
         http://www.graphviz.org/doc/info/attrs.html
         """
         if makepdf and filename[-4:] == '.pdf': filename = filename[:-4]
-        from mergertrees.GetScaleFactors import getsnap
-        getsnap = getsnap()
+        print "Generating graph"
         maxvalue = np.max(self.data['rvir'])
 
         graph = pydot.Dot(graph_type='graph',size="8, 8")
         for row in reversed(xrange(len(self.data))):
-            nodesize = max(1.0*(self.data[row]['rvir']/maxvalue),0.01)
+            nodesize = 100.0*(self.data[row]['rvir']/maxvalue)
+            if nodesize < 0.01: continue #skip over things too small to plot
             graph.add_node(pydot.Node(self.data[row]['id'],
                                       shape='circle',fixedsize="true",
                                       width=nodesize,#height=nodesize,
@@ -332,9 +332,13 @@ class MTCatalogueTree:
         #Delete the extra last node
         graph.del_edge(self.data[0]['id'],self.data[0]['desc_id'])
         graph.del_node(self.data[0]['desc_id'])
+        print "Writing "+str(len(graph.get_nodes()))+" nodes and "+str(len(graph.get_edges()))+" edges to "+filename+'.ps2'
+        print "(may freeze/take hours if graph is too big)"
         graph.write_ps2(filename+'.ps2')
         if makepdf:
+            print "Converting to "+filename+'.pdf'
             subprocess.call(["convert",filename+'.ps2',filename+'.pdf'])
+            print "Removing "+filename+'.ps2'
             subprocess.call(["rm",filename+'.ps2'])
 
     def getSubTree(self,row):
