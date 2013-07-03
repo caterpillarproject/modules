@@ -317,11 +317,11 @@ class MTCatalogueTree:
         if makepdf and filename[-4:] == '.pdf': filename = filename[:-4]
         from mergertrees.GetScaleFactors import getsnap
         getsnap = getsnap()
-        maxmass = np.max(np.log10(self.data['mvir']))
+        maxvalue = np.max(self.data['rvir'])
 
         graph = pydot.Dot(graph_type='graph',size="8, 8")
         for row in reversed(xrange(len(self.data))):
-            nodesize = 1.0*(np.log10(self.data[row]['mvir'])/maxmass)**2
+            nodesize = max(1.0*(self.data[row]['rvir']/maxvalue),0.01)
             graph.add_node(pydot.Node(self.data[row]['id'],
                                       shape='circle',fixedsize="true",
                                       width=nodesize,#height=nodesize,
@@ -493,10 +493,13 @@ class MTCatalogue:
                     tag = f.read(8)
                     halotype,nrow = struct.unpack("ii",tag)
                     if halotype != 0:
+                        print "halotype != 0, instead",halotype
                         raise ValueError
                     hosttree = MTCatalogueTree(f=f,scale_list=self.scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
                     rsid = hosttree.rockstar_id
                     if rsid != haloid:
+                        print "rsid != haloid"
+                        print "rsid",rsid,"; haloid",haloid
                         raise ValueError
                     if indexbyrsid:
                         self.Trees[haloid]=hosttree
