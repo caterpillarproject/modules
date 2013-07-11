@@ -83,6 +83,7 @@ write(*,"(a,F8.3)")" Time [s] to allocate vecs: ",seconds
 !###########################################
 seconds = omp_get_wtime()
 mesh_out(:,:,:) = 0.0
+!$OMP PARALLEL DO PRIVATE(xi,yi,zi,xii,yii,zii)
 do i = 1,Ntot
 
   xi = int(x1(i))
@@ -102,7 +103,7 @@ do i = 1,Ntot
       mesh_out(xii,yii,zii)= mesh_out(xii,yii,zii)+ dx2(i) * dy2(i) * dz2(i) * mpart
   end if
 end do
-
+!$OMP END PARALLEL DO
         
 !c  !$OMP PARALLEL DO PRIVATE(xi,yi,zi,xii,yii,zii)
 
