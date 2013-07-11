@@ -560,7 +560,7 @@ class MTCatalogue:
                             halotype,nrow = struct.unpack("ii",tag)
                     else: #index by mass order
                         while halotype==1:
-                            thistree = MTCatalogueTree(f=f,scale_list=scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            thistree = MTCatalogueTree(f=f,scale_list=self.scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
                             self.Trees[counter] = thistree ##use counter instead of rsid
                             counter+=1
                             tag = f.read(8)
