@@ -1,4 +1,2 @@
-__all__ = ["AlexNewMTCatalogue","GetScaleFactors","GregNewMTCatalogue",
-           "MergerTree","MTCatalogue","MTCatalogue2","MTCatalogue3",
-           "MTHalo"]
-
+__all__ = ["MergerTree","MTCatalogue","MTHalo","OldMTCatalogue"]
+           

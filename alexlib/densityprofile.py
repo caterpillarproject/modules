@@ -20,8 +20,8 @@ def densityprofile(rarr,filepath,header,haloparts,halopos,verbose=False,power03=
         marr = np.zeros(len(rarr))
 
     for parttype in [1,2,3,4,5]:
-        snapIDs=rs.read_block(filepath,"ID  ",parttype=parttype,doubleprec=False,silent=True)
-        snapPOS=rs.read_block(filepath,"POS ",parttype=parttype,doubleprec=False,silent=True)
+        snapIDs=rs.read_block(filepath,"ID  ",parttype=parttype,doubleprec=False)
+        snapPOS=rs.read_block(filepath,"POS ",parttype=parttype,doubleprec=False)
         mask = np.in1d(snapIDs,haloparts,assume_unique=True) #for large numbers of particles, this is slow
         dx=snapPOS[mask][:,0]-halopos[0]
         dy=snapPOS[mask][:,1]-halopos[1]
