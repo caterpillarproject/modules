@@ -45,10 +45,11 @@ import sys
 import numpy as np
 import itertools
 import os
+import pydot
+import subprocess
 
-
-def getScaleFactors(path):
-    snap_num = 7
+def getScaleFactors(path,minsnap=0):
+    snap_num = minsnap
     file = path + '/halos_' + str(snap_num) + '/halos_' + str(snap_num) + ".0.bin"
     f = open(file)
     f.close()
@@ -67,6 +68,42 @@ def getScaleFactors(path):
         file = path + '/' + 'halos_' + str(snap_num) + '/' + 'halos_' + str(snap_num) + ".0.bin"
 
     return np.array(scale_list)
+
+class getsnap:
+    """
+    Class that allows you to easily turn scale factor into snap number.
+    Usage:
+    from mergertrees.GetScaleFactors import getsnap
+    getsnap = getsnap() #create object named getsnap. Note this destroys your import!
+    # also works with parentheses instead of brackets if you so desire
+    getsnap[1.0]
+    getsnap[[1.0,0.9,0.8]]
+    
+
+    Implementation: spline the snapnums against the scale factors, then int(round(spline))
+    (So note that you can give it scale factors that aren't close to a spline)
+    """
+    def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
+                 minsnap=0,maxsnap=63):
+        self.minsnap = minsnap
+        self.maxsnap = maxsnap
+        self.scale_list = getScaleFactors(path)
+        self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
+        self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
+    def getsnap(self,x):
+        snap=int(round(self.spl(x)))
+        if snap>max(self.snap_list):
+            print "WARNING: snap is "+str(snap)+", larger than largest snap!"
+        if snap<min(self.snap_list):
+            print "WARNING: snap is "+str(snap)+", less than smallest snap!"
+        return snap
+    def __getitem__(self,key):
+        try:
+            return [self.getsnap(x) for x in key]
+        except:
+            return self.getsnap(key)
+    def __call__(self,arg):
+        return self.__getitem__(arg)
                     
 def storeSubInfo(file):
     """
@@ -309,6 +346,37 @@ class MTCatalogueTree:
                 self.data[i] = struct.unpack(fmt,f.read(fmtsize))
             self.rockstar_id = self.data[0]['origid']
 
+    def plottree(self,filename='treegraph',makepdf=True):
+        """
+        http://www.graphviz.org/doc/info/attrs.html
+        """
+        if makepdf and filename[-4:] == '.pdf': filename = filename[:-4]
+        print "Generating graph"
+        maxvalue = np.max(self.data['rvir'])
+
+        graph = pydot.Dot(graph_type='graph',size="8, 8")
+        for row in reversed(xrange(len(self.data))):
+            nodesize = 100.0*(self.data[row]['rvir']/maxvalue)
+            if nodesize < 0.01: continue #skip over things too small to plot
+            graph.add_node(pydot.Node(self.data[row]['id'],
+                                      shape='circle',fixedsize="true",
+                                      width=nodesize,#height=nodesize,
+                                      label=" "
+                                      #label=str(getsnap(self.data[row]['scale']))+": "+str(self.data[row]['origid'])
+                                      ))
+            graph.add_edge(pydot.Edge(self.data[row]['id'],self.data[row]['desc_id']))
+        #Delete the extra last node
+        graph.del_edge(self.data[0]['id'],self.data[0]['desc_id'])
+        graph.del_node(self.data[0]['desc_id'])
+        print "Writing "+str(len(graph.get_nodes()))+" nodes and "+str(len(graph.get_edges()))+" edges to "+filename+'.ps2'
+        print "(may freeze/take hours if graph is too big)"
+        graph.write_ps2(filename+'.ps2')
+        if makepdf:
+            print "Converting to "+filename+'.pdf'
+            subprocess.call(["convert",filename+'.ps2',filename+'.pdf'])
+            print "Removing "+filename+'.ps2'
+            subprocess.call(["rm",filename+'.ps2'])
+
     def getSubTree(self,row):
         """
         Returns a MTCatalogueTree object that is the subtree of the halo specified by row
@@ -465,10 +533,13 @@ class MTCatalogue:
                     tag = f.read(8)
                     halotype,nrow = struct.unpack("ii",tag)
                     if halotype != 0:
+                        print "halotype != 0, instead",halotype
                         raise ValueError
                     hosttree = MTCatalogueTree(f=f,scale_list=self.scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
                     rsid = hosttree.rockstar_id
                     if rsid != haloid:
+                        print "rsid != haloid"
+                        print "rsid",rsid,"; haloid",haloid
                         raise ValueError
                     if indexbyrsid:
                         self.Trees[haloid]=hosttree
@@ -489,7 +560,7 @@ class MTCatalogue:
                             halotype,nrow = struct.unpack("ii",tag)
                     else: #index by mass order
                         while halotype==1:
-                            thistree = MTCatalogueTree(f=f,scale_list=scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
+                            thistree = MTCatalogueTree(f=f,scale_list=self.scale_list,halotype=halotype,nrow=nrow,fmt=self.fmt,fmttype=self.fmttype)
                             self.Trees[counter] = thistree ##use counter instead of rsid
                             counter+=1
                             tag = f.read(8)

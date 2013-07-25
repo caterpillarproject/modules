@@ -21,6 +21,15 @@ def plotlegend(ax,legendfontsize,location=1):
     leg = ax.legend(handles, labels,prop={'size':legendfontsize},ncol=1,loc=location)
     leg.draw_frame(False)
 
+
+def imsave2(fname, arr, vmin=None, vmax=None, cmap=None, origin=None, z='dummy'):
+    from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+    from matplotlib.figure import Figure
+    fig = Figure(figsize=arr.shape[::-1], dpi=1, frameon=False)
+    canvas = FigureCanvas(fig)
+    fig.figimage(arr, cmap=cmap, vmin=vmin, vmax=vmax, origin=origin)
+    fig.savefig(fname + '.png', format='PNG',dpi=1)
+    
 def tick_function(X):
     V = (1/X)-1
     return ["%.1f" % z for z in V]
@@ -355,13 +364,13 @@ def create3x3fig(size,xmin,xmax,ymin,ymax,xlabel,ylabel):
 
     return fig,ax1,ax2,ax3,ax4,ax5,ax6,ax7,ax9
     
-def drawcircle(x,y,r,vec):
-    if vec == True:
+def drawcircle(x,y,r):
+    try:
         phi = np.linspace(0.0,2*np.pi,100)
         na=np.newaxis
         x_line = x[na,:]+r[na,:]*np.sin(phi[:,na])
         y_line = y[na,:]+r[na,:]*np.cos(phi[:,na])
-    if vec == False:
+    except:
         x = float(x)
         y = float(y)
         r = float(r)
@@ -369,6 +378,7 @@ def drawcircle(x,y,r,vec):
         na=np.newaxis
         x_line = x+r*np.sin(phi)
         y_line = y+r*np.cos(phi)
+
     return x_line,y_line
 
 def determinebasepath(node):
@@ -381,22 +391,7 @@ def determinebasepath(node):
         
     return basepath
 
-def drawcircle(x,y,r,vec):
-    if vec == True:
-        phi = np.linspace(0.0,2*np.pi,100)
-        na=np.newaxis
-        x_line = x[na,:]+r[na,:]*np.sin(phi[:,na])
-        y_line = y[na,:]+r[na,:]*np.cos(phi[:,na])
-    if vec == False:
-        x = float(x)
-        y = float(y)
-        r = float(r)
-        phi = np.linspace(0.0,2*np.pi,100)
-        na=np.newaxis
-        x_line = x+r*np.sin(phi)
-        y_line = y+r*np.cos(phi)
-    return x_line,y_line
-    
+
 def makelegend(ax,line=0,location=1):
     handles, labels = ax.get_legend_handles_labels()
     
