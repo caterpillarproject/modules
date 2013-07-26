@@ -43,10 +43,11 @@ ParticleSize = 8 #: in bytes
 KpcToMpc = 1.0/1000
 
 #######################
-numextras = 9
+numextras = 11
 nfloats = len(varlist) - numextras - 3  #33
+# hostID, offset, particle_offset added later. not read from file.
 #print "nfloats:",nfloats
-datatypesstr = "q"+("f" * nfloats)+"qqqqqqff" #change
+datatypesstr = "q"+("f" * nfloats)+"qqqqqqffff" #change
 numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
 #numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
 #print "numbytes:",numbytes
