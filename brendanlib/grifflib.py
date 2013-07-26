@@ -9,6 +9,26 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def CorrectPos(pos, box):
+
+    com=pos.sum()/len(pos)
+    index=(abs(pos[:]-com)<box/2)
+
+    if ~(np.alltrue(index)):
+        index=(pos[:]<box/2)
+        if (index.sum()>=len(index)/2):
+            pos[~index]=pos[~index]-box
+        else:
+            pos[index]=pos[index]+box
+
+def COM(posX,posY,posZ):
+
+    tmpX=np.float64(posX)
+    tmpY=np.float64(posY)
+    tmpZ=np.float64(posZ)
+
+    return tmpX.sum()/len(tmpX), tmpY.sum()/len(tmpY), tmpZ.sum()/len(tmpZ)
+        
 def plotquantl(ax,x,y,label):
     ax.plot(x,y,linestyle='-',linewidth=2,label=str(label))
     #ax.plot(x,y,marker='o',linewidth=10,label=str(label))
@@ -36,6 +56,16 @@ def tick_function(X):
 
 def calcT(p):
     return 1 - (1./p)**2
+
+def placenormtext(ax,xpos,ypos,teststr,fontsize):
+    xpos = float(xpos)
+    ypos = float(ypos)
+    ax.text(xpos, ypos,teststr,
+        horizontalalignment='left',
+        verticalalignment='center',
+        color='black',
+        fontsize=fontsize,
+        transform = ax.transAxes)
 
 def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
@@ -72,6 +102,19 @@ def getxyzdeltamcut(resolution,icgeometry):
             pass
 
     return x,y,z,m,mgroup
+
+def getcentext(filename):
+    with open(filename, 'r') as fp:
+        lines = []
+        for i in xrange(6):
+            lines.append(fp.readline().strip('#\n'))
+
+    lines = map(float, lines)
+    return tuple(lines)
+
+def getlagrxyz(filename):
+    x, y, z = np.loadtxt(filename, comments='#', unpack=True)
+    return x,y,z
 
 def getcandidatelist(filename):
     listin = []
@@ -437,3 +480,54 @@ def makecolormap():
         rgbg[color,2] = lambda2[color]**gamma + a[color] * 1.97249 * math.cos(phi[color])
 
     return col.LinearSegmentedColormap.from_list('newmap',rgbg,N=vals)
+
+def cosmoconstant(cosmology):
+#    if cosmology == 'WMAP1':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+#    
+#    if cosmology == 'WMAP3':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+#  
+#    if cosmology == 'WMAP5':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+    
+    if cosmology == 'WMAP7':
+        omegam = 0.276
+        omegal = 0.724
+        omegab = 0.045
+        hubble = 70.3
+        sigma8 = 0.811
+        nspec = 0.961
+    
+#    if cosmology == 'WMAP9':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+    
+    if cosmology == 'PLANCK':
+        omegam = 0.3175
+        omegal = 0.6825
+        omegab = 0.0489991
+        hubble = 67.11
+        sigma8 = 0.8344
+        nspec = 0.9624
+
+    return omegam,omegal,omegab,hubble,sigma8,nspec
