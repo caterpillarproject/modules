@@ -9,16 +9,9 @@ cm = plt.cm.get_cmap('RdYlBu')
 import os
 import sys
 
-basedir = "/bigbang/data/AnnaGroup/caterpillar/halos/"
-
 inputdir = sys.argv[1]
-
 snapnum = 63
 fontsize = 12
-padlist = ['p6','p7','p8','p9','p10']
-reslist = ['l11']
-nvirlist= ['nvir3']
-regionlist = ['ellipsoid']
 TimeStepMod=100
 subtags = ["total", "treegrav", "pmgrav", "voronoi", "hydro", "domain", "sph", "i/o"]
 label_subtags={"total": "total", 
@@ -36,13 +29,10 @@ fig = plt.figure()
 ax1 = fig.add_subplot(2,1,1)
 ax2 = fig.add_subplot(2,1,2)
 
-tmppath = basedir + '/H' + res + '/' + pad + '/' + nvir + '/outputs'
-print tmppath
-titlestr = pad + ", " + nvir
-cputxt = inputdir + '/cpu.txt'
-timingstxt = inputdir + '/timings.txt'
-energytxt = inputdir + '/energy.txt'
-infotxt = inputdir + '/info.txt'
+cputxt = basedir + '/cpu.txt'
+timingstxt = basedir + '/timings.txt'
+energytxt = basedir + '/energy.txt'
+infotxt = basedir + '/info.txt'
 
 try:
     with open(cputxt): pass
