@@ -10,9 +10,8 @@ ax.set_xlabel("Particle Type", fontsize=14)
 snapshot = 63
 
 def pdist(file):
-    inputdir = sys.argv[0]
-    print "Reading: ",inputdir
-    header = rs.snapshot_header(inputdir)
+    print "Reading: ",filename
+    header = rs.snapshot_header(filename)
     nall = np.log10(header.nall)
     partypes = np.array([0,1,2,3,4,5])
     ax.plot(partypes,nall,)
