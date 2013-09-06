@@ -1,4 +1,4 @@
-import readsnapshots.readsnapHDF5 as rs
+import readsnapshots.readsnap as rs
 import pylab as plt
 import sys
 import numpy as np
