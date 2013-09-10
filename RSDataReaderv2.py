@@ -18,8 +18,8 @@ import time
 import struct
 
 varlist = ['id','posX','posY','posZ','corevelx','corevely','corevelz', \
-          'pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ','mgrav',\
-          'rvir','child_r','dummy1','mvir','vmax','rvmax','rs','rs_klypin',\
+          'pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ','mvir',\
+          'rvir','child_r','dummy1','mgrav','vmax','rvmax','rs','rs_klypin',\
           'vrms','Jx','Jy','Jz','Epot','spin','dummy2','m200c','m500c','m2500c', \
           'Xoff','Voff','b_to_a','c_to_a','A[x]','A[y]','A[z]','spin_bullock','T/|U|','npart',\
           'num_cp','numstart','desc','flags','n_core','min_pos_err','min_vel_err','min_bulkvel_err','dummy3', \
@@ -57,7 +57,7 @@ num_columns = len(varlist) #change
 
 id = 0 
 mvir = 13
-npart = varlist.index('npart')
+npart = 30 #change
 hostID = num_columns - 3 #change
 offset = num_columns - 2 #change
 particle_offset = num_columns - 1 #change
@@ -148,14 +148,18 @@ class RSDataReader:
                 line = f.read(numbytes)
                 tmpinx = num_columns -3
                 data[i,0:tmpinx] = struct.unpack(datatypesstr, line) #change
+                #for i in xrange(0,tmpinx):
+                #    print data[0,i]
+                #print data[0,0:10] 
+                #print data[0,10:20]
+                #print data[0,20:30]
+                #print data[0,30:39] #change
                 # info to read particle IDs for halo
                 data[i,offset] = particleID_start
-                #print particleID_start2, data[i,npart], particleID_start2+data[i,npart]
                 data[i,particle_offset] = particleID_start2
                 files[i] = file_name
                 particleID_start += ParticleSize*data[i,npart]
                 particleID_start2 += data[i,npart]
-                #print particleID_start2, j, ' j listed last'
                 i += 1
             # Read in and store particle information (optional)
             if AllParticles:
