@@ -1,6 +1,7 @@
 """
 Merger Tree updated version to improve speed
 
+Includes MTCatalogueTree, which has simple visualization built in
 
 Old Strategy:
 1) First read in file line by line searching for subhalos at a=1 and building
@@ -346,36 +347,65 @@ class MTCatalogueTree:
                 self.data[i] = struct.unpack(fmt,f.read(fmtsize))
             self.rockstar_id = self.data[0]['origid']
 
-    def plottree(self,filename='treegraph',makepdf=True):
+    def plottree(self,filename='mytree',makepdf=True,savedot=False,mask=None):
         """
         http://www.graphviz.org/doc/info/attrs.html
+        @param filename: the file name you want to save to. Don't put on a file extension,
+                         e.g. if you want 'mytree.pdf' then filename='mytree'
+        @param makepdf: defaults to True, writes a .ps2 and converts to .pdf using the
+                        shell's convert program
+        @param savedot: writes out the .dot file. May be useful if your graph is ginormous
+                        and takes too long to compute.
+        @param mask: UNDER DEVELOPMENT an optional boolean array to mask the tree's data. 
+                     Intended for pruning small objects out of gigantic trees when plotting.
+                     WILL NOT WORK if you prune a halo from the middle of a branch!
+                     (It'll add at least one more halo after the one you want,
+                     it won't reconnect halos if you splice one in the middle,
+                     and no guarantees that it will work properly even after that.)
+                     The user is responsible for doing something that won't break the
+                     plotting (i.e., don't get rid of the base halo), and for keeping
+                     track of what mask is applied.
+                     Note the mask is just for making the plot, i.e. it will not be saved
+                     into the tree's internal data structures.
+        TODO allow some flexibility in coloring/text? I don't think so, it may be best
+             to write more functions that can modify the returned graph object.
+
+        @return graph: the pydot.Dot graph object
         """
         if makepdf and filename[-4:] == '.pdf': filename = filename[:-4]
+        if mask != None:
+            plotdata = self.data[mask]
+        else:
+            plotdata = self.data
         print "Generating graph"
-        maxvalue = np.max(self.data['rvir'])
+        maxvalue = np.max(plotdata['rvir'])
 
         graph = pydot.Dot(graph_type='graph',size="8, 8")
-        for row in reversed(xrange(len(self.data))):
-            nodesize = 100.0*(self.data[row]['rvir']/maxvalue)
+        for row in reversed(xrange(len(plotdata))):
+            nodesize = 100.0*(plotdata[row]['rvir']/maxvalue)
             if nodesize < 0.01: continue #skip over things too small to plot
-            graph.add_node(pydot.Node(self.data[row]['id'],
+            graph.add_node(pydot.Node(plotdata[row]['id'],
                                       shape='circle',fixedsize="true",
                                       width=nodesize,#height=nodesize,
                                       label=" "
-                                      #label=str(getsnap(self.data[row]['scale']))+": "+str(self.data[row]['origid'])
+                                      #label=str(getsnap(plotdata[row]['scale']))+": "+str(plotdata[row]['origid'])
                                       ))
-            graph.add_edge(pydot.Edge(self.data[row]['id'],self.data[row]['desc_id']))
+            graph.add_edge(pydot.Edge(plotdata[row]['id'],plotdata[row]['desc_id']))
         #Delete the extra last node
-        graph.del_edge(self.data[0]['id'],self.data[0]['desc_id'])
-        graph.del_node(self.data[0]['desc_id'])
-        print "Writing "+str(len(graph.get_nodes()))+" nodes and "+str(len(graph.get_edges()))+" edges to "+filename+'.ps2'
-        print "(may freeze/take hours if graph is too big)"
-        graph.write_ps2(filename+'.ps2')
+        graph.del_edge(plotdata[0]['id'],plotdata[0]['desc_id'])
+        graph.del_node(plotdata[0]['desc_id'])
+        if savedot:
+            print "Writing dot file"
+            graph.write_dot(filename+'.dot')
         if makepdf:
+            print "Writing "+str(len(graph.get_nodes()))+" nodes and "+str(len(graph.get_edges()))+" edges to "+filename+'.ps2'
+            print "(may freeze/take hours if graph is too big)"
+            graph.write_ps2(filename+'.ps2')
             print "Converting to "+filename+'.pdf'
             subprocess.call(["convert",filename+'.ps2',filename+'.pdf'])
             print "Removing "+filename+'.ps2'
             subprocess.call(["rm",filename+'.ps2'])
+        return graph
 
     def getSubTree(self,row):
         """
@@ -575,12 +605,12 @@ class MTCatalogue:
                 print "(Catalogue object is still created but empty)"
         f.close()
 
-    ## TODO maybe edit this guy too
     def getSubTrees(self,treenum):
         """
         returns list of indices of subhalo trees of tree given by treenum
         """
         if self.indexbyrsid:
+            # TODO
             print 'getSubTrees not supported for indexbyrsid yet'
             return 0
         else:

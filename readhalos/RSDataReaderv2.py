@@ -56,7 +56,7 @@ num_columns = len(varlist) #change
 #######################
 
 id = 0 
-mvir = 13
+mvir = 17
 npart = varlist.index('npart')
 hostID = num_columns - 3 #change
 offset = num_columns - 2 #change
@@ -77,7 +77,6 @@ class RSDataReader:
         self.dir = dir
         self.snap_num = snap_num
         self.AllParticles = AllParticles
-  
         # open first file, test if it exists
         file_num = 0 
         file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
