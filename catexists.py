@@ -36,6 +36,13 @@ for haloid in haloidlist:
             ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             try:
+                subdirnames = basepath + "/" + haloid
+                for subname in os.listdir(subdirnames)
+                    halosubdirlist.append(filename)
+                    fileparts =  filename.split("_")
+                    print fileparts
+                    #levelmax = float(fileparts[5][2:4]
+                        
                 with open(corepath + "ics.0"):
                     icfilesize = os.path.getsize(corepath + "ics.0")
                     if icfilesize > 0:
