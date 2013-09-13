@@ -36,25 +36,32 @@ for haloid in haloidlist:
             ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             try:
-                subdirnames = basepath + "/" + haloid
-                for subname in os.listdir(subdirnames)
-                    halosubdirlist.append(filename)
-                    fileparts =  filename.split("_")
-                    print fileparts
-                    #levelmax = float(fileparts[5][2:4]
-                        
                 with open(corepath + "ics.0"):
                     icfilesize = os.path.getsize(corepath + "ics.0")
                     if icfilesize > 0:
                         marker = 'rD'
+			markerface = 'red'
     
                     if os.path.isdir(corepath + "outputs/snapdir_063"):
-                        marker = 'k^'
+            	    	marker = 'k^'
+			markerface = 'k'
+
+                    elif os.path.isdir(corepath + "outputs/"):
+                        subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
+                        for subname in os.listdir(subdirnames):
+                            fileparts =  subname.split("_")
+                            if any("snapdir" in s for s in fileparts):
+                                snapshot = fileparts[1][-2:]
+                            
+                        ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
+			marker = 'k^'
+			markerface = 'white'
     
                     if os.path.isdir(corepath + "outputs/group_063"):
                         marker = 'bo'
+			markerface = 'b'
     
-                    ax.plot(int(level),int(nrvir),marker)
+                    ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface)
 
             except IOError: pass
 
