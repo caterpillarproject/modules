@@ -1,6 +1,6 @@
 import numpy as np
 
-noutputs = 1024
+noutputs = 8
 expfacti = 0.0212765957447
 
 snapshots = range(0,noutputs)
