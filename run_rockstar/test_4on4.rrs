@@ -1,0 +1,23 @@
+## Name of this job (names rockstar cfg file and other temporary files)
+jobname="test_4on4"
+
+## Directory where rockstar is located
+rsdir="/home/alexji/Rockstar-0.99.9"
+## Directory where consistenttrees is located
+ctrees="/home/alexji/consistent_trees-0.99.9.2"
+## Directory of RunRockstar, so other nodes can cd into it
+rrsdir="/home/alexji/AlexRunRockstar"
+
+## Directory where snapshots are located
+indir="/bigbang/data/AnnaGroup/caterpillar/halos/H140666/H140666_BB_Z127_P7_LN7_LX12_O4_NV5/outputs/"
+## Directory to save snapshots and merger trees in. Create it before you run!
+outdir="/spacebase/data/alexji/data/test_rockstar_4on4"
+
+## Compute node numbers. Doesn't error check, so don't give it bad nodes!
+nodearr=(10 11 12 13)
+
+## Stuff used to autogenerate the .cfg file
+numsnaps=64 #total number of snaps
+startsnap=0 #starting snap number
+numblocks=4 #number of Gadget blocks per snap
+forceres=.005 #force resolution in kpc

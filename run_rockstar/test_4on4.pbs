@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo "HI!"
+/home/alexji/AlexRunRockstar/run_rockstar.sh /home/alexji/AlexRunRockstar/test_4on4.rrs
