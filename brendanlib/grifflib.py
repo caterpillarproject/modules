@@ -431,6 +431,8 @@ def determinebasepath(node):
         basepath = '/Users/griffen/Desktop/'
     if node == "spacebase":
         basepath = '/spacebase/data/AnnaGroup/'
+    if node == "bigbang.mit.edu":
+        basepath = '/bigbang/data/AnnaGroup/'
         
     return basepath
 

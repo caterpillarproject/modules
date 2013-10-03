@@ -9,8 +9,7 @@ cm = plt.cm.get_cmap('RdYlBu')
 import os
 import sys
 
-def cpu(file):
-    inputdir = sys.argv[1]
+def cpu(basedir):
     snapnum = 63
     fontsize = 12
     TimeStepMod=100
@@ -25,10 +24,10 @@ def cpu(file):
                    "i/o": "I/O"}
     tcolors = ["Azure", "Blue", "Green", "Red", "SpringGreen", "DarkTurquoise", "Red", "Black", "FireBrick", "Purple", "OrangeRed", "SeaGreen", "Navy", "Yellow", "Tomato", "Violet", "Tan", "Olive", "Gold"] 
     
-    fig = plt.figure()
+    fig = plt.figure(figsize=(16,7))
     
-    ax1 = fig.add_subplot(2,1,1)
-    ax2 = fig.add_subplot(2,1,2)
+    ax1 = fig.add_subplot(1,2,1)
+    ax2 = fig.add_subplot(1,2,2)
     
     cputxt = basedir + '/cpu.txt'
     timingstxt = basedir + '/timings.txt'
@@ -89,13 +88,13 @@ def cpu(file):
             y=np.concatenate((data1[:],[data2[steps-1]],data2[::-1],[data1[0]]))
             ax1.fill(x,y,label=label_subtags[found_subtags[i]],color=tcolors[subtags.index(found_subtags[i])])
             data1=data2
+
         ax1.axis([x.min(),0.99*x.max(),0,100.])
-        if figi == 1:
-            handles, labels = ax1.get_legend_handles_labels()
+        handles, labels = ax1.get_legend_handles_labels()
         # reverse the order
-            prop = matplotlib.font_manager.FontProperties(size=fontsize)
-            #ax1.legend(handles[::-1], labels[::-1],loc="lower right",prop=prop, bbox_to_anchor=(0., -5.0, 1., .102)).draggable()
-            fig.legend(handles[::-1], labels[::-1], 'upper center',prop=prop,ncol=number_of_found_subtags-1)
+        prop = matplotlib.font_manager.FontProperties(size=fontsize)
+        #ax1.legend(handles[::-1], labels[::-1],loc="lower right",prop=prop, bbox_to_anchor=(0., -5.0, 1., .102)).draggable()
+        fig.legend(handles[::-1], labels[::-1], 'upper center',prop=prop,ncol=number_of_found_subtags-1)
         #plt.savefig(tmppath+"/times_rel_diff.pdf")
         #plt.clf()
         # cumulative cpu usage over time
@@ -109,6 +108,7 @@ def cpu(file):
             y=np.concatenate((data1[:],[data2[steps-1]],data2[::-1],[data1[0]]))
             ax2.fill(x,y,label=label_subtags[found_subtags[i]],color=tcolors[subtags.index(found_subtags[i])])
             ax2.text(0.4, 0.935, "miscellaneous", transform = ax2.transAxes, size=fontsize, color="brown")
+            ax1.text(0.4, 0.935, "miscellaneous", transform = ax1.transAxes, size=fontsize, color="brown")
             data1=data2
         ax2.axis([x.min(),0.99*x.max(),0,100.])
         #if figi == 1:
@@ -125,18 +125,22 @@ def cpu(file):
     ax2.set_ylabel("cumulative (%)", fontsize=fontsize)
     ax1.set_xlabel("time-step (10$^3$)", fontsize=fontsize)
     ax2.set_xlabel("time-step (10$^3$)", fontsize=fontsize)
-    ax1.text(0.5,0.05,titlestr,
-            horizontalalignment='center',
-            verticalalignment='bottom',
-            color='white',
-            transform = ax1.transAxes)
-    ax2.text(0.5, 0.05,titlestr,
-            horizontalalignment='center',
-            verticalalignment='bottom',
-            color='white',
-            transform = ax2.transAxes)
+    #ax1.text(0.5,0.05,"",
+    #        horizontalalignment='center',
+    #        verticalalignment='bottom',
+    #        color='white',
+    #        transform = ax1.transAxes)
+    #ax2.text(0.5, 0.05,titlestr,
+    #        horizontalalignment='center',
+    #        verticalalignment='bottom',
+    #        color='white',
+    #        transform = ax2.transAxes)
     #plt.clf()
     #fig1.savefig('./figs/' + regionlist[0] + 'cpu_relative.png')
     #fig2.savefig('./figs/' + regionlist[0] + 'cpu_cumulative.png')
     
     plt.show()
+
+if __name__ == '__main__':
+    import os
+    cpu(os.getcwd())
