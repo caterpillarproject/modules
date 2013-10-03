@@ -1,0 +1,20 @@
+## Name of this job (used for temporary files if you run more than one)
+jobname="tmp"
+
+## Directory where rockstar is located
+rsdir="/home/alexji/Rockstar-0.99.9"
+## Full path to rockstar config file
+config="$rsdir/cfgs/test_rockstar_8on4.cfg"
+## Directory where consistenttrees is located
+ctrees="/home/alexji/consistent_trees-0.99.9.2"
+## Directory to save snapshots and merger trees in
+outdir="/spacebase/data/alexji/data/test_rockstar_8on4"
+
+## Compute node numbers. Doesn't error check, so don't give it bad nodes!
+nodearr=(10 11 12 13 14 15 16 17)
+## Number of snapshots you'll be running
+## Make sure this is consistent with the rockstar cfg file
+numsnaps=64
+
+## Directory of RunRockstar, so other nodes can cd into it
+rrsdir="/home/alexji/AlexRunRockstar"
