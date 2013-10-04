@@ -18,13 +18,14 @@ import time
 import struct
 
 varlist = ['id','posX','posY','posZ','corevelx','corevely','corevelz', \
-          'pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ','mgrav',\
-          'rvir','child_r','dummy1','mvir','vmax','rvmax','rs','rs_klypin',\
+          'pecVX','pecVY','pecVZ', 'bulkvelX','bulkvelY','bulkvelZ',\
+           'mgrav','rvir','child_r','dummy1','mvir','vmax','rvmax','rs','rs_klypin',\
           'vrms','Jx','Jy','Jz','Epot','spin','dummy2','m200c','m500c','m2500c', \
           'Xoff','Voff','b_to_a','c_to_a','A[x]','A[y]','A[z]',
            'b_to_a_2','c_to_a_2','A2[x]','A2[y]','A2[z]',
            'spin_bullock','T/|U|','npart',\
-          'num_cp','numstart','desc','flags','n_core','min_pos_err','min_vel_err','min_bulkvel_err','dummy3', \
+          'num_cp','numstart','desc','flags','n_core',\
+           'min_pos_err','min_vel_err','min_bulkvel_err','dummy3', \
           'hostID','offset','particle_offset']
 
           #'dummy8','dummy9','dummy10','dummy11','dummy12','dummy13','dummy14','dummy15','dummy16','dummy17','dummy18',\
@@ -40,18 +41,26 @@ varlist = ['id','posX','posY','posZ','corevelx','corevely','corevelz', \
 
 BinaryHeaderSize = 256 #: in bytes
 HeaderInfoSize = 96  #: in bytes
-HaloSize = 176  #: in bytes
+HaloSize = 256
+#HaloSize = 176 + 20  #: in bytes
 ParticleSize = 8 #: in bytes
 KpcToMpc = 1.0/1000
 
 #######################
-numextras = 11
-nfloats = len(varlist) - numextras - 3  #33
+#numextras = 10
+#nfloats = 12+33
+#nfloats = len(varlist) - numextras - 3  #33
 # hostID, offset, particle_offset added later. not read from file.
 #print "nfloats:",nfloats
-datatypesstr = "q"+("f" * nfloats)+"qqqqqqffff" #change
-numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
+#datatypesstr = "q"+("f" * nfloats)+"qqqqqqfff" #change
+#numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
+datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqfff"
+numbytes = 252
 #numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
+#print varlist
+#print len(varlist)
+#print datatypesstr
+#print len(datatypesstr)
 #print "numbytes:",numbytes
 num_columns = len(varlist) #change
 #print "num_columns:",num_columns
@@ -146,9 +155,11 @@ class RSDataReader:
 
             # Produce array of Halo objects
             for j in range(0,num_halos):
-                line = f.read(numbytes)
+                #line = f.read(numbytes)
+                line = f.read(252)
                 tmpinx = num_columns -3
                 data[i,0:tmpinx] = struct.unpack(datatypesstr, line) #change
+                line = f.read(4) # extra buffer space to make it 256 bytes
                 # info to read particle IDs for halo
                 data[i,offset] = particleID_start
                 #print particleID_start2, data[i,npart], particleID_start2+data[i,npart]
@@ -169,7 +180,8 @@ class RSDataReader:
         sortedIndices = data[:,mvir].argsort()[::-1]
         data = data[sortedIndices]
         files = files[sortedIndices]
-            
+        
+        np.save('tmp',np.array(data[:,0]))
         self.files = pandas.DataFrame(files,index=data[:,id].astype(int),columns=['file'])
 
         #print data.shape, 'shape of data'
