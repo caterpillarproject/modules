@@ -54,8 +54,8 @@ KpcToMpc = 1.0/1000
 #print "nfloats:",nfloats
 #datatypesstr = "q"+("f" * nfloats)+"qqqqqqfff" #change
 #numbytes = datatypesstr.count('q')*8 + datatypesstr.count('f')*4
-datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqfff"
-numbytes = 252
+datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqffff"
+numbytes = 256
 #numbytes = (nfloats+3)*4+(numq+2)*8+4 #change
 #print varlist
 #print len(varlist)
@@ -156,10 +156,9 @@ class RSDataReader:
             # Produce array of Halo objects
             for j in range(0,num_halos):
                 #line = f.read(numbytes)
-                line = f.read(252)
+                line = f.read(256)
                 tmpinx = num_columns -3
                 data[i,0:tmpinx] = struct.unpack(datatypesstr, line) #change
-                line = f.read(4) # extra buffer space to make it 256 bytes
                 # info to read particle IDs for halo
                 data[i,offset] = particleID_start
                 #print particleID_start2, data[i,npart], particleID_start2+data[i,npart]
