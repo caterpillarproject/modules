@@ -127,5 +127,5 @@ done
 ## generate parents.list
 for ((i=0;i<=$lastsnap;++i))
 do
-    $rsdir/util/find_parents $outdir'/halos_'$i'/out_'$i'.list' > $outdir'/halos_'$i'/parents.list'
+    $rsdir/util/find_parents $outdir'/halos_'$i'/out_'$i'.list' 100 > $outdir'/halos_'$i'/parents.list'
 done
