@@ -45,4 +45,4 @@ def pdist(filename):
 
 if __name__ == '__main__':
     import os
-    pdist(os.getcwd() + "/ics.0")
+    pdist(os.getcwd() + "/ics_rewrite.0")

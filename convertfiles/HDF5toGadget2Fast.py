@@ -22,12 +22,12 @@ def Convert(base, snapnum, newbase):
     filebase = base+'/snapdir_'+str(snapnum).zfill(3)+'/snap_'+str(snapnum).zfill(3)
     h = rs.snapshot_header(filebase+'.0')
     headerformat = 'iiiiiiiddddddddiiiiiiiiiidddd'
-    
+    print h.filenum
     for k in range(h.filenum):
         file = filebase+'.'+str(k)
         h = rs.snapshot_header(file)
         f = open(newbase+'/snap_'+str(snapnum).zfill(3)+'.'+str(k), 'wb')
-        #print 'Starting on Header', snapnum, k
+        print 'Starting on Header', snapnum, k
         ## write size of block 1 in bytes
         header_size = 256 #bytes
 
@@ -130,7 +130,7 @@ def Convert(base, snapnum, newbase):
             f.write(data)
             f.write(data)
 
-        #print 'Finished Positions'
+        print 'Finished Positions'
         
         # write velocities
         if rs.contains_block(file+'.hdf5',"VEL ",parttype=1):
@@ -153,14 +153,14 @@ def Convert(base, snapnum, newbase):
             f.write(data)
             f.write(data)
 
-        #print 'Finished Velocities'
+        print 'Finished Velocities'
 
         # write Ids
         if rs.contains_block(file+'.hdf5',"ID  ",parttype=1):
             d1 = rs.read_block(file, "ID  ",parttype=1,verbose=False)
-            blocksize = struct.pack('I', len(d1)*4) # 4 bytes to an id
+            blocksize = struct.pack('q', len(d1)*8) #4 bytes to an id
             f.write(blocksize)
-            data = struct.pack('I'*len(d1), *d1)
+            data = struct.pack('q'*len(d1), *d1)
             f.write(data)
             """
             for i in range(len(d1)):
@@ -173,7 +173,7 @@ def Convert(base, snapnum, newbase):
             f.write(data)
             f.write(data)
 
-        #print 'Finished Ids'
+        print 'Finished Ids'
 
         ## write MASS information now
         if rs.contains_block(file+'.hdf5',"MASS",parttype=1):
@@ -193,180 +193,8 @@ def Convert(base, snapnum, newbase):
             f.write(data)
             f.write(data)
 
-        #print 'Finished Mass'
+        print 'Finished Mass'
 
-        ## write Internal Energy
-        if rs.contains_block(file+'.hdf5',"U   ",parttype=1):
-            d1 = rs.read_block(file, "U   ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished Internal Energy'
-
-        ## write density
-        if rs.contains_block(file+'.hdf5',"RHO ",parttype=1):
-            d1 = rs.read_block(file, "RHO ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished Internal Energy'
-
-        ## NE - electron abundance
-        if rs.contains_block(file+'.hdf5',"NE  ",parttype=1):
-            d1 = rs.read_block(file, "NE  ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished electron abundance'
-
-        ## NH neutral hydrogen abundance
-        if rs.contains_block(file+'.hdf5',"NH  ",parttype=1):
-            d1 = rs.read_block(file, "NH  ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-            
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished neutral hydrogen abundance'
-
-        ## HSML
-        if rs.contains_block(file+'.hdf5',"HSML",parttype=1):
-            d1 = rs.read_block(file, "HSML",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished HSML'
-
-        ## SFR
-        if rs.contains_block(file+'.hdf5',"SFR ",parttype=1):
-            d1 = rs.read_block(file, "SFR ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished SFR'
-   
-        ## AGE
-        if rs.contains_block(file+'.hdf5',"AGE ",parttype=1):
-            d1 = rs.read_block(file, "AGE ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished Age'
-
-        ## Z
-        if rs.contains_block(file+'.hdf5',"Z   ",parttype=1):
-            d1 = rs.read_block(file, "Z   ",parttype=1,verbose=False)
-            blocksize = struct.pack('d', len(d1)*8) # 4 bytes to an id
-            f.write(blocksize)
-            
-            data = struct.pack('I'*len(d1), *d1)
-            f.write(data)
-            """
-            for i in range(len(d1)):
-                data = struct.pack('I',d1[i])
-                f.write(data)
-            """
-            f.write(blocksize)
-        else:
-            data = struct.pack('I',0)
-            f.write(data)
-            f.write(data)
-
-        #print 'Finished Z'
-
-        #ACCE =?
-        #d1 = rs.read_block(file, "ENDT",parttype=1,verbose=False)
-        #d1 = rs.read_block(file, "TSTP",parttype=1,verbose=False)
         f.close()
 
 if __name__ == "__main__":
