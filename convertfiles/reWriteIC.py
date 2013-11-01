@@ -24,9 +24,7 @@ def getBlocks(path):
     for i in xrange(0,header.filenum):
 
         header=rs.snapshot_header(pathname+'.'+str(i))
-
         if (header.npart[5]>0)&(header.massarr[5]==0.0):
-
             if count==0:
                 datM=rs.read_block(pathname+'.'+str(i), "MASS",parttype=5,doubleprec=False,mult=False)
                 count = count+1
