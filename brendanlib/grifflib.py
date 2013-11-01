@@ -347,13 +347,39 @@ def create31fig(size,xmin,xmax,ymin,ymax,xlabel,ylabel,title=None):
     ax3 = fig.add_subplot(313)
     plt.subplots_adjust(hspace=0.08)
     plt.subplots_adjust(wspace=0.08)
-    ax1.set_xticklabels([])
-    ax2.set_xticklabels([])
-    xticklabels = ax1.get_xticklabels()+ ax2.get_xticklabels()
-    plt.setp(xticklabels, visible=False)
+    #ax1.set_xticklabels([])
+    #ax2.set_xticklabels([])
+    #xticklabels = ax1.get_xticklabels()+ ax2.get_xticklabels()
+    #plt.setp(xticklabels, visible=False)
     ax1.set_title(title)
     ax2.set_ylabel(ylabel, fontsize = 20)
     ax3.set_xlabel(xlabel, fontsize = 20)
+    ax1.set_xlim([xmin,xmax])
+    ax2.set_xlim([xmin,xmax])
+    ax3.set_xlim([xmin,xmax])
+    ax1.set_ylim([ymin,ymax])
+    ax2.set_ylim([ymin,ymax])
+    ax3.set_ylim([ymin,ymax])
+    return fig,ax1,ax2,ax3
+
+def create13fig(size,xmin,xmax,ymin,ymax,xlabel1,ylabel1,xlabel2,ylabel2,xlabel3,ylabel3,title=None,fontsize=12):
+    fig = plt.figure(figsize=(size+15,size))
+    ax1 = fig.add_subplot(131)
+    ax2 = fig.add_subplot(132)
+    ax3 = fig.add_subplot(133)
+    plt.subplots_adjust(hspace=0.08)
+    plt.subplots_adjust(wspace=0.1)
+    #ax1.set_xticklabels([])
+    #ax2.set_xticklabels([])
+    #xticklabels = ax1.get_xticklabels()+ ax2.get_xticklabels()
+    #plt.setp(xticklabels,3 visible=False)
+    ax2.set_title(title)
+    ax1.set_xlabel(ylabel1, fontsize = fontsize)
+    ax1.set_ylabel(ylabel1, fontsize = fontsize)
+    ax2.set_xlabel(ylabel2, fontsize = fontsize)
+    ax2.set_ylabel(ylabel2, fontsize = fontsize) 
+    ax3.set_xlabel(ylabel3, fontsize = fontsize)
+    ax3.set_ylabel(ylabel3, fontsize = fontsize) 
     ax1.set_xlim([xmin,xmax])
     ax2.set_xlim([xmin,xmax])
     ax3.set_xlim([xmin,xmax])
@@ -423,6 +449,13 @@ def drawcircle(x,y,r):
         y_line = y+r*np.cos(phi)
 
     return x_line,y_line
+
+def getillustrispath():
+    node = platform.node()
+    if "harvard" in node:
+        basepath = '/n/home01/bgriffen/data/'
+    if node == "bigbang.mit.edu":
+        basepath = '/bigbang/data/bgriffen/'
 
 def determinebasepath(node):
     if node == "csr-dyn-150.mit.edu":
