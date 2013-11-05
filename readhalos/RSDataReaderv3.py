@@ -1,4 +1,7 @@
 """
+By: Brendan Griffen, Alex Ji, Greg Dooley (MIT)
+Contact: brendan.f.griffen@gmail.com
+
 Read in all data from Rockstar Halo Finder into a large matrix.
 Rows correspond to halos, columns correspond to halo properties.
 Much faster access to data than object approach.
