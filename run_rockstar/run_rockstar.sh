@@ -46,10 +46,12 @@ FORK_READERS_FROM_WRITERS   = 1
 FORK_PROCESSORS_PER_MACHINE = 8
 FILE_FORMAT = "GADGET2"
 FORCE_RES = ${forceres}
-FULL_PARTICLE_CHUNKS = 1         #Print particles for 1 of the 8 tasks
+FULL_PARTICLE_CHUNKS = 1
 STARTING_SNAP = ${startsnap}
-MASS_DEFINITION = "200c"
-BOX_SIZE = 100
+MASS_DEFINITION = "vir"
+BOX_SIZE = ${boxsize}
+${EXTRA1}
+${EXTRA2}
 EOF
 
 config=${rrsdir}/rrs_cfg/${jobname}.cfg
@@ -112,7 +114,7 @@ perl do_merger_tree.pl $outdir/outputs/merger_tree.cfg
 
 cd $outdir
 ## make folders
-c=0
+c=${startsnap}
 let lastsnap=$numsnaps-1
 while [ $c -le $lastsnap ]
 do
@@ -125,7 +127,7 @@ done
 
 
 ## generate parents.list
-for ((i=0;i<=$lastsnap;++i))
+for ((i=${startsnap};i<=$lastsnap;++i))
 do
-    $rsdir/util/find_parents $outdir'/halos_'$i'/out_'$i'.list' > $outdir'/halos_'$i'/parents.list'
+    $rsdir/util/find_parents $outdir'/halos_'$i'/out_'$i'.list' ${boxsize} > $outdir'/halos_'$i'/parents.list'
 done

@@ -68,6 +68,28 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfff"
             numbytes = struct.calcsize(datatypesstr) #256
+        if version==4:
+            headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
+            varlist = np.dtype([('id','<i8'),\
+                                ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
+                                ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),\
+                                ('corevelx','<f8'),('corevely','<f8'),('corevelz','<f8'),\
+                                ('bulkvelx','<f8'),('bulkvely','<f8'),('bulkvelz','<f8'),\
+                                ('mvir','<f8'),('rvir','<f8'),('child_r','<f8'),('vmax_r','<f8'),\
+                                ('mgrav','<f8'),('vmax','<f8'),('rvmax','<f8'),('rs','<f8'),('rs_klypin','<f8'),\
+                                ('vrms','<f8'),('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),\
+                                ('Epot','<f8'),('spin','<f8'),('altm1','<f8'),('altm2','<f8'),('altm3','<f8'),('altm4','<f8'),\
+                                ('Xoff','<f8'),('Voff','<f8'),\
+                                ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
+                                ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
+                                ('spin_bullock','<f8'),('T/|U|','<f8'),\
+                                ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
+                                ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
+                                ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
+                                ('num_bound','<i8'),\
+                                ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
+            datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffq"
+            numbytes = struct.calcsize(datatypesstr) #256
         self.datatypesstr = datatypesstr
 
         file_num = 0
@@ -100,7 +122,7 @@ class RSDataReader:
         file_num = 0 # reset file name
         file_name = getfilename(file_num)
         i = 0
-        particleID_start2 = 0
+        particleID_start2 = 0 
         while os.path.exists(file_name):
             f = open(file_name)
             h = f.read(numheaderbytes)

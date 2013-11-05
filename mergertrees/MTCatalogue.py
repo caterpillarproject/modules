@@ -138,7 +138,52 @@ def storeSubInfo(file):
             host2sub[hostIDs[i]]=[lines[i]]
     return host2sub
 
-def writeline(line,fout,fmt):
+def writeline_v3(line,fout,fmt):
+    s = line.split()
+    data = struct.pack(fmt,
+                       float(s[0]), #scale
+                       int(s[1]),   #id
+                       int(s[3]),   #desc_id
+                       int(s[4]),   #num_prog
+                       int(s[5]),   #pid
+                       int(s[6]),   #upid
+                       int(s[8]),   #phantom
+                       float(s[9]), #sam_mvir
+                       float(s[10]),#mvir
+                       float(s[11]),#rvir
+                       float(s[12]),#rs
+                       float(s[13]),#vrms
+                       int(s[14]),  #mmp
+                       float(s[15]),#scale_of_last_MM
+                       float(s[16]),#vmax
+                       float(s[17]),#x
+                       float(s[18]),#y
+                       float(s[19]),#z
+                       float(s[20]),#vx
+                       float(s[21]),#vy
+                       float(s[22]),#vz
+                       float(s[23]),#jx
+                       float(s[24]),#jy
+                       float(s[25]),#jz
+                       float(s[26]),#spin
+                       int(s[27]),  #bfid [Breadth_first_ID]
+                       int(s[28]),  #dfid [Depth_first_ID]
+                       int(s[30]),  #origid [Orig_halo_ID]
+                       int(s[33]),  #lastprog_dfid [Last_progenitor_depthfirst_ID]
+                       float(s[35]),#m200c_all
+                       float(s[36]),#m200b
+                       float(s[40]),#xoff
+                       float(s[41]),#voff
+                       float(s[42]),#spin_bullock
+                       float(s[48]),#b_to_a(500c)
+                       float(s[49]),#c_to_a(500c)
+                       float(s[50]),#A[x](500c)
+                       float(s[51]),#A[y](500c)
+                       float(s[52]),#A[z](500c)
+                       float(s[53]))#T/|U|
+    fout.write(data)
+
+def writeline_v2(line,fout,fmt):
     s = line.split()
     data = struct.pack(fmt,
                        float(s[0]), #scale
@@ -183,7 +228,7 @@ def writeline(line,fout,fmt):
                        float(s[48]))#T/|U|
     fout.write(data)
 
-def writeline_old(line,fout,fmt):
+def writeline_v1(line,fout,fmt):
     s = line.split()
     data = struct.pack(fmt,
                        float(s[0]), #scale
@@ -215,7 +260,7 @@ def writeline_old(line,fout,fmt):
                        int(s[30]))  #Orig_halo_ID
     fout.write(data)
 
-def convertmt(dir,time_me=False,oldversion=False,verbose=False):
+def convertmt(dir,time_me=False,version=2,verbose=False):
     """
     Convert tree_0_0_0.dat ascii file to tree.bin binary file for
     faster reading. Also outputs index file
@@ -232,18 +277,25 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
     host2sub = storeSubInfo(filenamein)
     if time_me:
         print time.time()-start, 'Time to get subhalo positions'
+        start = time.time()
 
     fin = open(filenamein,'r')
     fout= open(filenameout,'wb')
     findex=open(fileindexname,'w')
     writer = csv.writer(findex)
 
-    if oldversion:
+    if version==1:
         fmt = "fiiiiifffffiffffffffffffiii"
-        mywriteline = writeline_old
-    else:
+        mywriteline = writeline_v1
+    elif version==2:
         fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
-        mywriteline = writeline
+        mywriteline = writeline_v2
+    elif version==3:
+        fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
+        mywriteline = writeline_v3
+    else:
+        print "ERROR, version must be 1, 2, or 3"
+        sys.exit()
     fmtsize = struct.calcsize(fmt)
     if verbose: print "Bytes per line:",fmtsize
 
@@ -257,14 +309,13 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
             if int(hostsplit[5]) == -1:
                 if verbose:
                     print "Reading in host halo"
-                    start = time.time()
+                    start2 = time.time()
                 #save host ID and file location to index
                 writer.writerow([hostsplit[30],fout.tell()])
                 #write header tag and dummy numlines
                 fout.write(struct.pack("ii",0,-1))
                 numlines = 0
                 #write host tree
-                start2 = time.time()
                 while line != '' and line[0:5] != "#tree":
                     mywriteline(line,fout,fmt)
                     numlines = numlines+1
@@ -275,13 +326,14 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                 fout.seek(numlines*fmtsize,1) #from current location forwards
                 #remember host location to come back to after writing subs
                 host_loc = fin.tell()
+                if verbose:
+                    print time.time()-start2, 'Time to read host halo',i
 
                 ## read/write in all the subhalos
                 try:
                     if verbose:
-                        print time.time()-start, 'Time to read host halo',i
                         print "Reading in subhalos"
-                        start = time.time()
+                        start2 = time.time()
                     for subhalo_loc in host2sub[int(hostsplit[1])]: #key is host halo id
                         #write header tag and dummy numlines
                         fout.write(struct.pack("ii",1,-1))
@@ -298,8 +350,9 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                         fout.write(struct.pack("i",numlines))
                         fout.seek(numlines*fmtsize,1) #from current location forwards
                     fin.seek(host_loc)
+                    line = fin.readline() #11/4/2013 Alex added this to avoid a bug where conversion stops
                     if verbose:
-                        print time.time()-start, 'Time to read all subhalos'
+                        print time.time()-start2, 'Time to read all subhalos'
                 except KeyError: #Host with no subs, do nothing
                     pass
             ## else, is a subhalo, which means it will have already been read/written
@@ -308,7 +361,7 @@ def convertmt(dir,time_me=False,oldversion=False,verbose=False):
                 while line != '' and line[0:5] != "#tree":
                     line = fin.readline()
             i = i+1
-            if i % 5000 == 0 and time_me:
+            if i % 5000 == 0 and verbose:
                 print i,"host halos completed"
         else:
             line = fin.readline()
@@ -469,13 +522,13 @@ class MTCatalogue:
     to haloid and read in that host halo with all the subhalos as the catalogue.
     """
 
-    def __init__(self,dir,haloids=[],oldversion=False,numHosts=np.infty,indexbyrsid=False,verbose=False):
+    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False):
         self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.indexbyrsid = indexbyrsid
         self.scale_list = getScaleFactors(dir[0:-6]) #assumes /trees is current
                                                      #folder in dir
-        if oldversion:
+        if version==1:
             self.fmt = "fiiiiifffffiffffffffffffiii"
             self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
                                      ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
@@ -489,7 +542,7 @@ class MTCatalogue:
                                      ('bfid','<i8'), #breadth first ID
                                      ('dfid','<i8'), #depth first ID
                                      ('origid','<i8')]) #rockstar cat ID
-        else:
+        elif version==2:
             self.fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
             self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
                                      ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
@@ -511,6 +564,31 @@ class MTCatalogue:
                                      ('b_to_a','<f8'),('c_to_a','<f8'),
                                      ('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),
                                      ('T/|U|','<f8')])
+        elif version==3:
+            self.fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
+            self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
+                                     ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
+                                     ('phantom','<i8'),
+                                     ('sam_mvir','<f8'),('mvir','<f8'),
+                                     ('rvir','<f8'),('rs','<f8'),
+                                     ('vrms','<f8'),('mmp','<i8'),
+                                     ('scale_of_last_MM','<f8'),('vmax','<f8'),
+                                     ('posX','<f8'),('posY','<f8'),('posZ','<f8'),
+                                     ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),
+                                     ('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),('spin','<f8'),
+                                     ('bfid','<i8'), #breadth first ID
+                                     ('dfid','<i8'), #depth first ID
+                                     ('origid','<i8'), #rockstar cat ID
+                                     ('lastprog_dfid','<i8'), #depth first ID last progenitor
+                                     ('m200c_all','<f8'),('m200b','<f8'),
+                                     ('xoff','<f8'),('voff','<f8'),
+                                     ('spin_bullock','<f8'),
+                                     ('b_to_a(500c)','<f8'),('c_to_a(500c)','<f8'),
+                                     ('A[x](500c)','<f8'),('A[y](500c)','<f8'),('A[z](500c)','<f8'),
+                                     ('T/|U|','<f8')])
+        else:
+            print "ERROR, version must be 1, 2, or 3"
+            sys.exit()
         self.fmtsize = struct.calcsize(self.fmt)
         ## NOTE: the reason I have separated the while loops is to speed up
         ## the reading (don't have to call if every single time)
