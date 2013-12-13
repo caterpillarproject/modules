@@ -10,7 +10,7 @@ if platform.node() == "bigbang.mit.edu":
 if "harvard.edu" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
 
-levellist = [11,12,13,14,15]
+levellist = [11,12,13,14]
 nrvirlist = [3,4,5,6]
 haloidlist = []
 for filename in os.listdir(basepath):
@@ -26,11 +26,11 @@ for haloid in haloidlist:
     ax = fig.add_subplot(3,5,plotinc)
     ax.set_title(haloid)
     ax.set_ylim([2,7])
-    ax.set_xlim([10,16])
+    ax.set_xlim([10,15])
     ax.set_yticks((3,4,5,6))
     ax.set_yticklabels(('3','4','5','6'))
-    ax.set_xticks((11,12,13,14,15))
-    ax.set_xticklabels(('11','12','13','14','15'))
+    ax.set_xticks((11,12,13,14))
+    ax.set_xticklabels(('11','12','13','14'))
     
     for level in levellist:
         for nrvir in nrvirlist: 
@@ -56,7 +56,7 @@ for haloid in haloidlist:
 			markerface = 'k'
 
                     elif os.path.isdir(corepath + "outputs/"):
-			strprog = ext + " ["
+#			strprog = ext + " ["
                         subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
 			snapshotvec = []
                         for subname in os.listdir(subdirnames):
@@ -67,19 +67,24 @@ for haloid in haloidlist:
 			    snapshot = -1
 			else:
 			    snapshot = max(snapshotvec)
-			
-			if snapshot != -1 and snapshot != maxsnap:
-    			    for progsnap in range(0,maxsnap):	
-			        if progsnap <= int(snapshot):
-				    strprog = strprog + "="
-				if progsnap == int(snapshot):
-				    strprog = strprog + ">" + str(snapshot)
-				if progsnap > int(snapshot):
-				    strprog = strprog + "-"
-				if progsnap == int(maxsnap)-1:
-				    strprog = strprog + "]"
+
+                            strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/" + str(maxsnap)			
+			    print strprog 
+
+#			if snapshot != -1 and snapshot != maxsnap:
+#			    strprog = strprog + " %0.2f" % (float(snapshot/maxsnap))
+    			    #for progsnap in range(0,maxsnap):	
+			        #if progsnap <= int(snapshot):
+				#    strprog = strprog + "="
+				#if progsnap == int(snapshot):
+				#    strprog = strprog + ">" + str(snapshot)
+				#    strprog = strprog + ">" + str(snapshot)
+				#if progsnap > int(snapshot):
+				#    strprog = strprog + "-"
+				#if progsnap == int(maxsnap)-1:
+				#    strprog = strprog + "]"
                                 
-                            print strprog
+#                            print strprog
 
                         if snapshot != -1: 
                             ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)

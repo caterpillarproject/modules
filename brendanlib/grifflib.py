@@ -457,6 +457,7 @@ def getillustrispath():
         basepath = '/n/home01/bgriffen/data/'
     if node == "bigbang.mit.edu":
         basepath = '/bigbang/data/bgriffen/'
+    return basepath
 
     return basepath
 
