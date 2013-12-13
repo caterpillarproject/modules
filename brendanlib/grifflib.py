@@ -451,11 +451,14 @@ def drawcircle(x,y,r):
     return x_line,y_line
 
 def getillustrispath():
+    import platform
     node = platform.node()
     if "harvard" in node:
         basepath = '/n/home01/bgriffen/data/'
     if node == "bigbang.mit.edu":
         basepath = '/bigbang/data/bgriffen/'
+
+    return basepath
 
 def determinebasepath(node):
     if node == "csr-dyn-150.mit.edu":
