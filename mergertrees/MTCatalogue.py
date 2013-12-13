@@ -48,10 +48,18 @@ import itertools
 import os
 import pydot
 import subprocess
+import glob
 
-def getScaleFactors(path,minsnap=0):
+def getScaleFactors(path,minsnap=0,digits=3):
     snap_num = minsnap
-    file = path + '/halos_' + str(snap_num) + '/halos_' + str(snap_num) + ".0.bin"
+    #digits = len(str(snap_num))
+    #for folder in glob.glob(path + '/halos_*'):
+    #    endingstr = folder.split("_")
+    #    digits = len(endingstr[1])
+
+    #print "DIGITS",digits
+    file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    #print file
     f = open(file)
     f.close()
     if (not os.path.exists(file)):
@@ -65,8 +73,11 @@ def getScaleFactors(path,minsnap=0):
         chunk = np.fromfile(f, np.int64, count = 1)[0]
         scale = np.fromfile(f, np.float32, count = 1)[0]
         scale_list.append(scale)
+        #print file.replace(path,""),snap,scale
         snap_num+=1
-        file = path + '/' + 'halos_' + str(snap_num) + '/' + 'halos_' + str(snap_num) + ".0.bin"
+        #digits = len(str(snap_num))
+        file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
+        #print file.replace(path,"")
 
     return np.array(scale_list)
 
@@ -319,13 +330,14 @@ def convertmt(dir,time_me=False,version=2,verbose=False):
                 while line != '' and line[0:5] != "#tree":
                     mywriteline(line,fout,fmt)
                     numlines = numlines+1
+                    #remember host location to come back to after writing subs
+                    host_loc = fin.tell()
                     line = fin.readline()
+                    
                 #seek back and fill in numlines
                 fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
                 fout.write(struct.pack("i",numlines))
                 fout.seek(numlines*fmtsize,1) #from current location forwards
-                #remember host location to come back to after writing subs
-                host_loc = fin.tell()
                 if verbose:
                     print time.time()-start2, 'Time to read host halo',i
 
