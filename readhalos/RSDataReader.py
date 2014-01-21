@@ -160,6 +160,8 @@ class RSDataReader:
         parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
         self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
+        self.ix = self.data.ix
+
     def get_particles_from_halo(self, haloID):
         """
         @param haloID: id number of halo. Not its row position in matrix
@@ -270,9 +272,6 @@ class RSDataReader:
         if self.version == 3:
             return "Version 3: Rockstar 0.99.9 RC2"
         return "ERROR: Not a valid version number!"
-
-    def ix(self,key):
-        return self.data.ix[key]
 
     def __getitem__(self,key):
         return self.data[key]
