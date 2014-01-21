@@ -271,6 +271,9 @@ class RSDataReader:
             return "Version 3: Rockstar 0.99.9 RC2"
         return "ERROR: Not a valid version number!"
 
+    def ix(self,key):
+        return self.data.ix[key]
+
     def __getitem__(self,key):
         return self.data[key]
     def __repr__(self):
