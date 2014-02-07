@@ -160,6 +160,8 @@ class RSDataReader:
         parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
         self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
+        self.ix = self.data.ix
+
     def get_particles_from_halo(self, haloID):
         """
         @param haloID: id number of halo. Not its row position in matrix
