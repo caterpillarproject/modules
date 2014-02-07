@@ -142,8 +142,9 @@ class RSDataReader:
             if AllParticles:
                 line = f.read() # read the rest of the file
                 ## DEBUG: this ratio should be 1
-                #print (len(line)/float(self.particlebytes))/num_particles
-                self.particles = np.concatenate((self.particles, np.array(struct.unpack("q"*num_particles,line))))
+                if num_particles != 0:
+                    assert(len(line)/float(self.particlebytes))/num_particles == 1
+                    self.particles = np.concatenate((self.particles, np.array(struct.unpack("q"*num_particles,line))))
             f.close()
             file_num += 1
             file_name = getfilename(file_num)
@@ -275,6 +276,8 @@ class RSDataReader:
 
     def __getitem__(self,key):
         return self.data[key]
+    def __len__(self):
+        return len(self.data)
     def __repr__(self):
         out = "RSDataReader "+self.getversion()+"\n"
         out +="Read from "+self.dir+"\n"
