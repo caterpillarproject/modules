@@ -1,14 +1,16 @@
 # This script read in ICs and shifts lower resolution particles from all being type 5
 
 import numpy as np
-import readsnapshots.readsnap as rs
+import readsnap as rs
 import os
 
-def getBlocks(path):
+def getBlocks():
+#    padding = str(padding)
+#    nvir = str(nvir)
 
-    #pathname = '/n/home01/bgriffen/data/caterpillar/ics/halo80609/l12/p' + padding + '/nvir' + nvir + '/ics'
-    pathname = path + '/ics'
-
+#    pathname = '/n/home01/bgriffen/data/caterpillar/ics/halo80609/l12/p' + padding + '/nvir' + nvir + '/ics'
+    pathname = './ics'
+    
     # defining header blocks:
     nall=np.zeros(6,dtype=np.int32)
     massarr=np.zeros(6,dtype=np.float64)
@@ -24,7 +26,9 @@ def getBlocks(path):
     for i in xrange(0,header.filenum):
 
         header=rs.snapshot_header(pathname+'.'+str(i))
+
         if (header.npart[5]>0)&(header.massarr[5]==0.0):
+
             if count==0:
                 datM=rs.read_block(pathname+'.'+str(i), "MASS",parttype=5,doubleprec=False,mult=False)
                 count = count+1
