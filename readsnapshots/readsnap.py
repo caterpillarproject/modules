@@ -187,12 +187,14 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
     print "and:", curfilename
     sys.exit()
 
-  print curfilename
+  if verbose:
+    print curfilename
   
   head = snapshot_header(curfilename)
   format = head.format
 
-  print "FORMAT=", format
+  if verbose:
+    print "FORMAT=", format
   swap = head.swap
   npart = head.npart
   massarr = head.massarr
