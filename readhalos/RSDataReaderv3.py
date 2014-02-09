@@ -124,11 +124,23 @@ class RSDataReader:
             #increment to next file
             f.close()
             file_num += 1
-            file_name = dir+ '/' + base + str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            if sub:
+                file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+            else:
+                file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+        
+            #file_name = dir+ '/' + base + str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        
         self.num_halos = num_rows
         #reset file name
         file_num = 0
-        file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        if sub:
+            file_name = dir+ '/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        else:
+            file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        
+        #print file_name
+        #file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
         ### Two important pieces of data storage
         data = np.zeros((num_rows,num_columns)) #: Matrix of all halos and all information
         string_len = len(file_name)*2
@@ -160,7 +172,7 @@ class RSDataReader:
             np.fromfile(f,'f',count = (BinaryHeaderSize-HeaderInfoSize)/4)
 
             particleID_start = BinaryHeaderSize + HaloSize*num_halos
-
+            #print num_halos
             # Produce array of Halo objects
             for j in range(0,num_halos):
                 #line = f.read(numbytes)
