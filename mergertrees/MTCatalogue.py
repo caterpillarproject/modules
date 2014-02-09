@@ -50,7 +50,7 @@ import pydot
 import subprocess
 import glob
 
-def getScaleFactors(path,minsnap=0,digits=3):
+def getScaleFactors(path,minsnap=0,digits=3,sub=False):
     snap_num = minsnap
     #digits = len(str(snap_num))
     #for folder in glob.glob(path + '/halos_*'):
@@ -58,7 +58,12 @@ def getScaleFactors(path,minsnap=0,digits=3):
     #    digits = len(endingstr[1])
 
     #print "DIGITS",digits
-    file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    #file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    if sub:
+        file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    else:
+        file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
     #print file
     f = open(file)
     f.close()
@@ -76,7 +81,13 @@ def getScaleFactors(path,minsnap=0,digits=3):
         #print file.replace(path,""),snap,scale
         snap_num+=1
         #digits = len(str(snap_num))
-        file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
+        if sub:
+            file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+        else:
+            file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
+        #file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
         #print file.replace(path,"")
 
     return np.array(scale_list)
@@ -96,10 +107,10 @@ class getsnap:
     (So note that you can give it scale factors that aren't close to a spline)
     """
     def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
-                 minsnap=0,maxsnap=63):
+                 minsnap=0,maxsnap=63,sub=False):
         self.minsnap = minsnap
         self.maxsnap = maxsnap
-        self.scale_list = getScaleFactors(path)
+        self.scale_list = getScaleFactors(path,sub)
         self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
         self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
     def getsnap(self,x):
@@ -534,11 +545,11 @@ class MTCatalogue:
     to haloid and read in that host halo with all the subhalos as the catalogue.
     """
 
-    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False):
+    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False,sub=False):
         self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.indexbyrsid = indexbyrsid
-        self.scale_list = getScaleFactors(dir[0:-6]) #assumes /trees is current
+        self.scale_list = getScaleFactors(dir[0:-6],sub=sub) #assumes /trees is current
                                                      #folder in dir
         if version==1:
             self.fmt = "fiiiiifffffiffffffffffffiii"
@@ -640,7 +651,7 @@ class MTCatalogue:
             #Read just the host halos and their subs
             reader = csv.reader(open(dir+"/treeindex.csv",'r'))
             index = dict(x for x in reader)
-            print "Reading these IDs:",haloids
+            #print "Reading these IDs:",haloids
             if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
             try:
                 file_locs = [int(index[str(x)]) for x in haloids] #raises KeyError if problem
