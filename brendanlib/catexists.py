@@ -21,8 +21,8 @@ fig = plt.figure(figsize=(16,10))
 plotinc = 0
 print "\n"
 for haloid in haloidlist:
-    
-    plotinc += 1   
+
+    plotinc += 1
     ax = fig.add_subplot(3,5,plotinc)
     ax.set_title(haloid)
     ax.set_ylim([2,7])
@@ -31,9 +31,9 @@ for haloid in haloidlist:
     ax.set_yticklabels(('3','4','5','6'))
     ax.set_xticks((11,12,13,14))
     ax.set_xticklabels(('11','12','13','14'))
-    
+
     for level in levellist:
-        for nrvir in nrvirlist: 
+        for nrvir in nrvirlist:
             ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             marker = 'yD'
@@ -41,71 +41,66 @@ for haloid in haloidlist:
             try:
                 with open(corepath + "ics.0"):
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
-		    maxsnap = len(explist)-1
+                    maxsnap = len(explist)-1
                     icfilesize = os.path.getsize(corepath + "ics.0")
 
                     if icfilesize > 0:
                         marker = 'rD'
-			markerface = 'red'
+                        markerface = 'red'
                     elif icfilesize == 0:
-   			 marker = 'gx'
-			 markerface = 'green'
+                         marker = 'gx'
+                         markerface = 'green'
 
                     if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
-            	    	marker = 'k^'
-			markerface = 'k'
+                        marker = 'k^'
+                        markerface = 'k'
 
                     elif os.path.isdir(corepath + "outputs/"):
-#			strprog = ext + " ["
+#                       strprog = ext + " ["
                         subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
-			snapshotvec = []
+                        snapshotvec = []
                         for subname in os.listdir(subdirnames):
-			    if "snapdir" in subname:
-				snapshotvec.append(int(subname.replace("snapdir_","")))
+                            if "snapdir" in subname:
+                                snapshotvec.append(int(subname.replace("snapdir_","")))
 
-			if not snapshotvec:
-			    snapshot = -1
-			else:
-			    snapshot = max(snapshotvec)
+                        if not snapshotvec:
+                            snapshot = -1
+                        else:
+                            snapshot = max(snapshotvec)
 
-                            strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/" + str(maxsnap)			
-			    print strprog 
+                            strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
+                            print strprog
 
-#			if snapshot != -1 and snapshot != maxsnap:
-#			    strprog = strprog + " %0.2f" % (float(snapshot/maxsnap))
-    			    #for progsnap in range(0,maxsnap):	
-			        #if progsnap <= int(snapshot):
-				#    strprog = strprog + "="
-				#if progsnap == int(snapshot):
-				#    strprog = strprog + ">" + str(snapshot)
-				#    strprog = strprog + ">" + str(snapshot)
-				#if progsnap > int(snapshot):
-				#    strprog = strprog + "-"
-				#if progsnap == int(maxsnap)-1:
-				#    strprog = strprog + "]"
-                                
-#                            print strprog
-
-                        if snapshot != -1: 
+                        if snapshot != -1:
                             ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
-                   	    marker = 'k^'
-			    markerface = 'white'
+                            marker = 'k^'
+                            markerface = 'white'
 
                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'bo'
-			markerface = 'b'
-    
-                    ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface)
-		    
+                        markerface = 'b'
+
+                    if os.path.isdir(corepath + "rockstardata/halo_"+str(maxsnap).zfill(3)+"/"):
+                        marker = 'co'
+                        markerface = 'c'
+
+                    if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
+                       and os.path.isdir(corepath + "rockstardata/halos_"+str(maxsnap).zfill(3)+"/"):
+                        marker = 'go'
+                        markerface = 'g'
+
+                    ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
+
 
             except IOError: pass
 
 
 ICArtist = ax.plot((0,1),(0,0),'rD', label='IC')
-GADGETArtist = ax.plot((0,1),(0,0),'k^', label='Run')
-HALOArtist = ax.plot((0,1),(0,0),'bo', label='Halos')
+GADGETArtist = ax.plot((0,1),(0,0),'k^', label='Incomplete Runs')
+SUBFINDArtist = ax.plot((0,1),(0,0),'bo', label='SUBFIND')
+ROCKSTARArtist = ax.plot((0,1),(0,0),'mo', label='Rockstar')
+HALOSArtist = ax.plot((0,1),(0,0),'go', label='S&R [Complete]')
 handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, 'upper center',ncol=3,numpoints=1)
-        
-plt.show()
+fig.legend(handles, labels, 'upper center',ncol=5,numpoints=1)
 
+plt.show()

@@ -1,7 +1,7 @@
 import numpy as np
 import os
 
-def readParents(dir, file, numhalos):
+def readParents(dir, file, numhalos,sub=False):
     """
     @ param dir: directory of file (string)
     @ param file: name of .list file produced by ./find_parents
@@ -9,8 +9,17 @@ def readParents(dir, file, numhalos):
     @ return:  
     """
     file_name = dir+'/'+file
-    if(not os.path.exists(file_name)):
-		raise IOError('file not found: '+file_name)
+    print "Opening file: "+file_name
+    if sub:
+        try:
+            with open(file_name):
+                pass
+        except IOError:
+            raise IOError('file not found: '+file_name)
+    else:
+        if(not os.path.exists(file_name)):
+            raise IOError('file not found: '+file_name)
+
     f = open(file_name)
     data = np.zeros((numhalos,2))
 
@@ -24,9 +33,11 @@ def readParents(dir, file, numhalos):
     i = 0
     for line in f:
         a = line.split()
+        #print a
         try:
             data[i][0] = int(a[0])
             data[i][1] = int(a[-1])
+
         except:
             print "ERROR: AHHHH"
             print a
