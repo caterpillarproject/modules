@@ -142,10 +142,14 @@ def storeSubInfo(file):
     line = f.readline()
     while line!='':
         if line[0:5] == "#tree":
-            num = int(line[6::])
+            num = int(line[6::]) #tree mtid
             loc = f.tell()
             line = f.readline()
-            upid = int(line.split()[6]) # most massive host
+            upid = int(line.split()[6]) # ultimate parent (host)
+            pid = int(line.split()[5]) # immediate parent (host)
+            scale = float(line.split()[0]) #scale
+            if scale != 1:
+                print "%i not rooted at a=1 (at a=%3.2f)" % (num,scale)
             if upid != -1: #if subhalo, store hostID and location
                 hostIDs.append(upid)
                 lines.append(loc)
@@ -281,6 +285,146 @@ def writeline_v1(line,fout,fmt):
                        int(s[28]),  #Depth_first_ID
                        int(s[30]))  #Orig_halo_ID
     fout.write(data)
+
+def read_host(fin, hostline, mywriteline, fmt, fmtsize, fout):
+    fout.write(struct.pack("ii",0,-1))
+    mywriteline(hostline,fout,fmt)
+    numlines = 1
+    line = fin.readline()
+    while line != "" and line[0:5] != "#tree":
+        mywriteline(hostline,fout,fmt)
+        numlines += 1
+        lastloc = fin.tell()
+        line = fin.readline()
+    #seek back and fill in numlines
+    fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
+    fout.write(struct.pack("i",numlines))
+    fout.seek(numlines*fmtsize,1) #from current location forwards
+    return line,lastloc
+
+def read_subhalos(fin,subloclist,mywriteline,fmt,fmtsize,fout):
+    if len(subloclist) > 0:
+        for subhalo_loc in subloclist:
+            #write header tag and dummy numlines
+            fout.write(struct.pack("ii",1,-1))
+            numlines = 0
+            #write sub tree
+            fin.seek(subhalo_loc) #put file head at first line of subhalo
+            line = fin.readline()
+            while line != '' and line[0:5] != "#tree":
+                mywriteline(line,fout,fmt)
+                numlines += 1
+                line = fin.readline()
+            #seek back and fill in num lines
+            fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
+            fout.write(struct.pack("i",numlines))
+            fout.seek(numlines*fmtsize,1) #from current location forwards
+        return len(subloclist)
+    else:
+        return 0
+
+def skip_tree(fin):
+    line = fin.readline()
+    while line != "" and line[0:5] != "#tree":
+        line = fin.readline()
+    return line
+
+def test_alex(dir):
+    filenamein = dir+"/tree_0_0_0.dat"
+    host2sub = storeSubInfo(filenamein) #TODO check this if things fail
+    allsubids = [item for sublist in host2sub.values() for item in sublist]
+    #for idlist in host2sub.values():
+    #    allsubids = np.vstack(allsubids,idlist)
+    print allsubids; print len(allsubids)
+    fin = open(filenamein,'r')
+    line = fin.readline()
+    while line != "":
+        if line[0:5] == "#tree":
+            subid = int(line.split(" ")[1])
+            line = fin.readline()
+            #if subid not in allsubids:
+            #    print line
+        else:
+            line = fin.readline()
+    fin.close()
+
+def convertmt_alextest(dir,version=2,verbose=False):
+    filenamein = dir+"/tree_0_0_0.dat"
+    filenameout = dir+"/tree.bin"
+    fileindexname = dir+"/treeindex.csv"
+
+    host2sub = storeSubInfo(filenamein) #TODO check this if things fail
+
+    fin = open(filenamein,'r')
+    fout= open(filenameout,'wb')
+    findex=open(fileindexname,'w')
+    writer = csv.writer(findex)
+
+    if version==1:
+        fmt = "fiiiiifffffiffffffffffffiii"
+        mywriteline = writeline_v1
+    elif version==2:
+        fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
+        mywriteline = writeline_v2
+    elif version==3:
+        fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
+        mywriteline = writeline_v3
+    else:
+        print "ERROR, version must be 1, 2, or 3"
+        sys.exit()
+    fmtsize = struct.calcsize(fmt)
+    if verbose: print "Bytes per line:",fmtsize
+
+    line = fin.readline()
+    host_counter = 0
+    skip_counter = 0
+    comment_counter = 0
+    written_subhalos_counter = 0
+    host_with_no_subs_counter = 0
+    # skip line until Ntrees is seen
+    nlineskip = 1
+    while True:
+        if line == "":
+            break
+        elif line[0:5] == "#tree":
+            hostline = fin.readline(); hostsplit = hostline.split()
+            if int(hostsplit[5]) == -1: #is host
+                hostid = int(hostsplit[30])
+                writer.writerow([hostid,fout.tell()])
+                line,lastloc = read_host(fin,hostline,mywriteline,fmt,fmtsize,fout)
+                assert line[0:5] == "#tree" or line == ""
+                host_mtid = int(hostsplit[1])
+                if host_mtid in host2sub:
+                    subloclist = host2sub[host_mtid]
+                    written_subhalos_counter += read_subhalos(fin,subloclist,mywriteline,fmt,fmtsize,fout)
+                else:
+                    host_with_no_subs_counter += 1
+                fin.seek(lastloc) #reset back to the end of the host
+                line = fin.readline()
+                assert line[0:5] == "#tree" or line == ""
+                host_counter += 1
+            else: #is subhalo
+                line = skip_tree(fin)
+                skip_counter += 1
+        elif line[0] == "#":
+            line = fin.readline()
+            comment_counter += 1
+        elif nlineskip > 0:
+            nlineskip -= 1
+            print nlineskip,line
+            line = fin.readline()
+        else:
+            print line
+            raise RuntimeError("line is not a #tree, comment, or empty string indicating end of file")
+            
+    fin.close()
+    fout.close()
+    findex.close()
+    print "Found",comment_counter,"comment lines"
+    print "Found",host_counter,"hosts"
+    print "Found",host_with_no_subs_counter,"hosts with no subs"
+    print "Found",skip_counter,"total trees with no parent (subs)"
+    print "Wrote",written_subhalos_counter,"subs (found using host2sub)"
 
 def convertmt(dir,time_me=False,version=2,verbose=False):
     """
