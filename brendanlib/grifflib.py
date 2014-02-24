@@ -9,6 +9,26 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def getillustrismp(simtype):
+    if "1" in simtype:
+        mp = 4.4e6
+    elif "2" in simtype:
+        mp = 3.5e7
+    elif "3" in simtype:
+        mp = 2.8e8
+
+    return mp
+
+def getillustrisnsnaps(simtype):
+    if "1" in simtype:
+        nsnaps = 3975
+    elif "2" in simtype:
+        nsnaps = 2264
+    elif "3" in simtype:
+        nsnaps = 1425
+
+    return nsnaps
+
 def CorrectPos(pos, box):
 
     com=pos.sum()/len(pos)

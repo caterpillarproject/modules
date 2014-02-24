@@ -50,104 +50,99 @@ import pydot
 import subprocess
 import glob
 
-def getScaleFactors(path,minsnap=0,digits=3):
-    snap_num = minsnap
-    #digits = len(str(snap_num))
-    #for folder in glob.glob(path + '/halos_*'):
-    #    endingstr = folder.split("_")
-    #    digits = len(endingstr[1])
+def getScaleFactors(path,minsnap=0,digits=3,sub=False):
+    scalefile = path+'/outputs/scales.txt'
 
-    #print "DIGITS",digits
-    file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-    #print file
-    f = open(file)
-    f.close()
-    if (not os.path.exists(file)):
-            print "ERROR: file not found", file
-            sys.exit()
-    scale_list = []
-    while os.path.exists(file):
-        f = open(file)
-        magic = np.fromfile(f, np.uint64, count = 1)[0]
-        snap = np.fromfile(f, np.int64, count = 1)[0]
-        chunk = np.fromfile(f, np.int64, count = 1)[0]
-        scale = np.fromfile(f, np.float32, count = 1)[0]
-        scale_list.append(scale)
-        #print file.replace(path,""),snap,scale
-        snap_num+=1
-        #digits = len(str(snap_num))
-        file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
-        #print file.replace(path,"")
-
-    return np.array(scale_list)
-
-class getsnap:
-    """
-    Class that allows you to easily turn scale factor into snap number.
-    Usage:
-    from mergertrees.GetScaleFactors import getsnap
-    getsnap = getsnap() #create object named getsnap. Note this destroys your import!
-    # also works with parentheses instead of brackets if you so desire
-    getsnap[1.0]
-    getsnap[[1.0,0.9,0.8]]
-    
-
-    Implementation: spline the snapnums against the scale factors, then int(round(spline))
-    (So note that you can give it scale factors that aren't close to a spline)
-    """
-    def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
-                 minsnap=0,maxsnap=63):
-        self.minsnap = minsnap
-        self.maxsnap = maxsnap
-        self.scale_list = getScaleFactors(path)
-        self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
-        self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
-    def getsnap(self,x):
-        snap=int(round(self.spl(x)))
-        if snap>max(self.snap_list):
-            print "WARNING: snap is "+str(snap)+", larger than largest snap!"
-        if snap<min(self.snap_list):
-            print "WARNING: snap is "+str(snap)+", less than smallest snap!"
-        return snap
-    def __getitem__(self,key):
-        try:
-            return [self.getsnap(x) for x in key]
-        except:
-            return self.getsnap(key)
-    def __call__(self,arg):
-        return self.__getitem__(arg)
-                    
-def storeSubInfo(file):
-    """
-    search linearly, get line number and host halo ID for all a=0 halos.
-    then put information in dictionary. Each hostID has a corresponding
-    list of line numbers of its hosts.
-
-    TODO add an option to store one level deeper!
-    """
-    lines = []
-    hostIDs = []
-    f = open(file,'r')
+    f = open(scalefile)
     line = f.readline()
-    while line!='':
-        if line[0:5] == "#tree":
-            num = int(line[6::])
-            loc = f.tell()
-            line = f.readline()
-            upid = int(line.split()[6]) # most massive host
-            if upid != -1: #if subhalo, store hostID and location
-                hostIDs.append(upid)
-                lines.append(loc)
+    linesplit = line.split()
+    # pad beginning with extra -1's 
+    minsnap = int(linesplit[0])
+    scale_list = [-1 for x in xrange(minsnap)]
+    # read scales
+    scale_list.append(float(linesplit[1]))
+    while line != '':
+        scale_list.append(float(line.split()[1]))
         line = f.readline()
     f.close()
-    # Now create python dictionary (hash table) of hosts and sub locations
-    host2sub = {}
-    for i in range(len(hostIDs)):
-        if hostIDs[i] in host2sub:
-            host2sub[hostIDs[i]].append(lines[i])
-        else:
-            host2sub[hostIDs[i]]=[lines[i]]
-    return host2sub
+    return np.array(scale_list)
+    
+    ## snap_num = minsnap
+    ## #digits = len(str(snap_num))
+    ## #for folder in glob.glob(path + '/halos_*'):
+    ## #    endingstr = folder.split("_")
+    ## #    digits = len(endingstr[1])
+    
+    ## #print "DIGITS",digits
+    ## #file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ## if sub:
+    ##     file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ## else:
+    ##     file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
+    ## #print file
+    ## f = open(file)
+    ## f.close()
+    ## if (not os.path.exists(file)):
+    ##         print "ERROR: file not found", file
+    ##         sys.exit()
+    ## scale_list = []
+    ## while os.path.exists(file):
+    ##     f = open(file)
+    ##     magic = np.fromfile(f, np.uint64, count = 1)[0]
+    ##     snap = np.fromfile(f, np.int64, count = 1)[0]
+    ##     chunk = np.fromfile(f, np.int64, count = 1)[0]
+    ##     scale = np.fromfile(f, np.float32, count = 1)[0]
+    ##     scale_list.append(scale)
+    ##     #print file.replace(path,""),snap,scale
+    ##     snap_num+=1
+    ##     #digits = len(str(snap_num))
+
+    ##     if sub:
+    ##         file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ##     else:
+    ##         file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
+    ##     #file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ##     #print file.replace(path,"")
+
+    ## return np.array(scale_list)
+
+## class getsnap:
+##     """
+##     Class that allows you to easily turn scale factor into snap number.
+##     Usage:
+##     from mergertrees.GetScaleFactors import getsnap
+##     getsnap = getsnap() #create object named getsnap. Note this destroys your import!
+##     # also works with parentheses instead of brackets if you so desire
+##     getsnap[1.0]
+##     getsnap[[1.0,0.9,0.8]]
+##     
+## 
+##     Implementation: spline the snapnums against the scale factors, then int(round(spline))
+##     (So note that you can give it scale factors that aren't close to a spline)
+##     """
+##     def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
+##                  minsnap=0,maxsnap=63,sub=False):
+##         self.minsnap = minsnap
+##         self.maxsnap = maxsnap
+##         self.scale_list = getScaleFactors(path,sub)
+##         self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
+##         self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
+##     def getsnap(self,x):
+##         snap=int(round(self.spl(x)))
+##         if snap>max(self.snap_list):
+##             print "WARNING: snap is "+str(snap)+", larger than largest snap!"
+##         if snap<min(self.snap_list):
+##             print "WARNING: snap is "+str(snap)+", less than smallest snap!"
+##         return snap
+##     def __getitem__(self,key):
+##         try:
+##             return [self.getsnap(x) for x in key]
+##         except:
+##             return self.getsnap(key)
+##     def __call__(self,arg):
+##         return self.__getitem__(arg)
 
 def writeline_v3(line,fout,fmt):
     s = line.split()
@@ -271,24 +266,99 @@ def writeline_v1(line,fout,fmt):
                        int(s[30]))  #Orig_halo_ID
     fout.write(data)
 
-def convertmt(dir,time_me=False,version=2,verbose=False):
-    """
-    Convert tree_0_0_0.dat ascii file to tree.bin binary file for
-    faster reading. Also outputs index file
+def _read_host(fin, hostline, mywriteline, fmt, fmtsize, fout):
+    fout.write(struct.pack("ii",0,-1))
+    mywriteline(hostline,fout,fmt)
+    numlines = 1
+    line = fin.readline()
+    while line != "" and line[0:5] != "#tree":
+        mywriteline(hostline,fout,fmt)
+        numlines += 1
+        lastloc = fin.tell()
+        line = fin.readline()
+    #seek back and fill in numlines
+    fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
+    fout.write(struct.pack("i",numlines))
+    fout.seek(numlines*fmtsize,1) #from current location forwards
+    return line,lastloc
 
-    TODO add option to store one level deeper (in the index)!
+def _read_subhalos(fin,subloclist,mywriteline,fmt,fmtsize,fout):
+    if len(subloclist) > 0:
+        for subhalo_loc in subloclist:
+            #write header tag and dummy numlines
+            fout.write(struct.pack("ii",1,-1))
+            numlines = 0
+            #write sub tree
+            fin.seek(subhalo_loc) #put file head at first line of subhalo
+            line = fin.readline()
+            while line != '' and line[0:5] != "#tree":
+                mywriteline(line,fout,fmt)
+                numlines += 1
+                line = fin.readline()
+            #seek back and fill in num lines
+            fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
+            fout.write(struct.pack("i",numlines))
+            fout.seek(numlines*fmtsize,1) #from current location forwards
+        return len(subloclist)
+    else:
+        return 0
+
+def _skip_tree(fin):
+    line = fin.readline()
+    while line != "" and line[0:5] != "#tree":
+        line = fin.readline()
+    return line
+
+def storeSubInfo(file):
+    """
+    search linearly, get line number and host halo ID for all a=1 halos .
+    then put information in dictionary. Each hostID has a corresponding
+    list of line numbers of its subs.
+    """
+    def get_corrected_upid(treeid,treeid2upid):
+        # recursively go up the upid chain until you find a host halo
+        upid = treeid2upid[treeid]
+        if upid == -1:
+            return treeid
+        else:
+            return get_corrected_upid(upid,treeid2upid)
+
+    host2sub = {}
+    treeid2upid = {}
+    f = open(file,'r')
+    line = f.readline()
+    while line!='':
+        if line[0:5] == "#tree":
+            treeid = int(line[6::]) #tree mtid
+            loc = f.tell()
+
+            line = f.readline(); linesplit = line.split()
+            upid = int(linesplit[6]) # ultimate parent
+            #pid = int(linesplit[5]) # immediate parent
+            scale = float(linesplit[0]) #scale
+            if scale != 1:
+                print "%i not rooted at a=1 (at a=%3.2f)" % (treeid,scale)
+
+            treeid2upid[treeid] = upid
+            if upid != -1: #if subhalo, store hostID and location
+                #assume the trees are sorted so host appears before sub (e.g. by mass)
+                corrected_upid = get_corrected_upid(treeid,treeid2upid)
+                if corrected_upid in host2sub:
+                    host2sub[corrected_upid].append(loc)
+                else:
+                    host2sub[corrected_upid] = [loc]
+        line = f.readline()
+    f.close()
+    return host2sub
+
+def convertmt(dir,version=2,verbose=True):
+    """
     """
     filenamein = dir+"/tree_0_0_0.dat"
     filenameout = dir+"/tree.bin"
     fileindexname = dir+"/treeindex.csv"
 
-    if time_me:
-        print "Reading subhalo positions"
-        start = time.time()
     host2sub = storeSubInfo(filenamein)
-    if time_me:
-        print time.time()-start, 'Time to get subhalo positions'
-        start = time.time()
 
     fin = open(filenamein,'r')
     fout= open(filenameout,'wb')
@@ -311,77 +381,56 @@ def convertmt(dir,time_me=False,version=2,verbose=False):
     if verbose: print "Bytes per line:",fmtsize
 
     line = fin.readline()
-    i = 0
-    while line != '':
-        if line[0:5] == "#tree":
+    host_counter = 0
+    skip_counter = 0
+    comment_counter = 0
+    written_subhalos_counter = 0
+    host_with_no_subs_counter = 0
+    # skip line until Ntrees is seen
+    nlineskip = 1
+    while True:
+        if line == "":
+            break
+        elif line[0:5] == "#tree":
+            hostline = fin.readline(); hostsplit = hostline.split()
+            if int(hostsplit[5]) == -1: #is host
+                hostid = int(hostsplit[30])
+                writer.writerow([hostid,fout.tell()])
+                line,lastloc = _read_host(fin,hostline,mywriteline,fmt,fmtsize,fout)
+                assert line[0:5] == "#tree" or line == ""
+                host_mtid = int(hostsplit[1])
+                if host_mtid in host2sub:
+                    subloclist = host2sub[host_mtid]
+                    written_subhalos_counter += _read_subhalos(fin,subloclist,mywriteline,fmt,fmtsize,fout)
+                else:
+                    host_with_no_subs_counter += 1
+                fin.seek(lastloc) #reset back to the end of the host
+                line = fin.readline()
+                assert line[0:5] == "#tree" or line == ""
+                host_counter += 1
+            else: #is subhalo
+                line = _skip_tree(fin)
+                skip_counter += 1
+        elif line[0] == "#":
             line = fin.readline()
-            hostsplit = line.split()
-            ## if host halo, readwrite this halo and its subhalos
-            if int(hostsplit[5]) == -1:
-                if verbose:
-                    print "Reading in host halo"
-                    start2 = time.time()
-                #save host ID and file location to index
-                writer.writerow([hostsplit[30],fout.tell()])
-                #write header tag and dummy numlines
-                fout.write(struct.pack("ii",0,-1))
-                numlines = 0
-                #write host tree
-                while line != '' and line[0:5] != "#tree":
-                    mywriteline(line,fout,fmt)
-                    numlines = numlines+1
-                    #remember host location to come back to after writing subs
-                    host_loc = fin.tell()
-                    line = fin.readline()
-                    
-                #seek back and fill in numlines
-                fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
-                fout.write(struct.pack("i",numlines))
-                fout.seek(numlines*fmtsize,1) #from current location forwards
-                if verbose:
-                    print time.time()-start2, 'Time to read host halo',i
-
-                ## read/write in all the subhalos
-                try:
-                    if verbose:
-                        print "Reading in subhalos"
-                        start2 = time.time()
-                    for subhalo_loc in host2sub[int(hostsplit[1])]: #key is host halo id
-                        #write header tag and dummy numlines
-                        fout.write(struct.pack("ii",1,-1))
-                        numlines = 0
-                        #write sub tree
-                        fin.seek(subhalo_loc) #put file head at first line of subhalo
-                        line = fin.readline()
-                        while line != '' and line[0:5] != "#tree":
-                            numlines = numlines+1
-                            mywriteline(line,fout,fmt)
-                            line = fin.readline()
-                        #seek back and fill in num lines
-                        fout.seek(-1*(numlines*fmtsize + struct.calcsize("i")),1) #from current location backwards
-                        fout.write(struct.pack("i",numlines))
-                        fout.seek(numlines*fmtsize,1) #from current location forwards
-                    fin.seek(host_loc)
-                    line = fin.readline() #11/4/2013 Alex added this to avoid a bug where conversion stops
-                    if verbose:
-                        print time.time()-start2, 'Time to read all subhalos'
-                except KeyError: #Host with no subs, do nothing
-                    pass
-            ## else, is a subhalo, which means it will have already been read/written
-            else: 
-                #skip down to next tree
-                while line != '' and line[0:5] != "#tree":
-                    line = fin.readline()
-            i = i+1
-            if i % 5000 == 0 and verbose:
-                print i,"host halos completed"
+            comment_counter += 1
+        elif nlineskip > 0:
+            nlineskip -= 1
+            #print nlineskip,line
+            line = fin.readline()
         else:
-            line = fin.readline()
-    if time_me:
-        print time.time()-start, 'Time for conversion'
+            print line
+            raise RuntimeError("line is not a #tree, comment, or empty string indicating end of file")
+            
     fin.close()
     fout.close()
     findex.close()
+    if verbose:
+        print "Found",comment_counter,"comment lines"
+        print "Found",host_counter,"hosts"
+        print "Found",host_with_no_subs_counter,"hosts with no subs"
+        print "Found",skip_counter,"total trees with no parent (subs)"
+        print "Wrote",written_subhalos_counter,"subs (found using host2sub)"
 
 class MTCatalogueTree:
     """
@@ -534,11 +583,11 @@ class MTCatalogue:
     to haloid and read in that host halo with all the subhalos as the catalogue.
     """
 
-    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False):
+    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False,sub=False):
         self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.indexbyrsid = indexbyrsid
-        self.scale_list = getScaleFactors(dir[0:-6]) #assumes /trees is current
+        self.scale_list = getScaleFactors(dir[0:-6],sub=sub) #assumes /trees is current
                                                      #folder in dir
         if version==1:
             self.fmt = "fiiiiifffffiffffffffffffiii"
@@ -640,7 +689,7 @@ class MTCatalogue:
             #Read just the host halos and their subs
             reader = csv.reader(open(dir+"/treeindex.csv",'r'))
             index = dict(x for x in reader)
-            print "Reading these IDs:",haloids
+            #print "Reading these IDs:",haloids
             if numHosts!=np.infty: print "  Warning: ignoring numHosts variable"
             try:
                 file_locs = [int(index[str(x)]) for x in haloids] #raises KeyError if problem

@@ -83,19 +83,24 @@ class RSDataReader:
     """
     Create a Halo Catalogue for a particular snapshot
     """
-    def __init__(self, dir, snap_num, base='halos_', digits=2, AllParticles=False,time_me=False):
+    def __init__(self, dir, snap_num, base='halos_', AllParticles=False,time_me=False,sub=False):
         start_time = time.clock()
         """
          @param dir: base directory containing binary files from Rockstar Halo Finder. ex: \"/home/gdooley/Rockstar-0.99/Output2\"
          @param snap_num: snap number to be viewed. ex: 50.
          @param digits: number of digits in file name of snapshot. ex: halos_063.0 should have digits = 3.
          """
+        digits = len(str(snap_num))
         self.dir = dir
         self.snap_num = snap_num
         self.AllParticles = AllParticles
         # open first file, test if it exists
-        file_num = 0 
-        file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+        file_num = 0
+        if sub:
+            file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+        else:
+            file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+        
         if (file_num == 0 and not os.path.exists(file_name)):
             print "ERROR: file not found", file_name
             sys.exit()
@@ -121,11 +126,23 @@ class RSDataReader:
             #increment to next file
             f.close()
             file_num += 1
-            file_name = dir+ '/' + base + str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            if sub:
+                file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+            else:
+                file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+        
+            #file_name = dir+ '/' + base + str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        
         self.num_halos = num_rows
         #reset file name
         file_num = 0
-        file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        if sub:
+            file_name = dir+ '/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        else:
+            file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+        
+        #print file_name
+        #file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
         ### Two important pieces of data storage
         data = np.zeros((num_rows,num_columns)) #: Matrix of all halos and all information
         string_len = len(file_name)*2
@@ -157,7 +174,7 @@ class RSDataReader:
             np.fromfile(f,'f',count = (BinaryHeaderSize-HeaderInfoSize)/4)
 
             particleID_start = BinaryHeaderSize + HaloSize*num_halos
-
+            #print num_halos
             # Produce array of Halo objects
             for j in range(0,num_halos):
                 #line = f.read(numbytes)
@@ -179,7 +196,12 @@ class RSDataReader:
             #increment to next file
             f.close()
             file_num += 1
-            file_name = dir+ '/' + base + str(snap_num).zfill(digits)+"/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            if sub:
+                #file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+                file_name = dir+ "/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            else:
+                #file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+                file_name = dir+ '/' + base + str(snap_num).zfill(digits)+"/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
 
         sortedIndices = data[:,mvir].argsort()[::-1]
         data = data[sortedIndices]
@@ -196,8 +218,14 @@ class RSDataReader:
         #sys.exit()
         self.particles = self.particles.astype(int)
         ## add column of hostID
-        file = 'parents'+'.list'
-        parents = rp.readParents(self.dir+'/'+base+str(snap_num).zfill(digits),file, self.num_halos)
+        if sub:
+            file = 'parents_'+str(snap_num).zfill(digits)+'.list'
+            parents = rp.readParents(self.dir,file, self.num_halos,sub=True)
+        else:
+            file = 'parents.list'
+            parents = rp.readParents(self.dir+'/'+base+str(snap_num).zfill(digits),file, self.num_halos)
+        
+        #parents = rp.readParents(self.dir+'/'+base+str(snap_num).zfill(digits),file, self.num_halos)
         self.data['hostID'].ix[parents[:,0]] = parents[:,1] # fill in hostID column
         #print self.data['id'].ix[0], 'ix method'
         #print self.data['id'][0], 'no ix method'
