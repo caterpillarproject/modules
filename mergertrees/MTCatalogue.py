@@ -63,6 +63,7 @@ def getScaleFactors(path,minsnap=0,digits=3,sub=False):
     scale_list.append(float(linesplit[1]))
     while line != '':
         scale_list.append(float(line.split()[1]))
+        line = f.readline()
     f.close()
     return np.array(scale_list)
     
