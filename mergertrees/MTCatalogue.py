@@ -51,83 +51,98 @@ import subprocess
 import glob
 
 def getScaleFactors(path,minsnap=0,digits=3,sub=False):
-    snap_num = minsnap
-    #digits = len(str(snap_num))
-    #for folder in glob.glob(path + '/halos_*'):
-    #    endingstr = folder.split("_")
-    #    digits = len(endingstr[1])
+    scalefile = path+'/outputs/scales.txt'
 
-    #print "DIGITS",digits
-    #file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-    if sub:
-        file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-    else:
-        file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-
-    #print file
-    f = open(file)
+    f = open(scalefile)
+    line = f.readline()
+    linesplit = line.split()
+    # pad beginning with extra -1's 
+    minsnap = int(linesplit[0])
+    scale_list = [-1 for x in xrange(minsnap)]
+    # read scales
+    scale_list.append(float(linesplit[1]))
+    while line != '':
+        scale_list.append(float(line.split()[1]))
     f.close()
-    if (not os.path.exists(file)):
-            print "ERROR: file not found", file
-            sys.exit()
-    scale_list = []
-    while os.path.exists(file):
-        f = open(file)
-        magic = np.fromfile(f, np.uint64, count = 1)[0]
-        snap = np.fromfile(f, np.int64, count = 1)[0]
-        chunk = np.fromfile(f, np.int64, count = 1)[0]
-        scale = np.fromfile(f, np.float32, count = 1)[0]
-        scale_list.append(scale)
-        #print file.replace(path,""),snap,scale
-        snap_num+=1
-        #digits = len(str(snap_num))
-
-        if sub:
-            file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-        else:
-            file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
-
-        #file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
-        #print file.replace(path,"")
-
     return np.array(scale_list)
-
-class getsnap:
-    """
-    Class that allows you to easily turn scale factor into snap number.
-    Usage:
-    from mergertrees.GetScaleFactors import getsnap
-    getsnap = getsnap() #create object named getsnap. Note this destroys your import!
-    # also works with parentheses instead of brackets if you so desire
-    getsnap[1.0]
-    getsnap[[1.0,0.9,0.8]]
     
+    ## snap_num = minsnap
+    ## #digits = len(str(snap_num))
+    ## #for folder in glob.glob(path + '/halos_*'):
+    ## #    endingstr = folder.split("_")
+    ## #    digits = len(endingstr[1])
+    
+    ## #print "DIGITS",digits
+    ## #file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ## if sub:
+    ##     file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ## else:
+    ##     file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
 
-    Implementation: spline the snapnums against the scale factors, then int(round(spline))
-    (So note that you can give it scale factors that aren't close to a spline)
-    """
-    def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
-                 minsnap=0,maxsnap=63,sub=False):
-        self.minsnap = minsnap
-        self.maxsnap = maxsnap
-        self.scale_list = getScaleFactors(path,sub)
-        self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
-        self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
-    def getsnap(self,x):
-        snap=int(round(self.spl(x)))
-        if snap>max(self.snap_list):
-            print "WARNING: snap is "+str(snap)+", larger than largest snap!"
-        if snap<min(self.snap_list):
-            print "WARNING: snap is "+str(snap)+", less than smallest snap!"
-        return snap
-    def __getitem__(self,key):
-        try:
-            return [self.getsnap(x) for x in key]
-        except:
-            return self.getsnap(key)
-    def __call__(self,arg):
-        return self.__getitem__(arg)
-                    
+    ## #print file
+    ## f = open(file)
+    ## f.close()
+    ## if (not os.path.exists(file)):
+    ##         print "ERROR: file not found", file
+    ##         sys.exit()
+    ## scale_list = []
+    ## while os.path.exists(file):
+    ##     f = open(file)
+    ##     magic = np.fromfile(f, np.uint64, count = 1)[0]
+    ##     snap = np.fromfile(f, np.int64, count = 1)[0]
+    ##     chunk = np.fromfile(f, np.int64, count = 1)[0]
+    ##     scale = np.fromfile(f, np.float32, count = 1)[0]
+    ##     scale_list.append(scale)
+    ##     #print file.replace(path,""),snap,scale
+    ##     snap_num+=1
+    ##     #digits = len(str(snap_num))
+
+    ##     if sub:
+    ##         file = path + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ##     else:
+    ##         file = path + '/halos_' + str(snap_num).zfill(digits) + '/halos_' + str(snap_num).zfill(digits) + ".0.bin"
+
+    ##     #file = path + '/' + 'halos_' + str(snap_num).zfill(digits) + '/' + 'halos_' + str(snap_num).zfill(digits) + ".0.bin"
+    ##     #print file.replace(path,"")
+
+    ## return np.array(scale_list)
+
+## class getsnap:
+##     """
+##     Class that allows you to easily turn scale factor into snap number.
+##     Usage:
+##     from mergertrees.GetScaleFactors import getsnap
+##     getsnap = getsnap() #create object named getsnap. Note this destroys your import!
+##     # also works with parentheses instead of brackets if you so desire
+##     getsnap[1.0]
+##     getsnap[[1.0,0.9,0.8]]
+##     
+## 
+##     Implementation: spline the snapnums against the scale factors, then int(round(spline))
+##     (So note that you can give it scale factors that aren't close to a spline)
+##     """
+##     def __init__(self,path='/spacebase/data/AnnaGroup/caterpillar/parent/RockstarData',
+##                  minsnap=0,maxsnap=63,sub=False):
+##         self.minsnap = minsnap
+##         self.maxsnap = maxsnap
+##         self.scale_list = getScaleFactors(path,sub)
+##         self.snap_list = range(minsnap,maxsnap+1) #minsnap to maxsnap inclusive
+##         self.spl = interpolate.UnivariateSpline(self.scale_list,self.snap_list,s=0)
+##     def getsnap(self,x):
+##         snap=int(round(self.spl(x)))
+##         if snap>max(self.snap_list):
+##             print "WARNING: snap is "+str(snap)+", larger than largest snap!"
+##         if snap<min(self.snap_list):
+##             print "WARNING: snap is "+str(snap)+", less than smallest snap!"
+##         return snap
+##     def __getitem__(self,key):
+##         try:
+##             return [self.getsnap(x) for x in key]
+##         except:
+##             return self.getsnap(key)
+##     def __call__(self,arg):
+##         return self.__getitem__(arg)
+
 def writeline_v3(line,fout,fmt):
     s = line.split()
     data = struct.pack(fmt,
