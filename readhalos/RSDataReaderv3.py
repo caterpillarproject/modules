@@ -1,13 +1,15 @@
+# coding: utf-8
+
+__author__ = "Brendan Griffen <brendan.f.griffen@gmail.com>"
+
 """
-By: Brendan Griffen, Alex Ji, Greg Dooley (MIT)
-Contact: brendan.f.griffen@gmail.com
+Contact: Brendan, Alex Ji (MIT) or Greg Dooley (MIT) for assistance.
 
 Read in all data from Rockstar Halo Finder into a large matrix.
 Rows correspond to halos, columns correspond to halo properties.
 Much faster access to data than object approach.
 
-RSDataReaderv2 reads in Rockstar version 0.99.9
-use RSDataReader for previous Rockstar version.
+RSDataReaderv2 reads in Rockstar version 0.99.9.
 """
 
 import numpy as np
