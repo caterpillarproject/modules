@@ -46,7 +46,7 @@ mergertree_datablocks = {"Descendant":                 ["int32",   1, True],
 
 
 class merger_tree:
-        def __init__(self, basedir, skipfac, snapnum, filenum = 0, tree_start = -1, tree_num = -1):
+        def __init__(self, basedir, skipfac, snapnum, filenum = 0, tree_start = -1, tree_num = -1, keysel = None):
 
 		self.filebase = basedir + "trees_sf"+str(skipfac)+"_"+str(snapnum).zfill(3)
 		self.basedir = basedir
@@ -69,9 +69,15 @@ class merger_tree:
 		self.tree_num = tree_num
 		for ntree in range(tree_start, tree_start + tree_num):
 			list = []
-			for datablock in mergertree_datablocks.keys():
-				data = hdf5lib.GetData(f, "Tree"+str(ntree)+"/"+datablock)[:] 
-				list.append((datablock,data))
+			if (keysel==None):
+				for datablock in mergertree_datablocks.keys():
+					data = hdf5lib.GetData(f, "Tree"+str(ntree)+"/"+datablock)[:] 
+					list.append((datablock,data))
+			else:
+				for datablock in keysel:
+					if hdf5lib.Contains(f, "Tree"+str(ntree), datablock):
+						data = hdf5lib.GetData(f, "Tree"+str(ntree)+"/"+datablock)[:]
+						list.append((datablock,data))
 			self.trees[ntree - tree_start] = dict(list)
 		f.close()
 
@@ -145,7 +151,7 @@ class merger_tree:
 		next = self.trees[ntree]["Descendant"][nhalo]
 		while (next >=0 ):
 			list.append(next)
-			next = self.trees[ntree]["Descendant"][nhalo]
+			next = self.trees[ntree]["Descendant"][next]
 		return list
 
 	def constructSubhaloLookup(self, snapnum):
