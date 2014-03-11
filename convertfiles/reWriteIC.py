@@ -5,10 +5,6 @@ import readsnap as rs
 import os
 
 def getBlocks():
-#    padding = str(padding)
-#    nvir = str(nvir)
-
-#    pathname = '/n/home01/bgriffen/data/caterpillar/ics/halo80609/l12/p' + padding + '/nvir' + nvir + '/ics'
     pathname = './ics'
     
     # defining header blocks:
