@@ -11,7 +11,7 @@ import os
 import sys
  
 class subfind_catalog:
-  def __init__(self, basedir, snapnum, group_veldisp = False, masstab = False, long_ids = False, swap = False):
+  def __init__(self, basedir, snapnum, group_veldisp = False, masstab = False, long_ids = False, swap = False, double = False):
     self.filebase = basedir + "/groups_" + str(snapnum).zfill(3) + "/subhalo_tab_" + str(snapnum).zfill(3) + "."
  
     #print
@@ -20,6 +20,9 @@ class subfind_catalog:
     if long_ids: self.id_type = np.uint64
     else: self.id_type = np.uint32
  
+    if double: self.float_type = np.float64
+    else: self.float_type = np.float32
+
     self.group_veldisp = group_veldisp
     self.masstab = masstab
  
@@ -61,58 +64,58 @@ class subfind_catalog:
 
         self.group_len = np.empty(totngroups, dtype=np.uint32)
         self.group_offset = np.empty(totngroups, dtype=np.uint32)
-        self.group_mass = np.empty(totngroups, dtype=np.float32)
-        self.group_pos = np.empty(totngroups, dtype=np.dtype((np.float32,3)))
-        self.group_m_mean200 = np.empty(totngroups, dtype=np.float32)
-        self.group_r_mean200 = np.empty(totngroups, dtype=np.float32)
-        self.group_m_crit200 = np.empty(totngroups, dtype=np.float32)
-        self.group_r_crit200 = np.empty(totngroups, dtype=np.float32)
-        self.group_m_tophat200 = np.empty(totngroups, dtype=np.float32)
-        self.group_r_tophat200 = np.empty(totngroups, dtype=np.float32)
+        self.group_mass = np.empty(totngroups, dtype=self.float_type)
+        self.group_pos = np.empty(totngroups, dtype=np.dtype((self.float_type,3)))
+        self.group_m_mean200 = np.empty(totngroups, dtype=self.float_type)
+        self.group_r_mean200 = np.empty(totngroups, dtype=self.float_type)
+        self.group_m_crit200 = np.empty(totngroups, dtype=self.float_type)
+        self.group_r_crit200 = np.empty(totngroups, dtype=self.float_type)
+        self.group_m_tophat200 = np.empty(totngroups, dtype=self.float_type)
+        self.group_r_tophat200 = np.empty(totngroups, dtype=self.float_type)
         if group_veldisp:
-          self.group_veldisp_mean200 = np.empty(totngroups, dtype=np.float32)
-          self.group_veldisp_crit200 = np.empty(totngroups, dtype=np.float32)
-          self.group_veldisp_tophat200 = np.empty(totngroups, dtype=np.float32)
+          self.group_veldisp_mean200 = np.empty(totngroups, dtype=self.float_type)
+          self.group_veldisp_crit200 = np.empty(totngroups, dtype=self.float_type)
+          self.group_veldisp_tophat200 = np.empty(totngroups, dtype=self.float_type)
         self.group_contamination_count = np.empty(totngroups, dtype=np.uint32)
-        self.group_contamination_mass = np.empty(totngroups, dtype=np.float32)
+        self.group_contamination_mass = np.empty(totngroups, dtype=self.float_type)
         self.group_nsubs = np.empty(totngroups, dtype=np.uint32)
         self.group_firstsub = np.empty(totngroups, dtype=np.uint32)
         
         self.sub_len = np.empty(totnsubs, dtype=np.uint32)
         self.sub_offset = np.empty(totnsubs, dtype=np.uint32)
         self.sub_parent = np.empty(totnsubs, dtype=np.uint32)
-        self.sub_mass = np.empty(totnsubs, dtype=np.float32)
-        self.sub_pos = np.empty(totnsubs, dtype=np.dtype((np.float32,3)))
-        self.sub_vel = np.empty(totnsubs, dtype=np.dtype((np.float32,3)))
-        self.sub_cm = np.empty(totnsubs, dtype=np.dtype((np.float32,3)))
-        self.sub_spin = np.empty(totnsubs, dtype=np.dtype((np.float32,3)))
-        self.sub_veldisp = np.empty(totnsubs, dtype=np.float32)
-        self.sub_vmax = np.empty(totnsubs, dtype=np.float32)
-        self.sub_vmaxrad = np.empty(totnsubs, dtype=np.float32)
-        self.sub_halfmassrad = np.empty(totnsubs, dtype=np.float32)
+        self.sub_mass = np.empty(totnsubs, dtype=self.float_type)
+        self.sub_pos = np.empty(totnsubs, dtype=np.dtype((self.float_type,3)))
+        self.sub_vel = np.empty(totnsubs, dtype=np.dtype((self.float_type,3)))
+        self.sub_cm = np.empty(totnsubs, dtype=np.dtype((self.float_type,3)))
+        self.sub_spin = np.empty(totnsubs, dtype=np.dtype((self.float_type,3)))
+        self.sub_veldisp = np.empty(totnsubs, dtype=self.float_type)
+        self.sub_vmax = np.empty(totnsubs, dtype=self.float_type)
+        self.sub_vmaxrad = np.empty(totnsubs, dtype=self.float_type)
+        self.sub_halfmassrad = np.empty(totnsubs, dtype=self.float_type)
         self.sub_id_mostbound = np.empty(totnsubs, dtype=self.id_type)
         self.sub_grnr = np.empty(totnsubs, dtype=np.uint32)
         if masstab:
-          self.sub_masstab = np.empty(totnsubs, dtype=np.dtype((np.float32,6)))
+          self.sub_masstab = np.empty(totnsubs, dtype=np.dtype((self.float_type,6)))
      
       if ngroups > 0:
         locs = slice(skip_gr, skip_gr + ngroups)
         self.group_len[locs] = np.fromfile(f, dtype=np.uint32, count=ngroups)
         self.group_offset[locs] = np.fromfile(f, dtype=np.uint32, count=ngroups)
-        self.group_mass[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_pos[locs] = np.fromfile(f, dtype=np.dtype((np.float32,3)), count=ngroups)
-        self.group_m_mean200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_r_mean200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_m_crit200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_r_crit200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_m_tophat200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-        self.group_r_tophat200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
+        self.group_mass[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_pos[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,3)), count=ngroups)
+        self.group_m_mean200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_r_mean200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_m_crit200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_r_crit200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_m_tophat200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+        self.group_r_tophat200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
         if group_veldisp:
-          self.group_veldisp_mean200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-          self.group_veldisp_crit200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
-          self.group_veldisp_tophat200[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
+          self.group_veldisp_mean200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+          self.group_veldisp_crit200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
+          self.group_veldisp_tophat200[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
         self.group_contamination_count[locs] = np.fromfile(f, dtype=np.uint32, count=ngroups)
-        self.group_contamination_mass[locs] = np.fromfile(f, dtype=np.float32, count=ngroups)
+        self.group_contamination_mass[locs] = np.fromfile(f, dtype=self.float_type, count=ngroups)
         self.group_nsubs[locs] = np.fromfile(f, dtype=np.uint32, count=ngroups)
         self.group_firstsub[locs] = np.fromfile(f, dtype=np.uint32, count=ngroups)        
         skip_gr += ngroups
@@ -122,19 +125,19 @@ class subfind_catalog:
         self.sub_len[locs] = np.fromfile(f, dtype=np.uint32, count=nsubs)
         self.sub_offset[locs] = np.fromfile(f, dtype=np.uint32, count=nsubs)
         self.sub_parent[locs] = np.fromfile(f, dtype=np.uint32, count=nsubs)
-        self.sub_mass[locs] = np.fromfile(f, dtype=np.float32, count=nsubs)
-        self.sub_pos[locs] = np.fromfile(f, dtype=np.dtype((np.float32,3)), count=nsubs)
-        self.sub_vel[locs] = np.fromfile(f, dtype=np.dtype((np.float32,3)), count=nsubs)
-        self.sub_cm[locs] = np.fromfile(f, dtype=np.dtype((np.float32,3)), count=nsubs)
-        self.sub_spin[locs] = np.fromfile(f, dtype=np.dtype((np.float32,3)), count=nsubs)
-        self.sub_veldisp[locs] = np.fromfile(f, dtype=np.float32, count=nsubs)
-        self.sub_vmax[locs] = np.fromfile(f, dtype=np.float32, count=nsubs)
-        self.sub_vmaxrad[locs] = np.fromfile(f, dtype=np.float32, count=nsubs)
-        self.sub_halfmassrad[locs] = np.fromfile(f, dtype=np.float32, count=nsubs)
+        self.sub_mass[locs] = np.fromfile(f, dtype=self.float_type, count=nsubs)
+        self.sub_pos[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,3)), count=nsubs)
+        self.sub_vel[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,3)), count=nsubs)
+        self.sub_cm[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,3)), count=nsubs)
+        self.sub_spin[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,3)), count=nsubs)
+        self.sub_veldisp[locs] = np.fromfile(f, dtype=self.float_type, count=nsubs)
+        self.sub_vmax[locs] = np.fromfile(f, dtype=self.float_type, count=nsubs)
+        self.sub_vmaxrad[locs] = np.fromfile(f, dtype=self.float_type, count=nsubs)
+        self.sub_halfmassrad[locs] = np.fromfile(f, dtype=self.float_type, count=nsubs)
         self.sub_id_mostbound[locs] = np.fromfile(f, dtype=self.id_type, count=nsubs)
         self.sub_grnr[locs] = np.fromfile(f, dtype=np.uint32, count=nsubs)
         if masstab:
-          self.sub_masstab[locs] = np.fromfile(f, dtype=np.dtype((np.float32,6)), count=nsubs)
+          self.sub_masstab[locs] = np.fromfile(f, dtype=np.dtype((self.float_type,6)), count=nsubs)
         skip_sub += nsubs
 
       curpos = f.tell()

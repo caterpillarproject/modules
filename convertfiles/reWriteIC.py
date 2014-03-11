@@ -20,7 +20,7 @@ def getBlocks():
     # first find break down of nall
 
     for i in xrange(0,header.filenum):
-
+	print "READING FILE",i
         header=rs.snapshot_header(pathname+'.'+str(i))
 
         if (header.npart[5]>0)&(header.massarr[5]==0.0):
