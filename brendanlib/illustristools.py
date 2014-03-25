@@ -372,6 +372,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     vely = []
     velz = []
     snapnums = []
+    halfmassr = []
 
     index = result['treeIndex']
 
@@ -394,6 +395,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         velx.append(fTree['SubhaloVel'][index,0])
         vely.append(fTree['SubhaloVel'][index,1])
         velz.append(fTree['SubhaloVel'][index,2])
+        halfmassr.append(fTree['SubhaloHalfmassRad'][index])
         snapnums.append(fTree['SnapNum'][index])
 
         while firstProg >= 0:
@@ -410,12 +412,14 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             vely.append(fTree['SubhaloVel'][firstProg,1])
             velz.append(fTree['SubhaloVel'][firstProg,2])
             snapnums.append(fTree['SnapNum'][firstProg])
+            halfmassr.append(fTree['SubhaloHalfmassRad'][firstProg])
+
             firstProg = fTree['FirstProgenitor'][firstProg]
  
         return [snapnums,subhaloid,posx,posy,posz, \
-            velx,vely,velz, masses_all,masses_gas,masses_dm,masses_stars,masses_bh]
+            velx,vely,velz,halfmassr,masses_all,masses_gas,masses_dm,masses_stars,masses_bh]
 
     varlist = recProgenitorList( fTree, result['treeIndex'] )
-    varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','mall','mgas','mdm','mstar','mbh']
+    varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh']
 
     return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
