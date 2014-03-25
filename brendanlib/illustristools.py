@@ -395,7 +395,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         velx.append(fTree['SubhaloVel'][index,0])
         vely.append(fTree['SubhaloVel'][index,1])
         velz.append(fTree['SubhaloVel'][index,2])
-        halfmassr.append(fTree['SubhaloHalfmassRad'][index])
+        halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
         snapnums.append(fTree['SnapNum'][index])
 
         while firstProg >= 0:
@@ -412,7 +412,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             vely.append(fTree['SubhaloVel'][firstProg,1])
             velz.append(fTree['SubhaloVel'][firstProg,2])
             snapnums.append(fTree['SnapNum'][firstProg])
-            halfmassr.append(fTree['SubhaloHalfmassRad'][firstProg])
+            halfmassr.append(fTree['SubhaloHalfmassRadType'][firstProg,1])
 
             firstProg = fTree['FirstProgenitor'][firstProg]
  
