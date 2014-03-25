@@ -134,16 +134,16 @@ def loadstarparticleblock(snappath,snapshot,block,verbose=False):
     if header.nall[4] > 0:
         if block in ["ID","POS","VEL","GIMA","GMET","GZ"]:
             start = time.time()
-            print "-- Time to read star particle block..."
+            if verbose: print "-- Time to read star particle block..."
             starrawGAGE = rsnap.read_block(snappath,"GAGE",parttype=4)
             starGAGE = starrawGAGE[starrawGAGE >= 0]
             elapsed = time.time() - start
-            print "---- [Ages] %3.2f seconds" % (elapsed)
+            if verbose: print "---- [Ages] %3.2f seconds" % (elapsed)
             start = time.time()
-            starraw  = rsnap.read_block(snappath,block.zfill(4),parttype=4)
+            starraw  = rsnap.read_block(snappath,block.ljust(4),parttype=4)
             starout = starraw[starrawGAGE >= 0]
             elapsed = time.time() - start
-            print "---- [" + block + "] %3.2f seconds" % (elapsed)
+            if verbose: print "---- [" + block + "] %3.2f seconds" % (elapsed)
             del starrawGAGE
         
             if verbose:
@@ -333,7 +333,8 @@ def tracestars(outputpath,snappath,simtype,verbose):
                     f.close()
         else:
            print "File Exists:",filename
-           def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
+
+def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     """ Return the full progenitor tree for a given subhalo at a given snapshot. """
     result = {}
  
