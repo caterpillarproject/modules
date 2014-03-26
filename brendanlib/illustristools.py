@@ -396,7 +396,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         vely.append(fTree['SubhaloVel'][index,1])
         velz.append(fTree['SubhaloVel'][index,2])
         halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
-        snapnums.append(fTree['snapNum'][index])
+        snapnums.append(fTree['SnapNum'][index])
         halotype.append(1)
 
         while firstProg >= 0:
