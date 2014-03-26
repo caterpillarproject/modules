@@ -395,7 +395,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         velx.append(fTree['SubhaloVel'][index,0])
         vely.append(fTree['SubhaloVel'][index,1])
         velz.append(fTree['SubhaloVel'][index,2])
-        halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
+        halfmassr.append(fTree['SubhaloHalfmassRad'][index])
         snapnums.append(fTree['SnapNum'][index])
 
         while firstProg >= 0:
@@ -412,7 +412,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             vely.append(fTree['SubhaloVel'][firstProg,1])
             velz.append(fTree['SubhaloVel'][firstProg,2])
             snapnums.append(fTree['SnapNum'][firstProg])
-            halfmassr.append(fTree['SubhaloHalfmassRadType'][firstProg,1])
+            halfmassr.append(fTree['SubhaloHalfmassRad'][firstProg])
 
             firstProg = fTree['FirstProgenitor'][firstProg]
  
@@ -421,6 +421,8 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
     varlist = recProgenitorList( fTree, result['treeIndex'] )
     varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh']
-    print varlist
-    print np.array(varlist).T
-    return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
+
+    if varlist != []:
+        return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
+    else:
+        return varlist
