@@ -378,7 +378,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
     def recProgenitorList( fTree, index ):
  
-        firstProg = fTree['FirstProgenitor'][index]
+        
         progs = []
         if firstProg == -1:
             return progs
@@ -397,8 +397,10 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         velz.append(fTree['SubhaloVel'][index,2])
         halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
         snapnums.append(fTree['SnapNum'][index])
-        halotype.append(1)
+        halotype.append(0)
 
+        firstProg = fTree['FirstProgenitor'][index]
+        nextProg = fTree['NextProgenitor'][firstProg]
         while firstProg >= 0:
             print "firstprog",firstProg
             subhaloid.append(fTree['SubhaloNumber'][firstProg])
@@ -418,8 +420,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             halotype.append(1)
 
             firstProg = fTree['FirstProgenitor'][firstProg]
-            
-            nextProg = fTree['NextProgenitor'][firstProg]
+
             print "nextprog",nextProg
             while nextProg >= 0:
                 print "nextprog",nextProg
@@ -437,7 +438,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
                 velz.append(fTree['SubhaloVel'][nextProg,2])
                 snapnums.append(fTree['SnapNum'][nextProg])
                 halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
-                halotype.append(0)
+                halotype.append(2)
                 nextProg = fTree['NextProgenitor'][nextProg]
 
         
