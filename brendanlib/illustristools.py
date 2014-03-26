@@ -388,7 +388,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         masses_dm.append(fTree['SubhaloMassType'][index,1])
         masses_stars.append(fTree['SubhaloMassType'][index,4])
         masses_bh.append(fTree['SubhaloMassType'][index,5])
-        subhaloid.append(index)
+        subhaloid.append(fTree['SubhaloNumber'][index])
         posx.append(fTree['SubhaloPos'][index,0])
         posy.append(fTree['SubhaloPos'][index,1])
         posz.append(fTree['SubhaloPos'][index,2])
@@ -399,7 +399,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         snapnums.append(fTree['SnapNum'][index])
 
         while firstProg >= 0:
-            subhaloid.append(firstProg)
+            subhaloid.append(fTree['SubhaloNumber'][firstProg])
             masses_all.append(np.sum(fTree['SubhaloMassType'][firstProg,:]))
             masses_gas.append(fTree['SubhaloMassType'][firstProg,0])
             masses_dm.append(fTree['SubhaloMassType'][firstProg,1])
