@@ -65,15 +65,15 @@ def loadstarsfromsnap(outputpath,filename,quant):
     if quant == "ID":
         subdata = fulldata[:,1]
     if quant == "POS":
-        subdata = fulldata[:,2:4]
+        subdata = fulldata[:,2:5]
     if quant == "GAGE":
-        subdata = fulldata[:,5]
-    if quant == "GIMA":
         subdata = fulldata[:,6]
-    if quant == "GMET":
+    if quant == "GIMA":
         subdata = fulldata[:,7]
+    if quant == "GMET":
+        subdata = fulldata[:,8]
     if quant == "GZ":
-        subdata = fulldata[:,8:16]
+        subdata = fulldata[:,9:16]
     return subdata
 
 def makesubboxinfo(basepath,subbox):
