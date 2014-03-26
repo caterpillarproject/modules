@@ -378,7 +378,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
     def recProgenitorList( fTree, index ):
  
-        
+        firstProg = fTree['FirstProgenitor'][index]
         progs = []
         if firstProg == -1:
             return progs
@@ -399,7 +399,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         snapnums.append(fTree['SnapNum'][index])
         halotype.append(0)
 
-        firstProg = fTree['FirstProgenitor'][index]
+        
         nextProg = fTree['NextProgenitor'][index]
         while firstProg >= 0:
             print "firstprog",firstProg
