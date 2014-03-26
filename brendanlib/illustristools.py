@@ -403,6 +403,9 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         nextProg = fTree['NextProgenitor'][index]
         print "nextprog",nextProg
 
+        nextProg = fTree['NextProgenitor'][firstProg]
+        print "nextprog",nextProg
+        
         while firstProg >= 0:
             print "firstprog",firstProg
             subhaloid.append(fTree['SubhaloNumber'][firstProg])
