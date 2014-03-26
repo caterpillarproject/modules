@@ -379,7 +379,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     def recProgenitorList( fTree, index ):
  
         firstProg = fTree['FirstProgenitor'][index]
- 
+        progs = []
         if firstProg == -1:
             return progs
  
