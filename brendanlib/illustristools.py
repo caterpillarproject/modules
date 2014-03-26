@@ -373,7 +373,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     velz = []
     snapnums = []
     halfmassr = []
-
+    halotype = []
     index = result['treeIndex']
 
     def recProgenitorList( fTree, index ):
@@ -396,7 +396,8 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         vely.append(fTree['SubhaloVel'][index,1])
         velz.append(fTree['SubhaloVel'][index,2])
         halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
-        snapnums.append(fTree['SnapNum'][index])
+        snapnums.append(fTree['snapNum'][index])
+        halotype.append(1)
 
         while firstProg >= 0:
             subhaloid.append(fTree['SubhaloNumber'][firstProg])
@@ -413,14 +414,35 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             velz.append(fTree['SubhaloVel'][firstProg,2])
             snapnums.append(fTree['SnapNum'][firstProg])
             halfmassr.append(fTree['SubhaloHalfmassRadType'][firstProg,1])
+            halotype.append(1)
 
             firstProg = fTree['FirstProgenitor'][firstProg]
  
+        nextProg = fTree['NextProgenitor'][firstProg]
+ 
+        while nextProg >= 0:
+            subhaloid.append(fTree['SubhaloNumber'][nextProg])
+            masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
+            masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
+            masses_dm.append(fTree['SubhaloMassType'][nextProg,1])
+            masses_stars.append(fTree['SubhaloMassType'][nextProg,4])
+            masses_bh.append(fTree['SubhaloMassType'][nextProg,5])
+            posx.append(fTree['SubhaloPos'][nextProg,0])
+            posy.append(fTree['SubhaloPos'][nextProg,1])
+            posz.append(fTree['SubhaloPos'][nextProg,2])
+            velx.append(fTree['SubhaloVel'][nextProg,0])
+            vely.append(fTree['SubhaloVel'][nextProg,1])
+            velz.append(fTree['SubhaloVel'][nextProg,2])
+            snapnums.append(fTree['SnapNum'][nextProg])
+            halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
+            halotype.append(0)
+
+
         return [snapnums,subhaloid,posx,posy,posz, \
-            velx,vely,velz,halfmassr,masses_all,masses_gas,masses_dm,masses_stars,masses_bh]
+            velx,vely,velz,halfmassr,masses_all,masses_gas,masses_dm,masses_stars,masses_bh,halotype]
 
     varlist = recProgenitorList( fTree, result['treeIndex'] )
-    varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh']
+    varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh','halotype']
 
     if varlist != []:
         return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
