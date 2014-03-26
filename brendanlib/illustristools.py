@@ -400,6 +400,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         halotype.append(1)
 
         while firstProg >= 0:
+            print "firstprog",firstProg
             subhaloid.append(fTree['SubhaloNumber'][firstProg])
             masses_all.append(np.sum(fTree['SubhaloMassType'][firstProg,:]))
             masses_gas.append(fTree['SubhaloMassType'][firstProg,0])
@@ -417,10 +418,11 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             halotype.append(1)
 
             firstProg = fTree['FirstProgenitor'][firstProg]
- 
+
         nextProg = fTree['NextProgenitor'][firstProg]
- 
+        print "nextprog",nextProg
         while nextProg >= 0:
+            print "nextprog",nextProg
             subhaloid.append(fTree['SubhaloNumber'][nextProg])
             masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
             masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
