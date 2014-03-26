@@ -421,5 +421,6 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
     varlist = recProgenitorList( fTree, result['treeIndex'] )
     varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh']
-
+    print varlist
+    print np.array(varlist).T
     return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
