@@ -59,7 +59,6 @@ def loadcandidates(outputpath,filename):
 
 def loadstarsfromsnap(outputpath,filename,quant):
     fulldata = np.loadtxt(outputpath+filename)
-    print np.shape(fulldata)
     if quant == "HOSTID":
         subdata = fulldata[:,0]
     if quant == "ID":
