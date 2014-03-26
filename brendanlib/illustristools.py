@@ -398,27 +398,6 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
         snapnums.append(fTree['SnapNum'][index])
         halotype.append(1)
-        nextProg = fTree['NextProgenitor'][firstProg]
-        
-        print "nextprog",nextProg
-        while nextProg >= 0:
-            print "nextprog",nextProg
-            subhaloid.append(fTree['SubhaloNumber'][nextProg])
-            masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
-            masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
-            masses_dm.append(fTree['SubhaloMassType'][nextProg,1])
-            masses_stars.append(fTree['SubhaloMassType'][nextProg,4])
-            masses_bh.append(fTree['SubhaloMassType'][nextProg,5])
-            posx.append(fTree['SubhaloPos'][nextProg,0])
-            posy.append(fTree['SubhaloPos'][nextProg,1])
-            posz.append(fTree['SubhaloPos'][nextProg,2])
-            velx.append(fTree['SubhaloVel'][nextProg,0])
-            vely.append(fTree['SubhaloVel'][nextProg,1])
-            velz.append(fTree['SubhaloVel'][nextProg,2])
-            snapnums.append(fTree['SnapNum'][nextProg])
-            halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
-            halotype.append(0)
-            nextProg = fTree['NextProgenitor'][nextProg]
 
         while firstProg >= 0:
             print "firstprog",firstProg
@@ -439,6 +418,27 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             halotype.append(1)
 
             firstProg = fTree['FirstProgenitor'][firstProg]
+            
+            nextProg = fTree['NextProgenitor'][firstProg]
+            print "nextprog",nextProg
+            while nextProg >= 0:
+                print "nextprog",nextProg
+                subhaloid.append(fTree['SubhaloNumber'][nextProg])
+                masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
+                masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
+                masses_dm.append(fTree['SubhaloMassType'][nextProg,1])
+                masses_stars.append(fTree['SubhaloMassType'][nextProg,4])
+                masses_bh.append(fTree['SubhaloMassType'][nextProg,5])
+                posx.append(fTree['SubhaloPos'][nextProg,0])
+                posy.append(fTree['SubhaloPos'][nextProg,1])
+                posz.append(fTree['SubhaloPos'][nextProg,2])
+                velx.append(fTree['SubhaloVel'][nextProg,0])
+                vely.append(fTree['SubhaloVel'][nextProg,1])
+                velz.append(fTree['SubhaloVel'][nextProg,2])
+                snapnums.append(fTree['SnapNum'][nextProg])
+                halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
+                halotype.append(0)
+                nextProg = fTree['NextProgenitor'][nextProg]
 
         
 
