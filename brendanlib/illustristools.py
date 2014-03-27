@@ -419,9 +419,8 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
         recProgenitorList( fTree, firstProg )
 
-            
-        print "nextprogsecond",nextProg
         nextProg = fTree['NextProgenitor'][firstProg]
+        print "nextprogsecond",nextProg
 
         while nextProg >= 0:
             print "nextprog",nextProg
