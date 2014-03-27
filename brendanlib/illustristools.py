@@ -440,7 +440,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
             halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
             halotype.append(2)
 
-            recProgenitorList( fTree, index )
+            recProgenitorList( fTree, nextProg )
             nextProg = fTree['NextProgenitor'][nextProg]
 
         return [snapnums,subhaloid,posx,posy,posz, \
