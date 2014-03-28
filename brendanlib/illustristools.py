@@ -375,32 +375,30 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     halfmassr = []
     halotype = []
     index = result['treeIndex']
-
-    masses_all.append(np.sum(fTree['SubhaloMassType'][index,:]))
-    masses_gas.append(fTree['SubhaloMassType'][index,0])
-    masses_dm.append(fTree['SubhaloMassType'][index,1])
-    masses_stars.append(fTree['SubhaloMassType'][index,4])
-    masses_bh.append(fTree['SubhaloMassType'][index,5])
-    subhaloid.append(fTree['SubhaloNumber'][index])
-    posx.append(fTree['SubhaloPos'][index,0])
-    posy.append(fTree['SubhaloPos'][index,1])
-    posz.append(fTree['SubhaloPos'][index,2])
-    velx.append(fTree['SubhaloVel'][index,0])
-    vely.append(fTree['SubhaloVel'][index,1])
-    velz.append(fTree['SubhaloVel'][index,2])
-    halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
-    snapnums.append(fTree['SnapNum'][index])
-    halotype.append(0)
+    #print index
+    #masses_all.append(np.sum(fTree['SubhaloMassType'][index,:]))
+    #masses_gas.append(fTree['SubhaloMassType'][index,0])
+    #masses_dm.append(fTree['SubhaloMassType'][index,1])
+    #masses_stars.append(fTree['SubhaloMassType'][index,4])
+    #masses_bh.append(fTree['SubhaloMassType'][index,5])
+    #subhaloid.append(fTree['SubhaloNumber'][index])
+    #posx.append(fTree['SubhaloPos'][index,0])
+    #posy.append(fTree['SubhaloPos'][index,1])
+    #posz.append(fTree['SubhaloPos'][index,2])
+    #velx.append(fTree['SubhaloVel'][index,0])
+    #vely.append(fTree['SubhaloVel'][index,1])
+    #velz.append(fTree['SubhaloVel'][index,2])
+    #halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
+    #snapnums.append(fTree['SnapNum'][index])
+    #halotype.append(0)
 
     def recProgenitorList( fTree, index ): 
-
         firstProg = fTree['FirstProgenitor'][index]
         progs = []
 
         if firstProg == -1:
             return progs
  
-        print "firstprog",firstProg
         subhaloid.append(fTree['SubhaloNumber'][firstProg])
         masses_all.append(np.sum(fTree['SubhaloMassType'][firstProg,:]))
         masses_gas.append(fTree['SubhaloMassType'][firstProg,0])
@@ -419,11 +417,8 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
 
         recProgenitorList( fTree, firstProg )
         nextProg = fTree['NextProgenitor'][firstProg]
-        
-        print "nextprogsecond",nextProg
-
         while nextProg >= 0:
-            print "nextprog",nextProg
+            #print nextProg
             subhaloid.append(fTree['SubhaloNumber'][nextProg])
             masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
             masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
