@@ -418,8 +418,8 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         halotype.append(1)
 
         recProgenitorList( fTree, firstProg )
-
         nextProg = fTree['NextProgenitor'][firstProg]
+        
         print "nextprogsecond",nextProg
 
         while nextProg >= 0:
