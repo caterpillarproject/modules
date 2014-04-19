@@ -60,7 +60,6 @@ def getScaleFactors(path,minsnap=0,digits=3,sub=False):
     minsnap = int(linesplit[0])
     scale_list = [-1 for x in xrange(minsnap)]
     # read scales
-    scale_list.append(float(linesplit[1]))
     while line != '':
         scale_list.append(float(line.split()[1]))
         line = f.readline()
@@ -272,7 +271,7 @@ def _read_host(fin, hostline, mywriteline, fmt, fmtsize, fout):
     numlines = 1
     line = fin.readline()
     while line != "" and line[0:5] != "#tree":
-        mywriteline(hostline,fout,fmt)
+        mywriteline(line,fout,fmt) #error used to be here
         numlines += 1
         lastloc = fin.tell()
         line = fin.readline()
@@ -757,7 +756,7 @@ class MTCatalogue:
                 print 'ERROR: input halo not a host'
                 return []
             row = treenum+1
-            while row<len(mt.Trees) and self.Trees[row].halotype == 1:
+            while row<len(self.Trees) and self.Trees[row].halotype == 1:
                 row+=1
             return np.arange(treenum+1, row)
 

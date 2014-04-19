@@ -62,9 +62,12 @@ datablocks = { 	"POS ":["Coordinates",3],
 		"SRHO":["SIDM_Density",1],
 		"SVEL":["SIDM_VelDisp",1],
 		#TRACER
-		"TRFQ":["FluidQuantities", 3],
-		"TRNT":["NumTracers", 1],
-		"TRCE":["TracerField", 1],
+                "TRCE":["TracerField", 1],
+                #TRACERMC
+                "TRNT":["NumTracers", 1],       #parttypes: 0,4,5
+                "TRFQ":["FluidQuantities", 13], #parttype: 3
+	        "TRID":["TracerID", 1],         #parttype: 3
+        	"TRPR":["ParentID", 1],         #parttype: 3
 		#GFM 
 		"GAGE":["GFM_StellarFormationTime",1],
 		"GIMA":["GFM_InitialMass",1],
@@ -99,7 +102,9 @@ datablocks = { 	"POS ":["Coordinates",3],
 		"BHHG":["BH_HaloGasMass", 1],
 		"BHCL":["BH_CoolingLuminosity", 1],
 		"BHMR":["BH_Mdot_Radio", 1], 
-		"BHPR":["BH_Progs", 1]
+		"BHPR":["BH_Progs", 1],
+                "BCEQ":["BH_CumEgyInjection_QM",1],
+                "BHMB":["BH_Mass_bubbles",1]
              }
 		
 
@@ -111,101 +116,96 @@ datablocks = { 	"POS ":["Coordinates",3],
 ########################### 
 #CLASS FOR SNAPSHOT HEADER#
 ###########################  
-###########################
-#CLASS FOR SNAPSHOT HEADER#
-###########################
 class snapshot_header:
-        def __init__(self, *args, **kwargs):
-                try:
-                        if (len(args) == 1):
-                                filename = args[0]
+	def __init__(self, *args, **kwargs):
+		if (len(args) == 1):
+			filename = args[0]
 
-                                if os.path.exists(filename):
-                                        curfilename=filename
-                                elif os.path.exists(filename+".hdf5"):
-                                        curfilename = filename+".hdf5"
-                                elif os.path.exists(filename+".0.hdf5"):
-                                        curfilename = filename+".0.hdf5"
-                                else:
-                                        print "[error] file not found : ", filename
-                                        sys.stdout.flush()
-                                        sys.exit()
+			if os.path.exists(filename):
+				curfilename=filename
+			elif os.path.exists(filename+".hdf5"):
+				curfilename = filename+".hdf5"
+			elif os.path.exists(filename+".0.hdf5"): 
+				curfilename = filename+".0.hdf5"
+			else:	
+				print "[error] file not found : ", filename
+				sys.stdout.flush()
+				sys.exit()
 
-                                f=hdf5lib.OpenFile(curfilename)
-                                self.npart = hdf5lib.GetAttr(f, "Header", "NumPart_ThisFile")
-                                self.nall = hdf5lib.GetAttr(f, "Header", "NumPart_Total")
-                                self.nall_highword = hdf5lib.GetAttr(f, "Header", "NumPart_Total_HighWord")
-                                self.massarr = hdf5lib.GetAttr(f, "Header", "MassTable")
-                                self.time = hdf5lib.GetAttr(f, "Header", "Time")
-                                self.redshift = hdf5lib.GetAttr(f, "Header", "Redshift")
-                                self.boxsize = hdf5lib.GetAttr(f, "Header", "BoxSize")
-                                self.filenum = hdf5lib.GetAttr(f, "Header", "NumFilesPerSnapshot")
-                                self.omega0 = hdf5lib.GetAttr(f, "Header", "Omega0")
-                                self.omegaL = hdf5lib.GetAttr(f, "Header", "OmegaLambda")
-                                self.hubble = hdf5lib.GetAttr(f, "Header", "HubbleParam")
-                                self.sfr = hdf5lib.GetAttr(f, "Header", "Flag_Sfr")
-                                self.cooling = hdf5lib.GetAttr(f, "Header", "Flag_Cooling")
-                                self.stellar_age = hdf5lib.GetAttr(f, "Header", "Flag_StellarAge")
-                                self.metals = hdf5lib.GetAttr(f, "Header", "Flag_Metals")
-                                self.feedback = hdf5lib.GetAttr(f, "Header", "Flag_Feedback")
-                                self.double = hdf5lib.GetAttr(f, "Header", "Flag_DoublePrecision") #GADGET-2 change
-                                f.close()
-                        else:
-                                #read arguments
-                                self.npart = kwargs.get("npart")
-                                self.nall = kwargs.get("nall")
-                                self.nall_highword = kwargs.get("nall_highword")
-                                self.massarr = kwargs.get("massarr")
-                                self.time = kwargs.get("time")
-                                self.redshift = kwargs.get("redshift")
-                                self.boxsize = kwargs.get("boxsize")
-                                self.filenum = kwargs.get("filenum")
-                                self.omega0 = kwargs.get("omega0")
-                                self.omegaL = kwargs.get("omegaL")
-                                self.hubble = kwargs.get("hubble")
-                                self.sfr = kwargs.get("sfr")
-                                self.cooling = kwargs.get("cooling")
-                                self.stellar_age = kwargs.get("stellar_age")
-                                self.metals = kwargs.get("metals")
-                                self.feedback = kwargs.get("feedback")
-                                self.double = kwargs.get("double")
-                                #set default values
-                                if (self.npart == None):
-                                        self.npart = np.array([0,0,0,0,0,0], dtype="int32")
-                                if (self.nall == None):
-                                        self.nall  = np.array([0,0,0,0,0,0], dtype="uint32")
-                                if (self.nall_highword == None):
-                                        self.nall_highword = np.array([0,0,0,0,0,0], dtype="uint32")
-                                if (self.massarr == None):
-                                        self.massarr = np.array([0,0,0,0,0,0], dtype="float64")
-                                if (self.time == None):
-                                        self.time = np.array([0], dtype="float64")
-                                if (self.redshift == None):
-                                        self.redshift = np.array([0], dtype="float64")
-                                if (self.boxsize == None):
-                                        self.boxsize = np.array([0], dtype="float64")
-                                if (self.filenum == None):
-                                        self.filenum = np.array([1], dtype="int32")
-                                if (self.omega0 == None):
-                                        self.omega0 = np.array([0], dtype="float64")
-                                if (self.omegaL == None):
-	                                self.omegaL = np.array([0], dtype="float64")
-                                if (self.hubble == None):
-                                        self.hubble = np.array([0], dtype="float64")
-                                if (self.sfr == None):
-                                        self.sfr = np.array([0], dtype="int32")
-                                if (self.cooling == None):
-                                        self.cooling = np.array([0], dtype="int32")
-                                if (self.stellar_age == None):
-                                        self.stellar_age = np.array([0], dtype="int32")
-                                if (self.metals == None):
-                                        self.metals = np.array([0], dtype="int32")
-                                if (self.feedback == None):
-                                        self.feedback = np.array([0], dtype="int32")
-                                if (self.double == None):
-                                        self.double = np.array([0], dtype="int32")
-                except:
-			pass
+			f=hdf5lib.OpenFile(curfilename)
+			self.npart = hdf5lib.GetAttr(f, "Header", "NumPart_ThisFile") 
+			self.nall = hdf5lib.GetAttr(f, "Header", "NumPart_Total")
+			self.nall_highword = hdf5lib.GetAttr(f, "Header", "NumPart_Total_HighWord") 
+			self.massarr = hdf5lib.GetAttr(f, "Header", "MassTable")
+			self.time = hdf5lib.GetAttr(f, "Header", "Time") 
+			self.redshift = hdf5lib.GetAttr(f, "Header", "Redshift") 
+			self.boxsize = hdf5lib.GetAttr(f, "Header", "BoxSize") 
+			self.filenum = hdf5lib.GetAttr(f, "Header", "NumFilesPerSnapshot") 
+			self.omega0 = hdf5lib.GetAttr(f, "Header", "Omega0")
+			self.omegaL = hdf5lib.GetAttr(f, "Header", "OmegaLambda") 
+			self.hubble = hdf5lib.GetAttr(f, "Header", "HubbleParam") 
+			self.sfr = hdf5lib.GetAttr(f, "Header", "Flag_Sfr") 
+			self.cooling = hdf5lib.GetAttr(f, "Header", "Flag_Cooling") 
+			self.stellar_age = hdf5lib.GetAttr(f, "Header", "Flag_StellarAge") 
+			self.metals = hdf5lib.GetAttr(f, "Header", "Flag_Metals") 
+			self.feedback = hdf5lib.GetAttr(f, "Header", "Flag_Feedback") 
+			self.double = hdf5lib.GetAttr(f, "Header", "Flag_DoublePrecision") #GADGET-2 change
+			f.close()
+		else:
+			#read arguments
+			self.npart = kwargs.get("npart")
+			self.nall = kwargs.get("nall")
+			self.nall_highword = kwargs.get("nall_highword")
+			self.massarr = kwargs.get("massarr")
+			self.time = kwargs.get("time")
+			self.redshift = kwargs.get("redshift")
+			self.boxsize = kwargs.get("boxsize")
+			self.filenum = kwargs.get("filenum")
+			self.omega0 = kwargs.get("omega0")
+			self.omegaL = kwargs.get("omegaL")
+			self.hubble = kwargs.get("hubble")
+			self.sfr = kwargs.get("sfr")
+			self.cooling = kwargs.get("cooling")
+			self.stellar_age = kwargs.get("stellar_age")
+			self.metals = kwargs.get("metals")
+			self.feedback = kwargs.get("feedback")
+			self.double = kwargs.get("double")
+
+			#set default values
+			if (self.npart == None):
+				self.npart = np.array([0,0,0,0,0,0], dtype="int32")
+			if (self.nall == None):				
+				self.nall  = np.array([0,0,0,0,0,0], dtype="uint32")
+			if (self.nall_highword == None):				
+				self.nall_highword = np.array([0,0,0,0,0,0], dtype="uint32")
+			if (self.massarr == None):
+				self.massarr = np.array([0,0,0,0,0,0], dtype="float64")
+			if (self.time == None):				
+				self.time = np.array([0], dtype="float64")
+			if (self.redshift == None):				
+				self.redshift = np.array([0], dtype="float64")
+			if (self.boxsize == None):				
+				self.boxsize = np.array([0], dtype="float64")
+			if (self.filenum == None):
+				self.filenum = np.array([1], dtype="int32")
+			if (self.omega0 == None):
+				self.omega0 = np.array([0], dtype="float64")
+			if (self.omegaL == None):
+				self.omegaL = np.array([0], dtype="float64")
+			if (self.hubble == None):
+				self.hubble = np.array([0], dtype="float64")
+			if (self.sfr == None):	
+				self.sfr = np.array([0], dtype="int32")            
+			if (self.cooling == None):	
+				self.cooling = np.array([0], dtype="int32")
+			if (self.stellar_age == None):	
+				self.stellar_age = np.array([0], dtype="int32")
+			if (self.metals == None):	
+				self.metals = np.array([0], dtype="int32")
+			if (self.feedback == None):	
+				self.feedback = np.array([0], dtype="int32")
+			if (self.double == None):
+				self.double = np.array([0], dtype="int32")
 
 
 
@@ -362,12 +362,14 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 		sys.stdout.flush()
 		sys.exit()
 
-	curfilename=filename+".hdf5"
-
-	if os.path.exists(curfilename):
+	if os.path.exists(filename):
+		curfilename=filename
 		multiple_files=False
-	elif os.path.exists(filename+".0"+".hdf5"):
-		curfilename = filename+".0"+".hdf5"
+	elif os.path.exists(filename+".hdf5"):
+		curfilename = filename+".hdf5"
+		multiple_files=False
+	elif os.path.exists(filename+".0.hdf5"):
+		curfilename = filename+".0.hdf5"
 		multiple_files=True
 	else:
 		print "[error] file not found : ", filename
@@ -507,10 +509,21 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 #############
 def list_blocks(filename, parttype=-1, verbose=False):
 
-	f=hdf5lib.OpenFile(filename)
+	if os.path.exists(filename):
+		curfilename=filename
+	elif os.path.exists(filename+".hdf5"):
+		curfilename = filename+".hdf5"
+	elif os.path.exists(filename+".0.hdf5"):
+		curfilename = filename+".0.hdf5"
+	else:
+		print "[error] file not found : ", filename
+		sys.stdout.flush()
+		sys.exit()
+
+	f=hdf5lib.OpenFile(curfilename)
 	for parttype in range(0,6):
 		part_name='PartType'+str(parttype)
-		if (hdf5lib.Contains(f,"",part_name_)):
+		if (hdf5lib.Contains(f,"",part_name)):
 			print "Parttype contains : ", parttype
 			print "-------------------"
 			sys.stdout.flush()
@@ -534,24 +547,34 @@ def list_blocks(filename, parttype=-1, verbose=False):
 #################
 def contains_block(filename, tag, parttype=-1, verbose=False):
 
+	if os.path.exists(filename):
+		curfilename=filename
+	elif os.path.exists(filename+".hdf5"):
+		curfilename = filename+".hdf5"
+	elif os.path.exists(filename+".0.hdf5"):
+		curfilename = filename+".0.hdf5"
+	else:
+		print "[error] file not found : ", filename
+		sys.stdout.flush()
+		sys.exit()
+
 	contains_flag=False
-	f=hdf5lib.OpenFile(filename)
-	for parttype in range(0,6):
-		part_name='PartType'+str(parttype)
-		if (hdf5lib.Contains(f,"",part_name)):
-			iter = it=datablocks.__iter__()
-			next = iter.next()
-			while (1):
-				if (verbose):
-					print "check ", next, datablocks[next][0]
-					sys.stdout.flush()
-				if (hdf5lib.Contains(f,part_name,datablocks[next][0])):
-					if (next.find(tag)>-1):
-						contains_flag=True	
-				try:
-					next=iter.next()
-				except StopIteration:
-					break
+	f=hdf5lib.OpenFile(curfilename)
+	part_name='PartType'+str(parttype)
+	if (hdf5lib.Contains(f,"",part_name)):
+		iter = it=datablocks.__iter__()
+		next = iter.next()
+		while (1):
+			if (verbose):
+				print "check ", next, datablocks[next][0]
+				sys.stdout.flush()
+			if (hdf5lib.Contains(f,part_name,datablocks[next][0])):
+				if (next.find(tag)>-1):
+					contains_flag=True	
+			try:
+				next=iter.next()
+			except StopIteration:
+				break
 	f.close() 
 	return contains_flag
 
@@ -630,7 +653,6 @@ def write_block(f, block, parttype, data):
 	else:
 		print "Unknown I/O block"
 		sys.stdout.flush()		
-
 
 
 

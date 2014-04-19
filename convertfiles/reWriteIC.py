@@ -5,10 +5,6 @@ import readsnapshots.readsnap as rs
 import os
 
 def getBlocks():
-#    padding = str(padding)
-#    nvir = str(nvir)
-
-#    pathname = '/n/home01/bgriffen/data/caterpillar/ics/halo80609/l12/p' + padding + '/nvir' + nvir + '/ics'
     pathname = './ics'
     
     # defining header blocks:
@@ -24,7 +20,7 @@ def getBlocks():
     # first find break down of nall
 
     for i in xrange(0,header.filenum):
-
+	print "READING FILE",i
         header=rs.snapshot_header(pathname+'.'+str(i))
 
         if (header.npart[5]>0)&(header.massarr[5]==0.0):
