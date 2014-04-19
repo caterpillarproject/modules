@@ -27,7 +27,7 @@ class RSDataReader:
             datatypesstr = ""
             numbytes = 256
             raise Exception("Not implemented error")
-        if version==2:
+        if version==2: #RC1
             headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
             varlist = np.dtype([('id','<i8'),\
                                 ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
@@ -47,7 +47,7 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfff"
             numbytes = struct.calcsize(datatypesstr) #232
-        if version==3:
+        if version==3: #RC2
             headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
             varlist = np.dtype([('id','<i8'),\
                                 ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
@@ -68,7 +68,7 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfff"
             numbytes = struct.calcsize(datatypesstr) #256
-        if version==4:
+        if version==4: #RC2 with numbound
             headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
             varlist = np.dtype([('id','<i8'),\
                                 ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
@@ -90,7 +90,6 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffq"
             numbytes = struct.calcsize(datatypesstr) #256
-
         if version==5: #modification to include total num bound particles and tidal radius
             # corresponds to rockstar version here: /spacebase/data/gdooley/RockstarSorted/rockstarTidal 
             # with TIDAL defined.
@@ -298,6 +297,10 @@ class RSDataReader:
             return "Version 2: Rockstar 0.99.9 RC1"
         if self.version == 3:
             return "Version 3: Rockstar 0.99.9 RC2"
+        if self.version == 4:
+            return "Version 4: Rockstar 0.99.9 RC2 with numbound"
+        if self.version == 5:
+            return "Version 5: Rockstar 0.99.9 RC2 with numbound and tidal (Greg)"
         return "ERROR: Not a valid version number!"
 
     def __getitem__(self,key):
