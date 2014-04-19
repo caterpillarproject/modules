@@ -271,7 +271,7 @@ def _read_host(fin, hostline, mywriteline, fmt, fmtsize, fout):
     numlines = 1
     line = fin.readline()
     while line != "" and line[0:5] != "#tree":
-        mywriteline(hostline,fout,fmt)
+        mywriteline(line,fout,fmt) #error used to be here
         numlines += 1
         lastloc = fin.tell()
         line = fin.readline()
