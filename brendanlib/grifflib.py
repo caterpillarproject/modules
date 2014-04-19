@@ -23,7 +23,7 @@ def getillustrisnsnaps(simtype):
     if "1" in simtype:
         nsnaps = 3975
     elif "2" in simtype:
-        nsnaps = 2264
+        nsnaps = 2263
     elif "3" in simtype:
         nsnaps = 1425
 
