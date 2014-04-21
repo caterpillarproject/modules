@@ -352,6 +352,17 @@ def storeSubInfo(file):
 
 def convertmt(dir,version=2,verbose=True):
     """
+    Converts dir/tree_0_0_0.dat to dir/tree.dat (with dir/treeindex.csv also output)
+    aka turns ASCII output into binary output, while also resorting the data to allow
+      fast retrieval of all trees (host and subs) from a single host halo
+    Potentially misses trees if their upid is not a "true" host, but that bug is hopefully fixed
+      (see get_corrected_upid in storeSubInfo in MTCatalogue.py)
+      
+    version=1: very old Rockstar (e.g. Greg's paper)
+    version=2: RC1 before the shape parameters were fixed (default)
+    version=3: RC2, probably correct for RC3
+    
+    Doesn't work if the original tree file is split into multiple .dat files
     """
     filenamein = dir+"/tree_0_0_0.dat"
     filenameout = dir+"/tree.bin"
