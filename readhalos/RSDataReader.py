@@ -89,7 +89,7 @@ class RSDataReader:
                                 ('num_bound','<i8'),\
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffq"
-            numbytes = struct.calcsize(datatypesstr) #256
+            numbytes = struct.calcsize(datatypesstr) #260
         if version==5: #modification to include total num bound particles and tidal radius
             # corresponds to rockstar version here: /spacebase/data/gdooley/RockstarSorted/rockstarTidal 
             # with TIDAL defined.
@@ -113,7 +113,29 @@ class RSDataReader:
                                 ('num_bound','<i8'),('tidal_r','<f8'),\
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffqfxxxx"
-            numbytes = struct.calcsize(datatypesstr) #256
+            numbytes = struct.calcsize(datatypesstr) #264
+        if version==6: #RC3, HDF5-compatible rockstar with pseudoevolution-corrected masses
+            headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
+            varlist = np.dtype([('id','<i8'),\
+                                ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
+                                ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),\
+                                ('corevelx','<f8'),('corevely','<f8'),('corevelz','<f8'),\
+                                ('bulkvelx','<f8'),('bulkvely','<f8'),('bulkvelz','<f8'),\
+                                ('mvir','<f8'),('rvir','<f8'),('child_r','<f8'),('vmax_r','<f8'),\
+                                ('mgrav','<f8'),('vmax','<f8'),('rvmax','<f8'),('rs','<f8'),('rs_klypin','<f8'),\
+                                ('vrms','<f8'),('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),\
+                                ('Epot','<f8'),('spin','<f8'),('altm1','<f8'),('altm2','<f8'),('altm3','<f8'),('altm4','<f8'),\
+                                ('Xoff','<f8'),('Voff','<f8'),\
+                                ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
+                                ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
+                                ('spin_bullock','<f8'),('T/|U|','<f8'),\
+                                ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
+                                ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
+                                ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
+                                ('num_bound','<i8'),('tidal_r','<f8'),\
+                                ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
+            datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfff"
+            numbytes = struct.calcsize(datatypesstr) #264
 
         self.datatypesstr = datatypesstr
 
@@ -301,6 +323,8 @@ class RSDataReader:
             return "Version 4: Rockstar 0.99.9 RC2 with numbound"
         if self.version == 5:
             return "Version 5: Rockstar 0.99.9 RC2 with numbound and tidal (Greg)"
+        if self.version == 6:
+            return "Version 6: Rockstar 0.99.9 RC3"
         return "ERROR: Not a valid version number!"
 
     def __getitem__(self,key):
