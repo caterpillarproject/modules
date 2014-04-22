@@ -129,10 +129,10 @@ class RSDataReader:
                                 ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
                                 ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
                                 ('spin_bullock','<f8'),('T/|U|','<f8'),\
+                                ('m_pe_b','<f8'),('m_pe_d','<f8'),\
                                 ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
                                 ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
                                 ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
-                                ('num_bound','<i8'),('tidal_r','<f8'),\
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfff"
             numbytes = struct.calcsize(datatypesstr) #264
