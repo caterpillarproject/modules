@@ -9,6 +9,33 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def plotxyzproj(ax1,ax2,ax3,pos,format='b-'):
+    ax1.plot(pos[...,0],pos[...,1],format,markeredgewidth=0.0)
+    ax2.plot(pos[...,0],pos[...,2],format,markeredgewidth=0.0)
+    ax3.plot(pos[...,1],pos[...,2],format,markeredgewidth=0.0)
+
+    ax1.set_xlabel('x-pos [Mpc/h]')
+    ax1.set_ylabel('y-pos [Mpc/h]')
+    ax2.set_xlabel('x-pos [Mpc/h]')
+    ax2.set_ylabel('z-pos [Mpc/h]')
+    ax3.set_xlabel('y-pos [Mpc/h]')
+    ax3.set_ylabel('z-pos [Mpc/h]')
+
+def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-'):
+    xcirc,ycirc = drawcircle(pos[...,0],pos[...,1],radius)
+    ax1.plot(xcirc,ycirc,format,linewidth=3)
+    xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
+    ax2.plot(xcirc,zcirc,format,linewidth=3)
+    ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
+    ax3.plot(ycirc,zcirc,format,linewidth=3)
+
+    ax1.set_xlabel('x-pos [Mpc/h]')
+    ax1.set_ylabel('y-pos [Mpc/h]')
+    ax2.set_xlabel('x-pos [Mpc/h]')
+    ax2.set_ylabel('z-pos [Mpc/h]')
+    ax3.set_xlabel('y-pos [Mpc/h]')
+    ax3.set_ylabel('z-pos [Mpc/h]')
+
 def getillustrismp(simtype):
     if "1" in simtype:
         mp = 4.4e6
