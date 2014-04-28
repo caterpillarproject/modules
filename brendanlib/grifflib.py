@@ -70,6 +70,7 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
 	f1.write("module load -S centos6/fftw-3.3.2_openmpi-1.6.4_gcc-4.8.0 \n")
 	f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0 \n")
 
+    f1.write("\n")
     f1.write("cd " + runpath + "\n")
     f1.write("\n")
     f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
