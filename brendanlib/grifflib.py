@@ -9,6 +9,68 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def makePBS(cluster,runpath,ncores,haloid,nrvir,level,email=False):
+    f1 = open(runpath + "smusic",'w')
+    f1.write("#!/bin/sh\n")
+    f1.write("#PBS -l nodes=1:ppn=" + str(ncores) + "\n")
+    f1.write("#PBS -M brendan.f.griffen@gmail.com\n")
+    f1.write("#PBS -N I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) +"\n")
+    f1.write("#PBS -m be\n")
+    f1.write("\n")
+    f1.write(". /opt/torque/etc/openmpi-setup.sh\n")
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic \n")
+    f1.write("rm wnoise* temp*\n")
+    f1.close()
+
+    f = open(runpath + 'runfrombigbang.sh','w')
+    f.write("#!/bin/bash\n")
+    f.write("ssh antares << 'ENDSSH' \n")
+    f.write("cd " + runpath + "\n")
+    f.write("qsub " + runpath + "smusic" + " > submitlist\n")
+    f.write("logout\n")
+    f.close()
+
+def makeSLURM(cluster,runpath,ncores,haloid,nrvir,level,email=False):
+    f1 = open(runpath + "smusic",'w')
+    f1.write("#!/bin/bash \n")
+    f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
+    f1.write("#SBATCH -o I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+
+    f1.write("#SBATCH -N 1 -n 1\n")
+    f1.write("#SBATCH --exclusive\n")
+    if "harvard" in cluster:
+        f1.write("#SBATCH -p "+ queue + "\n")
+        f1.write("#SBATCH -t 5000\n")
+
+    f1.write("#SBATCH --mem=256gb\n")
+    f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
+    f1.write("#SBATCH -J I" + str(haloid[1:4]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
+
+    if email:
+	f1.write("#SBATCH --mail-type=begin\n")
+        f1.write("#SBATCH --mail-type=end\n")
+
+    f1.write("\n")
+    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
+    f1.write("\n")
+
+    if "harvard" in cluster:
+        f1.write("module purge\n")
+        f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0\n")
+        f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0\n")
+        f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0\n")
+        f1.write("module load -S centos6/fftw-3.3.3_openmpi-1.6.4_gcc-4.8.0\n")
+
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
+    f1.write("rm wnoise* temp*\n")
+    f1.close()
+
+
 def replacetextinfile(filein,findtext,replacewith):
     f = open(filein,'r')
     filedata = f.read()
