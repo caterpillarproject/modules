@@ -14,10 +14,11 @@ def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1.write("#!/bin/sh\n")
     f1.write("#PBS -l nodes=1:ppn=" + str(ncores) + "\n")
     f1.write("#PBS -M brendan.f.griffen@gmail.com\n")
-    f1.write("#PBS -N I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) +"\n")
+    f1.write("#PBS -N I" + str(haloid[0:3]) + "N" + str(nrvir) + "L" + str(level[1]) +"\n")
     f1.write("#PBS -m be\n")
     f1.write("\n")
     f1.write(". /opt/torque/etc/openmpi-setup.sh\n")
+    f1.write("\n")
     f1.write("cd " + runpath + "\n")
     f1.write("\n")
     f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic \n")
@@ -32,7 +33,7 @@ def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f.write("logout\n")
     f.close()
 
-def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,queue="general",email=False):
+def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=256,queue="general",email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
@@ -45,9 +46,9 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,queue="g
         f1.write("#SBATCH -p "+ queue + "\n")
         f1.write("#SBATCH -t " + str(time) + "\n")
 
-    f1.write("#SBATCH --mem=256gb\n")
+    f1.write("#SBATCH --mem="+str(memory)+"gb\n")
     f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
-    f1.write("#SBATCH -J I" + str(haloid[1:4]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
+    f1.write("#SBATCH -J I" + str(haloid[0:3]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
 
     if email:
 	f1.write("#SBATCH --mail-type=begin\n")
