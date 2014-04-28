@@ -58,11 +58,14 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1.write("\n")
 
     if "harvard" in cluster:
-        f1.write("module purge\n")
-        f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0\n")
-        f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0\n")
-        f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0\n")
-        f1.write("module load -S centos6/fftw-3.3.3_openmpi-1.6.4_gcc-4.8.0\n")
+	f1.write("module purge \n")
+	f1.write("module load -S centos6/binutils-2.23.2 \n")
+	f1.write("module load -S centos6/gcc-4.8.0 \n")
+	f1.write("module load -S centos6/gmp-5.1.1 \n")
+	f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/fftw-3.3.2_openmpi-1.6.4_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0 \n")
 
     f1.write("cd " + runpath + "\n")
     f1.write("\n")
