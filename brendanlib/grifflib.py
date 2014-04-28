@@ -9,7 +9,7 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
-def makePBS(cluster,runpath,ncores,haloid,nrvir,level,email=False):
+def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/sh\n")
     f1.write("#PBS -l nodes=1:ppn=" + str(ncores) + "\n")
@@ -32,7 +32,7 @@ def makePBS(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f.write("logout\n")
     f.close()
 
-def makeSLURM(cluster,runpath,ncores,haloid,nrvir,level,email=False):
+def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
