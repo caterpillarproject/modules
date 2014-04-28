@@ -90,31 +90,33 @@ class EllipsoidTool:
         for i in range(len(x)):
             for j in range(len(x)):
                 [x[i,j],y[i,j],z[i,j]] = np.dot([x[i,j],y[i,j],z[i,j]], rotation) + center
-    
-        if plotAxes:
-            # make some purdy axes
-            axes = np.array([[radii[0],0.0,0.0],
-                             [0.0,radii[1],0.0],
-                             [0.0,0.0,radii[2]]])
-            # rotate accordingly
-            for i in range(len(axes)):
-                axes[i] = np.dot(axes[i], rotation)
-    
-    
-            # plot axes
-            for p in axes:
-                X3 = np.linspace(-p[0], p[0], 100) + center[0]
-                Y3 = np.linspace(-p[1], p[1], 100) + center[1]
-                Z3 = np.linspace(-p[2], p[2], 100) + center[2]
-                ax.plot(X3, Y3, Z3, color=cageColor)
-    
-        # plot ellipsoid
-        ax.plot_wireframe(x, y, z,  rstride=4, cstride=4, color=cageColor, alpha=cageAlpha)
-        
-        if make_ax:
-            plt.show()
-            plt.close(fig)
-            del fig
+
+        return x,y,z
+
+#        if plotAxes:
+#            # make some purdy axes
+#            axes = np.array([[radii[0],0.0,0.0],
+#                             [0.0,radii[1],0.0],
+#                             [0.0,0.0,radii[2]]])
+#            # rotate accordingly
+#            for i in range(len(axes)):
+#                axes[i] = np.dot(axes[i], rotation)
+#    
+#    
+#            # plot axes
+#            for p in axes:
+#                X3 = np.linspace(-p[0], p[0], 100) + center[0]
+#                Y3 = np.linspace(-p[1], p[1], 100) + center[1]
+#                Z3 = np.linspace(-p[2], p[2], 100) + center[2]
+#                ax.plot(X3, Y3, Z3, color=cageColor)
+#    
+#        # plot ellipsoid
+#        ax.plot_wireframe(x, y, z,  rstride=4, cstride=4, color=cageColor, alpha=cageAlpha)
+#        
+#        if make_ax:
+#            plt.show()
+#            plt.close(fig)
+#            del fig
         
 if __name__ == "__main__":
     # make 100 random points
