@@ -9,6 +9,17 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def replacetextinfile(filein,findtext,replacewith):
+    f = open(filein,'r')
+    filedata = f.read()
+    f.close()
+
+    newdata = filedata.replace(findtext,replacewith)
+
+    f = open(filein,'w')
+    f.write(newdata)
+    f.close()
+
 def getcaterpillarcandidates():
     candidatelist = [1194083, 861119, 1194823, 1878813, 917969, \
         1327381, 794919, 706754, 707045, 889102, 1292049, \
