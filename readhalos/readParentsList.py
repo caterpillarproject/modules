@@ -9,7 +9,7 @@ def readParents(dir, file, numhalos,sub=False):
     @ return:  
     """
     file_name = dir+'/'+file
-    print "Opening file: "+file_name
+    #print "Opening file: "+file_name
     if sub:
         try:
             with open(file_name):

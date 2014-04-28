@@ -341,7 +341,8 @@ def storeSubInfo(file):
             treeid2upid[treeid] = upid
             if upid != -1: #if subhalo, store hostID and location
                 #assume the trees are sorted so host appears before sub (e.g. by mass)
-                corrected_upid = get_corrected_upid(treeid,treeid2upid)
+                #corrected_upid = get_corrected_upid(treeid,treeid2upid)
+		corrected_upid = upid
                 if corrected_upid in host2sub:
                     host2sub[corrected_upid].append(loc)
                 else:
