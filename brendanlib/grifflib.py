@@ -37,20 +37,22 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
-    f1.write("#SBATCH -o I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
-    f1.write("#SBATCH -e I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+    f1.write("#SBATCH -o I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
 
     f1.write("#SBATCH -N 1 -n 1\n")
     f1.write("#SBATCH --exclusive\n")
+
     if "harvard" in cluster:
         f1.write("#SBATCH -p "+ queue + "\n")
         f1.write("#SBATCH -t " + str(time) + "\n")
 
     f1.write("#SBATCH --mem="+str(memory)+"gb\n")
-    f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
-    f1.write("#SBATCH -J I" + str(haloid[0:3]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
+
+    f1.write("#SBATCH -J I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
 
     if email:
+        f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
 	f1.write("#SBATCH --mail-type=begin\n")
         f1.write("#SBATCH --mail-type=end\n")
 
