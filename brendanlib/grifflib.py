@@ -53,8 +53,8 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
 
     if email:
         f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
-	f1.write("#SBATCH --mail-type=begin\n")
-        f1.write("#SBATCH --mail-type=end\n")
+	f1.write("#SBATCH --mail-type=FAIL\n")
+        #f1.write("#SBATCH --mail-type=end\n")
 
     f1.write("\n")
     f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
@@ -76,7 +76,6 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
     f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
     f1.write("rm wnoise* temp*\n")
     f1.close()
-
 
 def replacetextinfile(filein,findtext,replacewith):
     f = open(filein,'r')
