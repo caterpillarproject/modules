@@ -72,23 +72,23 @@ for haloid in haloidlist:
                         strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
                         print strprog
 
-                        if snapshot != -1:
-                            ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
-                            marker = 'k^'
-                            markerface = 'white'
+                     if snapshot != -1:
+                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
+                         marker = 'k^'
+                         markerface = 'white'
 
-                        if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
-                            marker = 'bo'
-                            markerface = 'b'
+                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
+                         marker = 'bo'
+                         markerface = 'b'
 
-                        if os.path.isdir(corepath + "rockstardata/halo_"+str(maxsnap).zfill(3)+"/"):
-                            marker = 'co'
-                            markerface = 'c'
+                     if os.path.isdir(corepath + "rockstardata/halo_"+str(maxsnap).zfill(3)+"/"):
+                         marker = 'co'
+                         markerface = 'c'
 
-                        if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
-                           and os.path.isdir(corepath + "rockstardata/halos_"+str(maxsnap).zfill(3)+"/"):
-                            marker = 'go'
-                            markerface = 'g'
+                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
+                        and os.path.isdir(corepath + "rockstardata/halos_"+str(maxsnap).zfill(3)+"/"):
+                         marker = 'go'
+                         markerface = 'g'
 
             ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
 
