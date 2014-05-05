@@ -67,8 +67,12 @@ for haloid in haloidlist:
                         else:
                             snapshot = max(snapshotvec)
 
-                    strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
-                    print strprog
+		    if snapshot == -1:
+                        strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, -/" + str(maxsnap)
+                    else:
+			strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
+
+		    print strprog
 
                     if snapshot != -1:
                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
