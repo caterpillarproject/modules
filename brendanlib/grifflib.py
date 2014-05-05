@@ -278,7 +278,7 @@ def plotbinnedxy(ax,x,y,labelin='data',nbins=10,color='r'):
 
     mean = sy / n
     std = np.sqrt(sy2/n - mean*mean)
-    ax.errorbar((_[1:] + _[:-1])/2, mean, yerr=std, fmt=color,marker='.',capsize=0,linestyle='None',ecolor=color,markerfacecolor=color,label=labelin)
+    ax.errorbar((_[1:] + _[:-1])/2, mean,linewidth=4, yerr=std, fmt=color,marker='.',capsize=0,linestyle='None',ecolor=color,markerfacecolor=color,label=labelin)
     #ax.errorbar((_[1:] + _[:-1])/2, mean, fmt=color,linestyle='-',linewidth=2,label=labelin)
 
 def getystd(x,y,nbins):
