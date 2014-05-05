@@ -240,7 +240,7 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
 	      print "filling masses according to massarr"   
       return np.ones(nall[parttype],dtype=dt)*massarr[parttype]
   elif block=="U   ":
-    data_for_type[0] = True
+    data_for_type[:] = True
     block_num = 6-blocksub
   elif block=="RHO ":
     data_for_type[0] = True
@@ -339,6 +339,9 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
           dt = np.uint64 
         
     if np.dtype(dt).itemsize*curpartnum != blocksize:
+      print np.dtype(dt).itemsize
+      print curpartnum
+
       print "something wrong with blocksize! expected =",np.dtype(dt).itemsize*curpartnum,"actual =",blocksize
       sys.exit()
     

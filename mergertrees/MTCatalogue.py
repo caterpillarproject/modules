@@ -271,7 +271,7 @@ def _read_host(fin, hostline, mywriteline, fmt, fmtsize, fout):
     numlines = 1
     line = fin.readline()
     while line != "" and line[0:5] != "#tree":
-        mywriteline(hostline,fout,fmt)
+        mywriteline(line,fout,fmt) #error used to be here
         numlines += 1
         lastloc = fin.tell()
         line = fin.readline()
@@ -341,7 +341,8 @@ def storeSubInfo(file):
             treeid2upid[treeid] = upid
             if upid != -1: #if subhalo, store hostID and location
                 #assume the trees are sorted so host appears before sub (e.g. by mass)
-                corrected_upid = get_corrected_upid(treeid,treeid2upid)
+                #corrected_upid = get_corrected_upid(treeid,treeid2upid)
+		corrected_upid = upid
                 if corrected_upid in host2sub:
                     host2sub[corrected_upid].append(loc)
                 else:
@@ -350,12 +351,83 @@ def storeSubInfo(file):
     f.close()
     return host2sub
 
-def convertmt(dir,version=2,verbose=True):
+def convertmt_multiple(dir,version):
     """
+    Converts multiple tree_x_x_x.dat files into one gigantic binary file and host index
+    Assumes that if a halo has subhalos, they are in the same tree_x_x_x.dat file
+    
+    version=1: very old Rockstar (e.g. Greg's paper)
+    version=2: RC1 before the shape parameters were fixed (default)
+    version=3: RC2, probably correct for RC3
     """
-    filenamein = dir+"/tree_0_0_0.dat"
-    filenameout = dir+"/tree.bin"
-    fileindexname = dir+"/treeindex.csv"
+    files = glob.glob(dir+'/tree_*')
+    filelist = []
+    for file in files:
+        filelist.append(file.split("/")[-1])
+    print "acting over these "+str(len(filelist))+" files"
+    print filelist
+    mergedfilenameout = dir+"/tree.bin"
+    mergedfileindexname = dir+"/treeindex.csv"
+    
+    ## Convert each individual .dat ASCII file to binary with its own index
+    ## I am assuming that if a halo has subs, they are in the same tree.dat file
+    tmp_fileoutlist = []
+    tmp_fileindexlist = []
+    for filenamein in filelist:
+        filenameout = dir+'/tmpoutbin_'+filenamein
+        fileindexname = dir+'/tmpoutindex_'+filenamein
+        tmp_fileoutlist.append(filenameout)
+        tmp_fileindexlist.append(fileindexname)
+        print "converting "+filenamein
+        start = time.time()
+        convertmt(dir,version=version,filenamein=dir+'/'+filenamein,filenameout=filenameout,fileindexname=fileindexname)
+        print "time:",time.time()-start
+    
+    print "Merging trees"
+    start = time.time()
+    import shutil
+    fout = open(mergedfilenameout,'wb')
+    filesizes = []
+    for filenameout in tmp_fileoutlist:
+        filesizes.append(os.path.getsize(filenameout)) #number of bytes in the file
+        shutil.copyfileobj(open(filenameout,'rb'),fout)
+    fout.close()
+    print "time:",time.time()-start
+    ## Offset bytes to fix the index
+    fileoffsets = np.array([0]+filesizes).cumsum()[:-1]
+    
+    print "Merging index"
+    start = time.time()
+    findex=open(mergedfileindexname,'w')
+    writer = csv.writer(findex)
+    for offset,fileindexname in zip(fileoffsets,tmp_fileindexlist):
+        reader = csv.reader(open(fileindexname,'r'))
+        for rsid,loc in reader:
+            writer.writerow([rsid,str(int(loc)+offset)])
+    findex.close()
+    print "time:",time.time()-start
+
+
+def convertmt(dir,version=2,verbose=True,filenamein=None,filenameout=None,fileindexname=None):
+    """
+    Converts dir/tree_0_0_0.dat to dir/tree.dat (with dir/treeindex.csv also output)
+    aka turns ASCII output into binary output, while also resorting the data to allow
+      fast retrieval of all trees (host and subs) from a single host halo
+    Potentially misses trees if their upid is not a "true" host, but that bug is hopefully fixed
+      (see get_corrected_upid in storeSubInfo in MTCatalogue.py)
+      
+    version=1: very old Rockstar (e.g. Greg's paper)
+    version=2: RC1 before the shape parameters were fixed (default)
+    version=3: RC2, probably correct for RC3
+    
+    Use convertmt_multiple if you have multiple tree_x_x_x.dat files
+    """
+    if filenamein==None:
+        filenamein = dir+"/tree_0_0_0.dat"
+    if filenameout==None:
+        filenameout = dir+"/tree.bin"
+    if fileindexname==None:
+        fileindexname = dir+"/treeindex.csv"
 
     host2sub = storeSubInfo(filenamein)
 

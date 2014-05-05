@@ -1,7 +1,7 @@
 # This script read in ICs and shifts lower resolution particles from all being type 5
 
 import numpy as np
-import readsnap as rs
+import readsnapshots.readsnap as rs
 import os
 
 def getBlocks():

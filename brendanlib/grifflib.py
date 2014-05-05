@@ -9,6 +9,136 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math
 
+def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
+    f1 = open(runpath + "smusic",'w')
+    f1.write("#!/bin/sh\n")
+    f1.write("#PBS -l nodes=1:ppn=" + str(ncores) + "\n")
+    f1.write("#PBS -M brendan.f.griffen@gmail.com\n")
+    f1.write("#PBS -N I" + str(haloid[0:3]) + "N" + str(nrvir) + "L" + str(level[1]) +"\n")
+    f1.write("#PBS -m be\n")
+    f1.write("\n")
+    f1.write(". /opt/torque/etc/openmpi-setup.sh\n")
+    f1.write("\n")
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic \n")
+    f1.write("rm wnoise* temp*\n")
+    f1.close()
+
+    f = open(runpath + 'runfrombigbang.sh','w')
+    f.write("#!/bin/bash\n")
+    f.write("ssh antares << 'ENDSSH' \n")
+    f.write("cd " + runpath + "\n")
+    f.write("qsub " + runpath + "smusic" + " > submitlist\n")
+    f.write("logout\n")
+    f.close()
+
+def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=256,queue="general",email=False):
+    f1 = open(runpath + "smusic",'w')
+    f1.write("#!/bin/bash \n")
+    f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
+    f1.write("#SBATCH -o I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+
+    f1.write("#SBATCH -N 1 -n 1\n")
+    f1.write("#SBATCH --exclusive\n")
+
+    if "harvard" in cluster:
+        f1.write("#SBATCH -p "+ queue + "\n")
+        f1.write("#SBATCH -t " + str(time) + "\n")
+
+    f1.write("#SBATCH --mem="+str(memory)+"gb\n")
+
+    f1.write("#SBATCH -J I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
+
+    if email:
+        f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
+	f1.write("#SBATCH --mail-type=FAIL\n")
+        #f1.write("#SBATCH --mail-type=end\n")
+
+    f1.write("\n")
+    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
+    f1.write("\n")
+
+    if "harvard" in cluster:
+	f1.write("module purge \n")
+	f1.write("module load -S centos6/binutils-2.23.2 \n")
+	f1.write("module load -S centos6/gcc-4.8.0 \n")
+	f1.write("module load -S centos6/gmp-5.1.1 \n")
+	f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/fftw-3.3.2_openmpi-1.6.4_gcc-4.8.0 \n")
+	f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0 \n")
+
+    f1.write("\n")
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + runpath.split("/")[-2] + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
+    f1.write("rm wnoise* temp*\n")
+    f1.close()
+
+def replacetextinfile(filein,findtext,replacewith):
+    f = open(filein,'r')
+    filedata = f.read()
+    f.close()
+
+    newdata = filedata.replace(findtext,replacewith)
+
+    f = open(filein,'w')
+    f.write(newdata)
+    f.close()
+
+def getcaterpillarcandidates():
+    candidatelist = [1194083, 861119, 1194823, 1878813, 917969, \
+        1327381, 794919, 706754, 707045, 889102, 1292049, \
+        1939265, 1725139, 1476079, 1327707, 65263, 1232333, \
+        616554, 40978, 264606, 1194227, 1697056, 767662, \
+        1327443, 682088, 387592, 264193, 387815, 616580, \
+        65342, 649524, 767635, 1878813, 794544, 1194055, \
+        1231743, 1194550, 264193, 918398, 1354300, 1939265,\
+         767635, 580280, 195776, 580399, 1161136, 1475134, \
+        1724694, 1104326, 1627198, 1697012, 951984, 1291497, \
+        1231889, 1160737, 1475260, 4847, 1878536, 264037, 794721, \
+        484859, 1506796, 1014456, 706334, 1041925, 362700,\
+         1599405, 1475260, 794919, 889079, 1014456, 446660, \
+        1665281, 1475134, 616404, 1129405, 1665066, 1665436, \
+        327784, 1014456, 1160737, 327506, 327506, 1665066, \
+        230667, 951984, 1506796, 1506656, 1194002, 889079, \
+        40585, 918056, 1630954, 327110, 40727, 1041925, \
+        1193868, 794919, 1506404, 1723903, 1475134, 1723903, \
+        1475260, 417608, 794919, 889033, 1696655, 1129405, 1194083, \
+        1878813, 951908, 1194083, 1506404, 1353966, 362579, 40727, \
+        1763685, 1268596, 674410]
+
+    return candidatelist
+
+def plotxyzproj(ax1,ax2,ax3,pos,format='b-'):
+    ax1.plot(pos[...,0],pos[...,1],format,markeredgewidth=0.0)
+    ax2.plot(pos[...,0],pos[...,2],format,markeredgewidth=0.0)
+    ax3.plot(pos[...,1],pos[...,2],format,markeredgewidth=0.0)
+
+    ax1.set_xlabel('x-pos [Mpc/h]')
+    ax1.set_ylabel('y-pos [Mpc/h]')
+    ax2.set_xlabel('x-pos [Mpc/h]')
+    ax2.set_ylabel('z-pos [Mpc/h]')
+    ax3.set_xlabel('y-pos [Mpc/h]')
+    ax3.set_ylabel('z-pos [Mpc/h]')
+
+def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-'):
+    xcirc,ycirc = drawcircle(pos[...,0],pos[...,1],radius)
+    ax1.plot(xcirc,ycirc,format,linewidth=3)
+    xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
+    ax2.plot(xcirc,zcirc,format,linewidth=3)
+    ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
+    ax3.plot(ycirc,zcirc,format,linewidth=3)
+
+    ax1.set_xlabel('x-pos [Mpc/h]')
+    ax1.set_ylabel('y-pos [Mpc/h]')
+    ax2.set_xlabel('x-pos [Mpc/h]')
+    ax2.set_ylabel('z-pos [Mpc/h]')
+    ax3.set_xlabel('y-pos [Mpc/h]')
+    ax3.set_ylabel('z-pos [Mpc/h]')
+
 def getillustrismp(simtype):
     if "1" in simtype:
         mp = 4.4e6

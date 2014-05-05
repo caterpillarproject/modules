@@ -186,7 +186,7 @@ class merger_tree:
 		self.SubhaloLookupTable = np.fromfile(f, dtype="int32", count=3 * self.TotNsubhalos[snapnum]).reshape([self.TotNsubhalos[snapnum],3])
 		f.close()
 	
-	def getSubhaloLookupTable(self):
+	def SubhaloLookupTable(self):
 		return self.SubhaloLookupTable
 	
 	def lookupSubhalo(self, subhalo_num):

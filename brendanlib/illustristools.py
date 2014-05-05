@@ -57,22 +57,42 @@ def loadcandidates(outputpath,filename):
     zposmw = candidates[:,6]
     return groupid,subid,groupmass,subhalomass,xposmw,yposmw,zposmw
 
-def loadstarsfromsnap(outputpath,filename,quant):
-    fulldata = np.loadtxt(outputpath+filename)
-    if quant == "HOSTID":
-        subdata = fulldata[:,0]
-    if quant == "ID":
-        subdata = fulldata[:,1]
-    if quant == "POS":
-        subdata = fulldata[:,2:5]
-    if quant == "GAGE":
-        subdata = fulldata[:,6]
-    if quant == "GIMA":
-        subdata = fulldata[:,7]
-    if quant == "GMET":
-        subdata = fulldata[:,8]
-    if quant == "GZ":
-        subdata = fulldata[:,9:16]
+def loadstarsfromsnap(outputpath,filename,quant,delimiter='',version='old'):
+    fulldata = np.loadtxt(outputpath+filename,delimiter=delimiter)
+    fulldata = np.atleast_2d(fulldata)
+    if version=='new':
+#	print fulldata
+#	print len(fulldata)
+#	print np.shape(fulldata)
+        if quant == "ID":
+            subdata = fulldata[...,0]
+        if quant == "POS":
+            subdata = fulldata[...,1:4]
+        if quant == "GAGE":
+            subdata = fulldata[...,5]
+        if quant == "GIMA":
+            subdata = fulldata[...,6]
+        if quant == "GMET":
+            subdata = fulldata[...,7]
+        if quant == "GZ":
+            subdata = fulldata[...,8:15]
+
+    if version=='old':
+        if quant == "HOSTID":
+            subdata = fulldata[:,0]
+        if quant == "ID":
+            subdata = fulldata[:,1]
+        if quant == "POS":
+            subdata = fulldata[:,2:5]
+        if quant == "GAGE":
+            subdata = fulldata[:,6]
+        if quant == "GIMA":
+            subdata = fulldata[:,7]
+        if quant == "GMET":
+            subdata = fulldata[:,8]
+        if quant == "GZ":
+            subdata = fulldata[:,9:16]
+
     return subdata
 
 def makesubboxinfo(basepath,subbox):
@@ -153,6 +173,13 @@ def loadstarparticleblock(snappath,snapshot,block,verbose=False):
                 print "---- Total Stars:",nstars
                 print "------ Wind Stars: %i (%3.2f)" % (nwindstars,(nstars-nwindstars)*100./nstars)
                 print "------ Real Stars: %i (%3.2f)"  % (nrealstars,(nstars-nrealstars)*100./nstars)
+	if block in ["GAGE"]:
+	    start = time.time()
+ 	    if verbose: print "-- Time to read star particle block..."
+            starrawGAGE = rsnap.read_block(snappath,"GAGE",parttype=4)
+            starout = starrawGAGE[starrawGAGE >= 0]
+            elapsed = time.time() - start
+            if verbose: print "---- [Ages] %3.2f seconds" % (elapsed)
     else:
         print "NO STAR PARTICLES AVAILABLE"
         starout=[]
@@ -334,13 +361,16 @@ def tracestars(outputpath,snappath,simtype,verbose):
         else:
            print "File Exists:",filename
 
-def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
+def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096,verbose=False,getmain=False):
     """ Return the full progenitor tree for a given subhalo at a given snapshot. """
     result = {}
  
     # load the tree number/subindex of this subgroup within the mergertree chunks
     filePath = fileBase + '/postprocessing/offsets/tree_offsets_subgroup_'+str(snapNum)+'_135.hdf5' 
 
+    if verbose: 
+	start = time.time()
+	
     f = h5py.File(filePath,'r')
  
     result['treeFileNum'] = f["TreeFile"][ subhaloID ]
@@ -348,7 +378,11 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     result['treeIndex']   = f["TreeIndex"][ subhaloID ]
  
     f.close()
- 
+
+    if verbose:
+	elapsed = time.time() - start
+ 	print "Reading offset file: %3.2f" % (elapsed)
+
     if result['treeFileNum'] < 0 or result['treeFileNum'] >= NtreeFiles:
         return[] # subhalo not in tree, and/or general error
  
@@ -356,9 +390,12 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     filePath = fileBase + 'trees/treedata/trees_sf1_' + str(snapNum).zfill(3)
     filePath += '.' + str(result['treeFileNum']) +'.hdf5'
  
+    if verbose:
+	start = time.time()
+
     f = h5py.File(filePath,'r')
     fTree = f['Tree'+str(result['treeNum'])]
-    
+ 
     masses_all = []
     masses_gas = []
     masses_dm = []
@@ -375,22 +412,21 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
     halfmassr = []
     halotype = []
     index = result['treeIndex']
-    #print index
-    #masses_all.append(np.sum(fTree['SubhaloMassType'][index,:]))
-    #masses_gas.append(fTree['SubhaloMassType'][index,0])
-    #masses_dm.append(fTree['SubhaloMassType'][index,1])
-    #masses_stars.append(fTree['SubhaloMassType'][index,4])
-    #masses_bh.append(fTree['SubhaloMassType'][index,5])
-    #subhaloid.append(fTree['SubhaloNumber'][index])
-    #posx.append(fTree['SubhaloPos'][index,0])
-    #posy.append(fTree['SubhaloPos'][index,1])
-    #posz.append(fTree['SubhaloPos'][index,2])
-    #velx.append(fTree['SubhaloVel'][index,0])
-    #vely.append(fTree['SubhaloVel'][index,1])
-    #velz.append(fTree['SubhaloVel'][index,2])
-    #halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
-    #snapnums.append(fTree['SnapNum'][index])
-    #halotype.append(0)
+    masses_all.append(np.sum(fTree['SubhaloMassType'][index,:]))
+    masses_gas.append(fTree['SubhaloMassType'][index,0])
+    masses_dm.append(fTree['SubhaloMassType'][index,1])
+    masses_stars.append(fTree['SubhaloMassType'][index,4])
+    masses_bh.append(fTree['SubhaloMassType'][index,5])
+    subhaloid.append(fTree['SubhaloNumber'][index])
+    posx.append(fTree['SubhaloPos'][index,0])
+    posy.append(fTree['SubhaloPos'][index,1])
+    posz.append(fTree['SubhaloPos'][index,2])
+    velx.append(fTree['SubhaloVel'][index,0])
+    vely.append(fTree['SubhaloVel'][index,1])
+    velz.append(fTree['SubhaloVel'][index,2])
+    halfmassr.append(fTree['SubhaloHalfmassRadType'][index,1])
+    snapnums.append(fTree['SnapNum'][index])
+    halotype.append(0)
 
     def recProgenitorList( fTree, index ): 
         firstProg = fTree['FirstProgenitor'][index]
@@ -416,30 +452,37 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         halotype.append(1)
 
         recProgenitorList( fTree, firstProg )
-        nextProg = fTree['NextProgenitor'][firstProg]
-        while nextProg >= 0:
-            #print nextProg
-            subhaloid.append(fTree['SubhaloNumber'][nextProg])
-            masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
-            masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
-            masses_dm.append(fTree['SubhaloMassType'][nextProg,1])
-            masses_stars.append(fTree['SubhaloMassType'][nextProg,4])
-            masses_bh.append(fTree['SubhaloMassType'][nextProg,5])
-            posx.append(fTree['SubhaloPos'][nextProg,0])
-            posy.append(fTree['SubhaloPos'][nextProg,1])
-            posz.append(fTree['SubhaloPos'][nextProg,2])
-            velx.append(fTree['SubhaloVel'][nextProg,0])
-            vely.append(fTree['SubhaloVel'][nextProg,1])
-            velz.append(fTree['SubhaloVel'][nextProg,2])
-            snapnums.append(fTree['SnapNum'][nextProg])
-            halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
-            halotype.append(2)
+        if getmain == False:
+            nextProg = fTree['NextProgenitor'][firstProg]
+            while nextProg >= 0:
+                #print nextProg
+                subhaloid.append(fTree['SubhaloNumber'][nextProg])
+                masses_all.append(np.sum(fTree['SubhaloMassType'][nextProg,:]))
+                masses_gas.append(fTree['SubhaloMassType'][nextProg,0])
+                masses_dm.append(fTree['SubhaloMassType'][nextProg,1])
+                masses_stars.append(fTree['SubhaloMassType'][nextProg,4])
+                masses_bh.append(fTree['SubhaloMassType'][nextProg,5])
+                posx.append(fTree['SubhaloPos'][nextProg,0])
+                posy.append(fTree['SubhaloPos'][nextProg,1])
+                posz.append(fTree['SubhaloPos'][nextProg,2])
+                velx.append(fTree['SubhaloVel'][nextProg,0])
+                vely.append(fTree['SubhaloVel'][nextProg,1])
+                velz.append(fTree['SubhaloVel'][nextProg,2])
+                snapnums.append(fTree['SnapNum'][nextProg])
+                halfmassr.append(fTree['SubhaloHalfmassRadType'][nextProg,1])
+                halotype.append(2)
+                recProgenitorList( fTree, nextProg )
+                nextProg = fTree['NextProgenitor'][nextProg]
 
-            recProgenitorList( fTree, nextProg )
-            nextProg = fTree['NextProgenitor'][nextProg]
+#                recProgenitorList( fTree, nextProg )
+#                nextProg = fTree['NextProgenitor'][nextProg]
 
         return [snapnums,subhaloid,posx,posy,posz, \
             velx,vely,velz,halfmassr,masses_all,masses_gas,masses_dm,masses_stars,masses_bh,halotype]
+
+    if verbose:
+        elapsed = time.time() - start
+	print "Time to walk tree: %3.2f" % (elapsed)
 
     varlist = recProgenitorList( fTree, result['treeIndex'] )
     varnames = ['snapnum','subhaloid','posx','posy','posz','velx','vely','velz','halfmassr','mall','mgas','mdm','mstar','mbh','halotype']
@@ -448,3 +491,103 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096):
         return pd.DataFrame(np.flipud(np.array(varlist).T),columns=varnames)
     else:
         return varlist
+
+def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=False):
+    """ Return requested fields for one particle type for all members of group/subgroup. """
+ 
+    groupName = "PartType" + str(partType)
+    dsetName = "Subhalo"
+    if getGroup > 0:
+        dsetName = "Group"
+ 
+    # load the length (by type) of this group/subgroup from the group catalog
+    filePath = fileBase + '/postprocessing/offsets/offsets_' + dsetName.lower() + '_'+str(snapNum)+'.npy'
+    if verbose: print filePath
+
+    offsets = np.load(filePath)
+ 
+    offsets = searchID - offsets
+    fileNum = np.max( np.where(offsets >= 0) )
+    groupOffset = offsets[fileNum]
+ 
+    filePath = fileBase + 'output/groups_' + str(snapNum).zfill(3) + '/'
+    filePath += 'fof_subhalo_tab_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
+    if verbose: print filePath
+ 
+    f = h5py.File(filePath,'r')
+    lenType = f[dsetName][dsetName+"LenType"][groupOffset]
+    f.close()
+ 
+    # load the offset (by type) of this group/subgroup within the snapshot chunks
+    filePath = fileBase + '/postprocessing/offsets/snap_offsets_' + dsetName.lower() + '_'+str(snapNum)+'.hdf5'
+    if verbose: print filePath
+ 
+    f = h5py.File(filePath,'r')
+    offsetType = f["Offsets"][ searchID ]
+    f.close()
+ 
+    # load the offsets for the snapshot chunks
+    filePath = fileBase + '/postprocessing/offsets/offsets_snap_'+str(snapNum)+'.npy'
+    if verbose: print filePath
+    offsets = np.load(filePath)
+    # determine first snapshot chunk we need to load for this type
+    wOffset = 0
+    result  = {}
+ 
+    offsetsThisType = offsetType[partType] - offsets[partType,:]
+    fileNum         = np.max( np.where(offsetsThisType >= 0) )
+    fileOffset      = offsetsThisType[fileNum]
+ 
+    numLeftToRead = lenType[partType]
+ 
+    while numLeftToRead:
+ 
+        # loop over files, for each load the overlapping chunk into the hdf5 file
+        curSnapFilePath = fileBase + 'output/snapdir_' + str(snapNum).zfill(3) + '/'
+        curSnapFilePath += 'snap_' + str(snapNum) + '.' + str(fileNum) + '.hdf5'
+ 
+        fSnap = h5py.File(curSnapFilePath,'r')
+ 
+        # set local read length for this file
+        readLen = numLeftToRead
+ 
+        if fileNum < offsets.shape[1]-1: # if in last file, assume group is entirely contained in this file
+            # if the local length after requested offset is less than the read length, modify read length
+            if fileOffset+readLen+offsets[partType,fileNum]-1 >= offsets[partType,fileNum+1]:
+                readLen = (offsets[partType,fileNum+1]-offsets[partType,fileNum]) - fileOffset
+ 
+        # loop over each requested field for this particle type
+        for fieldName in fields:
+            # shape and type
+            dtype = 'float32'
+            ndims = 1
+            if fieldName == 'ParticleIDs' or fieldName == 'ParentID' or fieldName == 'TracerID':
+                dtype = 'int64'
+            if fieldName == 'NumTracers':
+                dtype = 'int32'
+            if fieldName == 'Coordinates' or fieldName == 'Velocities':
+                ndims = 3
+            if fieldName == 'GFM_Metals':
+                ndims = 9
+            if fieldName == 'GFM_StellarPhotometrics':
+                ndims = 8
+ 
+            # read data local to the current file (allocate dataset if it does not already exist)
+            if ndims == 1:
+                if fieldName not in result:
+                    result[fieldName] = np.zeros( (lenType[partType],), dtype=dtype )
+                result[fieldName][wOffset:wOffset+readLen] = fSnap[groupName][fieldName][fileOffset:fileOffset+readLen]
+            else:
+                if fieldName not in result:
+                    result[fieldName] = np.zeros( (lenType[partType],ndims), dtype=dtype )
+                result[fieldName][wOffset:wOffset+readLen,:] = fSnap[groupName][fieldName][fileOffset:fileOffset+readLen,:]
+ 
+        wOffset += readLen
+        numLeftToRead -= readLen
+        fileNum += 1
+        fileOffset = 0
+ 
+        fSnap.close()
+ 
+    # reads across all files done, for all fields of this type
+    return result
