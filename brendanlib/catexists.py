@@ -51,7 +51,7 @@ for haloid in haloidlist:
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
                     maxsnap = len(explist)-1
 
-                     if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
+                    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'k^'
                         markerface = 'k'
 
@@ -60,8 +60,9 @@ for haloid in haloidlist:
                         snapshotvec = []
 
                         for subname in os.listdir(subdirnames):
-                                if "snapdir" in subname:
-                                    snapshotvec.append(int(subname.replace("snapdir_","")))
+                            if "snapdir" in subname:
+                                snapshotvec.append(int(subname.replace("snapdir_","")))
+                            
                             if not snapshotvec:
                                 snapshot = -1
                             else:
