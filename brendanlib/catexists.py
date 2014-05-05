@@ -38,43 +38,34 @@ for haloid in haloidlist:
             corepath =  basepath + "/" + haloid + "/" + ext
             marker = 'yD'
             markerface = 'yellow'
-            try:
-#		print corepath + "ics.0"
-                with open(corepath + "ics.0"):
-		    print corepath + "ics.0"
-                    icfilesize = os.path.getsize(corepath + "ics.0")
+            if os.path.isfile(corepath + "ics.0"):
+                icfilesize = os.path.getsize(corepath + "ics.0")
+                if icfilesize > 0:
+                    marker = 'rD'
+                    markerface = 'red'
+                elif icfilesize == 0:
+                     marker = 'gx'
+                     markerface = 'green'
 
-                    if icfilesize > 0:
-                        marker = 'rD'
-                        markerface = 'red'
-                    elif icfilesize == 0:
-                         marker = 'gx'
-                         markerface = 'green'
+                if os.path.isdir(corepath + "outputs/"):
+                    explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
+                    maxsnap = len(explist)-1
 
-                    elif os.path.isdir(corepath + "outputs/"):
-          		explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
-	                maxsnap = len(explist)-1
+                     if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
+                        marker = 'k^'
+                        markerface = 'k'
 
-			print explist
-		
-			if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
-                            marker = 'k^'
-                            markerface = 'k'
-
-	                strprog = ext + " ["
+                        strprog = ext + " ["
                         subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                         snapshotvec = []
 
-			print subdirnames                
-
-		        for subname in os.listdir(subdirnames):
-                            if "snapdir" in subname:
-                                snapshotvec.append(int(subname.replace("snapdir_","")))
-
-                        if not snapshotvec:
-                            snapshot = -1
-                        else:
-                            snapshot = max(snapshotvec)
+                        for subname in os.listdir(subdirnames):
+                                if "snapdir" in subname:
+                                    snapshotvec.append(int(subname.replace("snapdir_","")))
+                            if not snapshotvec:
+                                snapshot = -1
+                            else:
+                                snapshot = max(snapshotvec)
 
                             strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
                             print strprog
@@ -97,10 +88,8 @@ for haloid in haloidlist:
                             marker = 'go'
                             markerface = 'g'
 
-                    ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
+            ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
 
-
-            except IOError: pass
 
 
 ICArtist = ax.plot((0,1),(0,0),'rD', label='IC')
