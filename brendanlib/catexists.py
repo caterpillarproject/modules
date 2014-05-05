@@ -51,10 +51,6 @@ for haloid in haloidlist:
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
                     maxsnap = len(explist)-1
                     
-                    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
-                        marker = 'k^'
-                        markerface = 'k'
-
                     strprog = ext + " ["
                     subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                     snapshotvec = []
@@ -62,13 +58,13 @@ for haloid in haloidlist:
                         if "snapdir" in subname:
                             snapshotvec.append(int(subname.replace("snapdir_","")))
                         
-                        if not snapshotvec:
-                            snapshot = -1
-                        else:
-                            snapshot = max(snapshotvec)
+                    if not snapshotvec:
+                        snapshot = -1
+                    else:
+                        snapshot = max(snapshotvec)
 
 		    if snapshot == -1:
-                        strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, -/" + str(maxsnap)
+                        strprog = ext + " 0% -/" + str(maxsnap)
                     else:
 			strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
 
@@ -78,6 +74,10 @@ for haloid in haloidlist:
                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
                         marker = 'k^'
                         markerface = 'white'
+
+		    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
+                        marker = 'k^'
+                        markerface = 'k'
 
                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'bo'
@@ -97,11 +97,12 @@ for haloid in haloidlist:
 
 
 ICArtist = ax.plot((0,1),(0,0),'rD', label='IC')
-GADGETArtist = ax.plot((0,1),(0,0),'k^', label='Incomplete Runs')
+GADGETArtist = ax.plot((0,1),(0,0),'k^', label='Gadget Complete')
+GADGETncArtist = ax.plot((0,1),(0,0),'k^',markerfacecolor='white',label='Gadget On-going')
 SUBFINDArtist = ax.plot((0,1),(0,0),'bo', label='SUBFIND')
 ROCKSTARArtist = ax.plot((0,1),(0,0),'mo', label='Rockstar')
 HALOSArtist = ax.plot((0,1),(0,0),'go', label='S&R [Complete]')
 handles, labels = ax.get_legend_handles_labels()
-fig.legend(handles, labels, 'upper center',ncol=5,numpoints=1)
+fig.legend(handles, labels, 'upper center',ncol=6,numpoints=1)
 
 plt.show()
