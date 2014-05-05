@@ -10,7 +10,7 @@ if platform.node() == "bigbang.mit.edu":
 if "harvard.edu" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
 
-levellist = [11,12,13,14]
+levellist = [11,12,13,14,15]
 nrvirlist = [4]
 haloidlist = []
 for filename in os.listdir(basepath):
@@ -26,19 +26,20 @@ for haloid in haloidlist:
     ax = fig.add_subplot(3,5,plotinc)
     ax.set_title(haloid)
     ax.set_ylim([2,7])
-    ax.set_xlim([10,15])
+    ax.set_xlim([10,16])
     ax.set_yticks((3,4,5,6))
     ax.set_yticklabels(('3','4','5','6'))
     ax.set_xticks((11,12,13,14))
-    ax.set_xticklabels(('11','12','13','14'))
+    ax.set_xticklabels(('11','12','13','14','15'))
 
     for level in levellist:
         for nrvir in nrvirlist:
-            ext = haloid + "_BB_Z127_P7_LN10_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
+            ext = haloid + "_BB_Z127_P7_LN07_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             marker = 'yD'
             markerface = 'yellow'
             try:
+#		print corepath + "ics.0"
                 with open(corepath + "ics.0"):
 		    print corepath + "ics.0"
                     icfilesize = os.path.getsize(corepath + "ics.0")
@@ -51,8 +52,10 @@ for haloid in haloidlist:
                          markerface = 'green'
 
                     elif os.path.isdir(corepath + "outputs/"):
-#          		explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
+          		explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
 	                maxsnap = len(explist)-1
+
+			print explist
 		
 			if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                             marker = 'k^'
@@ -61,7 +64,9 @@ for haloid in haloidlist:
 	                strprog = ext + " ["
                         subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                         snapshotvec = []
-                
+
+			print subdirnames                
+
 		        for subname in os.listdir(subdirnames):
                             if "snapdir" in subname:
                                 snapshotvec.append(int(subname.replace("snapdir_","")))
