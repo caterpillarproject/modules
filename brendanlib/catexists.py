@@ -34,7 +34,7 @@ for haloid in haloidlist:
 
     for level in levellist:
         for nrvir in nrvirlist:
-            ext = haloid + "_BB_Z127_P7_LN07_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
+            ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             marker = 'yD'
             markerface = 'yellow'
@@ -50,6 +50,7 @@ for haloid in haloidlist:
                 if os.path.isdir(corepath + "outputs/"):
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
                     maxsnap = len(explist)-1
+		    print maxsnap
 
                     if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'k^'
@@ -58,7 +59,7 @@ for haloid in haloidlist:
                         strprog = ext + " ["
                         subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                         snapshotvec = []
-
+			print subdirnames
                         for subname in os.listdir(subdirnames):
                             if "snapdir" in subname:
                                 snapshotvec.append(int(subname.replace("snapdir_","")))
