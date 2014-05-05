@@ -3,6 +3,7 @@ import subprocess
 import numpy as np
 import pylab as plt
 import platform
+import time
 
 if platform.node() == "bigbang.mit.edu":
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
@@ -34,6 +35,7 @@ for haloid in haloidlist:
 
     for level in levellist:
         for nrvir in nrvirlist:
+
             ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
             corepath =  basepath + "/" + haloid + "/" + ext
             marker = 'yD'
@@ -68,7 +70,29 @@ for haloid in haloidlist:
                     else:
 			strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
 
-		    print strprog
+		    print
+		    print ext
+
+		    try:
+		        lastsnapfile = corepath + "/outputs/snapdir_"+str(snapshot).zfill(3)+"/snap_"+str(snapshot).zfill(3)+".0.hdf5"
+                        with open(lastsnapfile):
+                            file_mod_time = os.stat(lastsnapfile).st_mtime
+                            tnow = time.time()
+                            last_time = round((int(tnow) - file_mod_time) / 3600, 2)
+                            print "-- wrote out last snapshot {:.2f} hours ago.".format(last_time)
+                    except:
+                        try:
+                            with open(corepath+"/outputs/cpu.txt"):
+                                file_mod_time = os.stat(writepath+"/outputs/cpu.txt").st_mtime
+                                tnow = time.time()
+                                last_time = round((int(tnow) - file_mod_time) / 3600, 2)
+                                print "-- wrote out 'cpu.txt'  {:.2f} hours ago.".format(last_time)
+                        except:
+                            pass
+
+                        pass
+
+		    print "--",strprog.replace(ext,"")
 
                     if snapshot != -1:
                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
