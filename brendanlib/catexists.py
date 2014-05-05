@@ -50,27 +50,27 @@ for haloid in haloidlist:
                 if os.path.isdir(corepath + "outputs/"):
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
                     maxsnap = len(explist)-1
-		    print maxsnap
+                    #print maxsnap
 
                     if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'k^'
                         markerface = 'k'
 
-                        strprog = ext + " ["
-                        subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
-                        snapshotvec = []
-			print subdirnames
-                        for subname in os.listdir(subdirnames):
-                            if "snapdir" in subname:
-                                snapshotvec.append(int(subname.replace("snapdir_","")))
-                            
-                            if not snapshotvec:
-                                snapshot = -1
-                            else:
-                                snapshot = max(snapshotvec)
+                    strprog = ext + " ["
+                    subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
+                    snapshotvec = []
+                    #print subdirnames
+                    for subname in os.listdir(subdirnames):
+                        if "snapdir" in subname:
+                            snapshotvec.append(int(subname.replace("snapdir_","")))
+                        
+                        if not snapshotvec:
+                            snapshot = -1
+                        else:
+                            snapshot = max(snapshotvec)
 
-                            strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
-                            print strprog
+                        strprog = ext + " %0.2f" % (float(snapshot)*100/float(maxsnap)) + " %, " + str(snapshot)+ "/"
+                        print strprog
 
                         if snapshot != -1:
                             ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
