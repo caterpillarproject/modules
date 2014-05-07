@@ -4,6 +4,11 @@ import numpy as np
 import pylab as plt
 import platform
 import time
+from brendanlib.grifflib import getcurrentjobs
+
+jobids,currentjobs,statusjobs = getcurrentjobs()
+
+tthresh = 6
 
 if platform.node() == "bigbang.mit.edu":
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
@@ -20,7 +25,18 @@ for filename in os.listdir(basepath):
 
 fig = plt.figure(figsize=(16,10))
 plotinc = 0
-print "\n"
+
+tnow = time.time()
+should_time = tnow - (tthresh * 3600)
+jobstocancel = []
+
+leveldone = {}
+nhalolevels = {}
+
+for level in xrange(11,15):
+    leveldone[level] = 0
+    nhalolevels[level] = 0
+
 for haloid in haloidlist:
 
     plotinc += 1
@@ -30,7 +46,7 @@ for haloid in haloidlist:
     ax.set_xlim([10,16])
     ax.set_yticks((3,4,5,6))
     ax.set_yticklabels(('3','4','5','6'))
-    ax.set_xticks((11,12,13,14))
+    ax.set_xticks((11,12,13,14,15))
     ax.set_xticklabels(('11','12','13','14','15'))
 
     for level in levellist:
@@ -62,37 +78,45 @@ for haloid in haloidlist:
                         
                     if not snapshotvec:
                         snapshot = -1
+  		        strprog = ext + "Completed: 0% -/" + str(maxsnap)
                     else:
                         snapshot = max(snapshotvec)
-
-		    if snapshot == -1:
-                        strprog = ext + " 0% -/" + str(maxsnap)
-                    else:
-			strprog = ext + " %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
-
-		    print
-		    print ext
+			strprog = ext + "Completed: %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
 
 		    try:
 		        lastsnapfile = corepath + "/outputs/snapdir_"+str(snapshot).zfill(3)+"/snap_"+str(snapshot).zfill(3)+".0.hdf5"
                         with open(lastsnapfile):
                             file_mod_time = os.stat(lastsnapfile).st_mtime
-                            tnow = time.time()
                             last_time = round((int(tnow) - file_mod_time) / 3600, 2)
-                            print "-- wrote out last snapshot {:.2f} hours ago.".format(last_time)
+			    snaptimestr = "-- wrote out last snapshot {:.2f} hours ago.".format(last_time)
                     except:
-                        try:
-                            with open(corepath+"/outputs/cpu.txt"):
-                                file_mod_time = os.stat(writepath+"/outputs/cpu.txt").st_mtime
-                                tnow = time.time()
-                                last_time = round((int(tnow) - file_mod_time) / 3600, 2)
-                                print "-- wrote out 'cpu.txt'  {:.2f} hours ago.".format(last_time)
-                        except:
-                            pass
+			pass
 
+                    try:
+                        with open(corepath+"/outputs/cpu.txt"):
+                            file_mod_time = os.stat(corepath+"/outputs/cpu.txt").st_mtime
+                            last_time = round((int(tnow) - file_mod_time) / 3600, 2)
+			    cputimestr = "-- wrote out 'cpu.txt'     {:.2f} hours ago.".format(last_time)
+                    except:
                         pass
 
-		    print "--",strprog.replace(ext,"")
+		    jobname = haloid[:4]+"N"+str(nrvir)+"L"+str(level)[-1]
+
+		    if jobname in currentjobs:
+			idx = currentjobs.index(jobname)
+	                statusi = statusjobs[idx]
+  		        if snapshot != maxsnap and "-/" not in strprog and (file_mod_time - should_time) < tthresh and statusi == "R":
+			    print
+			    print ext
+ 		            print "--",strprog.replace(ext,"")
+			    print snaptimestr
+			    print cputimestr			    
+			    jobstocancel.append(int(jobids[idx]))
+
+		    if snapshot == maxsnap:
+			leveldone[level] += 1
+
+		    nhalolevels[level] += 1
 
                     if snapshot != -1:
                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
@@ -128,5 +152,16 @@ ROCKSTARArtist = ax.plot((0,1),(0,0),'mo', label='Rockstar')
 HALOSArtist = ax.plot((0,1),(0,0),'go', label='S&R [Complete]')
 handles, labels = ax.get_legend_handles_labels()
 fig.legend(handles, labels, 'upper center',ncol=6,numpoints=1)
+
+print
+print
+print "Potential jobs to cancel (been running over: " + str(tthresh) + " hours)"
+print jobstocancel
+
+print
+print "| Level | % Completed |"
+for key,value in leveldone.iteritems():
+    if nhalolevels[key] != 0:
+	print "   %i        %3.2f" % (key,float(value)/float(nhalolevels[key])*100)
 
 plt.show()
