@@ -8,6 +8,28 @@ from math import *
 import numpy.random as nprnd
 import matplotlib.colors as col
 import math
+import subprocess
+import shlex
+
+def getcurrentjobs():
+    pipemyq = "squeue -u bgriffen > currentqueue.out"
+    subprocess.call(';'.join([pipemyq]),shell=True)
+    lines = [line.strip() for line in open('currentqueue.out')]
+    currentjobs = []
+    statusjobs = []
+    jobids = []
+
+    for i in xrange(0,len(lines)):
+        currentjobs.append(shlex.split(lines[:][i])[2])
+	statusjobs.append(shlex.split(lines[:][i])[4])
+	jobids.append(shlex.split(lines[:][i])[0])
+
+#    if currentjobs:
+#        print "Current Jobs:"
+#        print currentjobs
+#	print statusjobs
+	
+    return jobids,currentjobs,statusjobs
 
 def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1 = open(runpath + "smusic",'w')
