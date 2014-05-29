@@ -107,12 +107,12 @@ for haloid in haloidlist:
                         marker = 'bo'
                         markerface = 'b'
 
-                    if os.path.isdir(corepath + "rockstardata/halo_"+str(maxsnap).zfill(3)+"/"):
+                    if os.path.isdir(corepath + "halos/halo_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'co'
                         markerface = 'c'
 
                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
-                       and os.path.isdir(corepath + "rockstardata/halos_"+str(maxsnap).zfill(3)+"/"):
+                       and os.path.isdir(corepath + "halos/halos_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'go'
                         markerface = 'g'
 
