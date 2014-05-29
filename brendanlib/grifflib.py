@@ -13,23 +13,19 @@ import shlex
 
 def getcurrentjobs():
     pipemyq = "squeue -u bgriffen,alexji > currentqueue.out"
+    pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen,alexji > currentqueue.out'
     subprocess.call(';'.join([pipemyq]),shell=True)
     lines = [line.strip() for line in open('currentqueue.out')]
     currentjobs = []
-    statusjobs = []
+    jobstatus = []
     jobids = []
-
-    for i in xrange(0,len(lines)):
-        currentjobs.append(shlex.split(lines[:][i])[2])
-	statusjobs.append(shlex.split(lines[:][i])[4])
-	jobids.append(shlex.split(lines[:][i])[0])
-
-#    if currentjobs:
-#        print "Current Jobs:"
-#        print currentjobs
-#	print statusjobs
-	
-    return jobids,currentjobs,statusjobs
+    
+    for i in xrange(1,len(lines)):
+	currentjobs.append(lines[i].split(",")[0])
+	jobids.append(lines[i].split(",")[1])
+	jobstatus.append(lines[i].split(",")[2])
+    
+    return jobids,currentjobs,jobstatus
 
 def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1 = open(runpath + "smusic",'w')
@@ -59,10 +55,10 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
-    #f1.write("#SBATCH -o I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
-    #f1.write("#SBATCH -e I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
-    f1.write("#SBATCH -o I" + str(haloid[:5]) + "L" + str(level[1]) + ".o%j \n")
-    f1.write("#SBATCH -e I" + str(haloid[:5]) + "L" + str(level[1]) + ".e%j \n")
+    f1.write("#SBATCH -o I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+    #f1.write("#SBATCH -o I" + str(haloid[:5]) + "L" + str(level[1]) + ".o%j \n")
+    #f1.write("#SBATCH -e I" + str(haloid[:5]) + "L" + str(level[1]) + ".e%j \n")
 
     f1.write("#SBATCH -N 1 -n 1\n")
     f1.write("#SBATCH --exclusive\n")
@@ -88,7 +84,7 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
         f1.write("#SBATCH -t " + str(time) + "\n")
         f1.write("#SBATCH --mem="+str(memory)+"gb\n")
 
-    f1.write("#SBATCH -J I" + str(haloid[:5]) + "L" + str(level[1]) + "\n")
+    f1.write("#SBATCH -J I" + str(haloid) + "L" + str(level[1]) + "\n")
 
     if email:
         f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
