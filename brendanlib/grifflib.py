@@ -12,7 +12,7 @@ import subprocess
 import shlex
 
 def getcurrentjobs():
-    pipemyq = "squeue -u bgriffen > currentqueue.out"
+    pipemyq = "squeue -u bgriffen,alexji > currentqueue.out"
     subprocess.call(';'.join([pipemyq]),shell=True)
     lines = [line.strip() for line in open('currentqueue.out')]
     currentjobs = []
