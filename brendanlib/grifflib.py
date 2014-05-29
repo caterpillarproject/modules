@@ -59,38 +59,54 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
-    f1.write("#SBATCH -o I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
-    f1.write("#SBATCH -e I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+    #f1.write("#SBATCH -o I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    #f1.write("#SBATCH -e I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+    f1.write("#SBATCH -o I" + str(haloid[:5]) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid[:5]) + "L" + str(level[1]) + ".e%j \n")
 
     f1.write("#SBATCH -N 1 -n 1\n")
     f1.write("#SBATCH --exclusive\n")
+    f1.write("#SBATCH -p "+ queue + "\n")
 
     if "harvard" in cluster:
-        f1.write("#SBATCH -p "+ queue + "\n")
+        if int(level) == 11:
+            timein = 180
+            mem = 64
+        elif int(level) == 12:
+            timein = 360
+            mem = 128
+        elif int(level) == 13:
+            timein = 1440
+            mem = 250
+        elif int(level) == 14:
+            timein = 1440
+            mem = 505
+        elif int(level) == 15:
+            timein = 1440
+            mem = 505
+
         f1.write("#SBATCH -t " + str(time) + "\n")
+        f1.write("#SBATCH --mem="+str(memory)+"gb\n")
 
-    f1.write("#SBATCH --mem="+str(memory)+"gb\n")
-
-    f1.write("#SBATCH -J I" + str(haloid[:3]) + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
+    f1.write("#SBATCH -J I" + str(haloid[:5]) + "L" + str(level[1]) + "\n")
 
     if email:
         f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
-	f1.write("#SBATCH --mail-type=FAIL\n")
-        #f1.write("#SBATCH --mail-type=end\n")
+        f1.write("#SBATCH --mail-type=FAIL\n")
 
     f1.write("\n")
     f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
     f1.write("\n")
 
     if "harvard" in cluster:
-	f1.write("module purge \n")
-	f1.write("module load -S centos6/binutils-2.23.2 \n")
-	f1.write("module load -S centos6/gcc-4.8.0 \n")
-	f1.write("module load -S centos6/gmp-5.1.1 \n")
-	f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0 \n")
-	f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0 \n")
-	f1.write("module load -S centos6/fftw-3.3.2_openmpi-1.6.4_gcc-4.8.0 \n")
-	f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0 \n")
+        f1.write("module purge \n")
+        f1.write("module load -S centos6/binutils-2.23.2 \n")
+        f1.write("module load -S centos6/gcc-4.8.0 \n")
+        f1.write("module load -S centos6/gmp-5.1.1 \n")
+        f1.write("module load -S centos6/openmpi-1.6.4_gcc-4.8.0 \n")
+        f1.write("module load -S centos6/hdf5-1.8.11_gcc-4.8.0 \n")
+        f1.write("module load -S centos6/fftw-3.3.2_openmpi-1.6.4_gcc-4.8.0 \n")
+        f1.write("module load -S centos6/gsl-1.16_gcc-4.8.0 \n")
 
     f1.write("\n")
     f1.write("cd " + runpath + "\n")
