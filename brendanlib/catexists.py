@@ -10,10 +10,10 @@ jobids,currentjobs,statusjobs = getcurrentjobs()
 
 tthresh = 6
 
-if platform.node() == "bigbang.mit.edu":
+if "bigbang" in platform.node() or "antares" in platform.node() or "spacebase" in platform.node():
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
 
-if "harvard.edu" in platform.node():
+if "harvard" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
 
 levellist = [11,12,13,14,15]
@@ -23,7 +23,13 @@ for filename in os.listdir(basepath):
     if filename[0] == "H":
         haloidlist.append(filename)
 
-fig = plt.figure(figsize=(16,10))
+nhalos = len(haloidlist)
+
+nplots_wide = 12
+fig,axs = plt.subplots(nplots_wide,10,sharex=True,sharey=True,figsize=(20,12)) 
+plt.subplots_adjust( hspace=0 ) 
+plt.subplots_adjust( wspace=0 )
+#plt.tight_layout()
 plotinc = 0
 
 tnow = time.time()
@@ -37,11 +43,20 @@ for level in xrange(11,15):
     leveldone[level] = 0
     nhalolevels[level] = 0
 
+nwide = 0
+nhigh = 0
 for haloid in haloidlist:
 
     plotinc += 1
-    ax = fig.add_subplot(3,5,plotinc)
-    ax.set_title(haloid)
+    ax = axs[nwide,nhigh]
+    if plotinc % nplots_wide == 0:
+	nhigh += 1
+        nwide = 0
+    else:
+        nwide += 1
+
+    #ax.set_title(haloid)
+    ax.text(0.5,0.80,haloid,fontsize=14, horizontalalignment='center',verticalalignment='center',transform=ax.transAxes)
     ax.set_ylim([2,7])
     ax.set_xlim([10,16])
     ax.set_yticks((3,4,5,6))
@@ -73,7 +88,7 @@ for haloid in haloidlist:
                     subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                     snapshotvec = []
                     for subname in os.listdir(subdirnames):
-                        if "snapdir" in subname:
+                        if "snapdir" in subname and "BACK" not in subname:
                             snapshotvec.append(int(subname.replace("snapdir_","")))
                         
                     if not snapshotvec:
