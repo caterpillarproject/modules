@@ -7,7 +7,6 @@ import time
 from brendanlib.grifflib import getcurrentjobs
 
 jobids,currentjobs,statusjobs = getcurrentjobs()
-
 tthresh = 6
 
 if "bigbang" in platform.node() or "antares" in platform.node() or "spacebase" in platform.node():
@@ -115,7 +114,7 @@ for haloid in haloidlist:
                     except:
                         pass
 
-		    jobname = haloid[:4]+"N"+str(nrvir)+"L"+str(level)[-1]
+		    jobname = haloid+"N"+str(nrvir)+"L"+str(level)[-1]
 
 		    if jobname in currentjobs:
 			idx = currentjobs.index(jobname)
@@ -134,9 +133,19 @@ for haloid in haloidlist:
 		    nhalolevels[level] += 1
 
                     if snapshot != -1:
-                        ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
                         marker = 'k^'
                         markerface = 'white'
+			if jobname in currentjobs:
+  			    idx = currentjobs.index(jobname)
+                            statusi = statusjobs[idx]
+			    print statusi
+		
+			    if statusi == 'R':
+			        ax.text(int(level),int(nrvir), str(snapshot)+'R', fontsize=9)
+			    else:
+			        ax.text(int(level),int(nrvir), str(snapshot)+'P', fontsize=9)
+			else:
+			    ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
 
 		    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'k^'
