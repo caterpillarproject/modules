@@ -7,13 +7,12 @@ import time
 from brendanlib.grifflib import getcurrentjobs
 
 jobids,currentjobs,statusjobs = getcurrentjobs()
-
 tthresh = 6
 
-if platform.node() == "bigbang.mit.edu":
+if "bigbang" in platform.node() or "antares" in platform.node() or "spacebase" in platform.node():
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
 
-if "harvard.edu" in platform.node():
+if "harvard" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
 
 levellist = [11,12,13,14,15]
@@ -23,7 +22,13 @@ for filename in os.listdir(basepath):
     if filename[0] == "H":
         haloidlist.append(filename)
 
-fig = plt.figure(figsize=(16,10))
+nhalos = len(haloidlist)
+
+nplots_wide = 12
+fig,axs = plt.subplots(nplots_wide,10,sharex=True,sharey=True,figsize=(20,12)) 
+plt.subplots_adjust( hspace=0 ) 
+plt.subplots_adjust( wspace=0 )
+#plt.tight_layout()
 plotinc = 0
 
 tnow = time.time()
@@ -37,11 +42,20 @@ for level in xrange(11,15):
     leveldone[level] = 0
     nhalolevels[level] = 0
 
+nwide = 0
+nhigh = 0
 for haloid in haloidlist:
 
     plotinc += 1
-    ax = fig.add_subplot(3,5,plotinc)
-    ax.set_title(haloid)
+    ax = axs[nwide,nhigh]
+    if plotinc % nplots_wide == 0:
+	nhigh += 1
+        nwide = 0
+    else:
+        nwide += 1
+
+    #ax.set_title(haloid)
+    ax.text(0.5,0.80,haloid,fontsize=14, horizontalalignment='center',verticalalignment='center',transform=ax.transAxes)
     ax.set_ylim([2,7])
     ax.set_xlim([10,16])
     ax.set_yticks((3,4,5,6))
@@ -73,7 +87,7 @@ for haloid in haloidlist:
                     subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
                     snapshotvec = []
                     for subname in os.listdir(subdirnames):
-                        if "snapdir" in subname:
+                        if "snapdir" in subname and "BACK" not in subname:
                             snapshotvec.append(int(subname.replace("snapdir_","")))
                         
                     if not snapshotvec:
@@ -100,7 +114,7 @@ for haloid in haloidlist:
                     except:
                         pass
 
-		    jobname = haloid[:4]+"N"+str(nrvir)+"L"+str(level)[-1]
+		    jobname = haloid+"N"+str(nrvir)+"L"+str(level)[-1]
 
 		    if jobname in currentjobs:
 			idx = currentjobs.index(jobname)
@@ -127,7 +141,21 @@ for haloid in haloidlist:
 		    elif snapshot != -1 and jobname in currentjobs: 
 			ax.text(int(level),int(nrvir), str(snapshot)+"+", fontsize=9)                      
 			marker = 'k^'
+
+                    if snapshot != -1:
+                        marker = 'k^'
                         markerface = 'white'
+			if jobname in currentjobs:
+  			    idx = currentjobs.index(jobname)
+                            statusi = statusjobs[idx]
+			    print statusi
+		
+			    if statusi == 'R':
+			        ax.text(int(level),int(nrvir), str(snapshot)+'R', fontsize=9)
+			    else:
+			        ax.text(int(level),int(nrvir), str(snapshot)+'P', fontsize=9)
+			else:
+			    ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
 
 		    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'k^'
@@ -137,12 +165,12 @@ for haloid in haloidlist:
                         marker = 'bo'
                         markerface = 'b'
 
-                    if os.path.isdir(corepath + "rockstardata/halo_"+str(maxsnap).zfill(3)+"/"):
+                    if os.path.isdir(corepath + "halos/halo_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'co'
                         markerface = 'c'
 
                     if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
-                       and os.path.isdir(corepath + "rockstardata/halos_"+str(maxsnap).zfill(3)+"/"):
+                       and os.path.isdir(corepath + "halos/halos_"+str(maxsnap).zfill(3)+"/"):
                         marker = 'go'
                         markerface = 'g'
 
