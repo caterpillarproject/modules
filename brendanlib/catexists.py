@@ -112,15 +112,21 @@ for haloid in haloidlist:
 			    print snaptimestr
 			    print cputimestr			    
 			    jobstocancel.append(int(jobids[idx]))
+			
 
 		    if snapshot == maxsnap:
 			leveldone[level] += 1
 
 		    nhalolevels[level] += 1
 
-                    if snapshot != -1:
+                    if snapshot != -1 and jobname not in currentjobs:
                         ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
-                        marker = 'k^'
+		        marker = 'k^'
+                        markerface = 'white'
+
+		    elif snapshot != -1 and jobname in currentjobs: 
+			ax.text(int(level),int(nrvir), str(snapshot)+"+", fontsize=9)                      
+			marker = 'k^'
                         markerface = 'white'
 
 		    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
