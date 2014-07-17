@@ -314,6 +314,11 @@ class RSDataReader:
         """
         return np.append(self.get_particles_from_halo(haloID), self.get_all_sub_particles_from_halo(haloID)).astype(int)
 
+    def get_all_num_particles_from_halo(self,haloID):
+        thisnum = self.data.ix[haloID]['npart']
+        subdat = self.get_all_subhalos_from_halo(haloID)
+        return thisnum + np.sum(subdat['npart'])
+
     def getversion(self):
         if self.version == 2:
             return "Version 2: Rockstar 0.99.9 RC1"
