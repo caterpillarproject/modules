@@ -592,14 +592,18 @@ class MTCatalogueTree:
             subprocess.call(["rm",filename+'.ps2'])
         return graph
 
-    def getSubTree(self,row):
+    def getSubTree(self,row,dfid=None,lastprog_dfid=None):
         """
         Returns a MTCatalogueTree object that is the subtree of the halo specified by row
         Uses depth-first ID to get the subtree
         (and may be a shallow copy of the data, so don't delete the original tree)
         """
-        dfid_base = self.data[row]['dfid']
-        dfid_last = self.data[row]['lastprog_dfid']
+        if dfid != None and lastprog_dfid != None:
+            dfid_base = dfid
+            dfid_last = lastprog_dfid
+        else:
+            dfid_base = self.data[row]['dfid']
+            dfid_last = self.data[row]['lastprog_dfid']
         mask = np.logical_and(self.data['dfid']>=dfid_base, self.data['dfid']<=dfid_last)
         return MTCatalogueTree(scale_list=self.scale_list,datatable=self.data[mask])
 
