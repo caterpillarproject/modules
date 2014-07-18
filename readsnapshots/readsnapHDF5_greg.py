@@ -150,6 +150,10 @@ class snapshot_header:
 			self.metals = hdf5lib.GetAttr(f, "Header", "Flag_Metals") 
 			self.feedback = hdf5lib.GetAttr(f, "Header", "Flag_Feedback") 
 			self.double = hdf5lib.GetAttr(f, "Header", "Flag_DoublePrecision") #GADGET-2 change
+			try: #Alex added
+				self.sorted = hdf5lib.GetAttr(f, "Header", "Sorted_Ids") 
+			except:
+				pass
 			f.close()
 		else:
 			#read arguments
@@ -170,6 +174,10 @@ class snapshot_header:
 			self.metals = kwargs.get("metals")
 			self.feedback = kwargs.get("feedback")
 			self.double = kwargs.get("double")
+			try: #Alex added
+				self.sorted = kwargs.get("sorted") 
+			except:
+				pass
 
 			#set default values
 			if (self.npart == None):
@@ -206,10 +214,6 @@ class snapshot_header:
 				self.feedback = np.array([0], dtype="int32")
 			if (self.double == None):
 				self.double = np.array([0], dtype="int32")
-
-
-
-# my ids functionality has a bug. if ids are not in first file it doesn't work
 
 
 ##############################
@@ -450,15 +454,36 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 				sys.stdout.flush()
 
 	#GREG -  allocate array here
-	#GREG - this part needs more work. must know data type before hand.
-	# I specified it for the quantities I need only. would be ideal to add a 3rd column
-	# to datablocks, then could write: 
-        # alloc_type = datablocks[fill_block][2]
-	if block=="ID  " or block=="NTSC":
-		alloc_type = np.uint64
-	else:
-		alloc_type = np.float64
+#	if block=="ID  " or block=="NTSC":
+#		alloc_type = np.uint64
+#	else:
+#		alloc_type = np.float64
 
+        # set alloc_type here. read in example item to determine data type. -GREG
+	alloc_type=None
+	g=hdf5lib.OpenFile(filename+".0.hdf5")
+	if parttype==-1:
+		for ptype in range(0,6):
+			try: contains=hdf5lib.Contains(g,'PartType'+str(ptype),block_name)
+			except: contains=False
+			if contains:
+				alloc_type = str(hdf5lib.GetData(g,'PartType'+str(ptype)+'/'+block_name)[0:1].dtype)
+				break
+	else:
+		try: contains=hdf5lib.Contains(g,'PartType'+str(parttype),block_name)
+		except: contains=False
+		if contains:
+			alloc_type = str(hdf5lib.GetData(g,'PartType'+str(parttype)+'/'+block_name)[0:1].dtype)
+	g.close()
+	# if block does not exist - GREG
+	if alloc_type==None and block=="MASS":
+		alloc_type=np.float64 #default to float64 for MASS
+	if alloc_type==None:
+		print "[error] block : ", block, "of parttype : ", parttype, "not found"
+                sys.stdout.flush()
+                sys.exit()
+
+ 
 	if dim2 > 1:
 		ret_val = np.ndarray((length,dim2),alloc_type)
 	else:
@@ -704,6 +729,11 @@ def writeheader(f, header):
 	hdf5lib.SetAttr(group_header, "Flag_Metals", header.metals)
 	hdf5lib.SetAttr(group_header, "Flag_Feedback", header.feedback)
 	hdf5lib.SetAttr(group_header, "Flag_DoublePrecision", header.double)
+	try: #Alex added
+		issorted = header.sorted
+		hdf5lib.SetAttr(group_header, "Sorted_Ids", issorted)
+	except AttributeError: #not sorted
+		pass
 
 ###############
 #WRITE ROUTINE#
