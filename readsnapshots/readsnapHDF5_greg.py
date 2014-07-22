@@ -476,12 +476,18 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 			alloc_type = str(hdf5lib.GetData(g,'PartType'+str(parttype)+'/'+block_name)[0:1].dtype)
 	g.close()
 	# if block does not exist - GREG
-	if alloc_type==None and block=="MASS":
-		alloc_type=np.float64 #default to float64 for MASS
 	if alloc_type==None:
-		print "[error] block : ", block, "of parttype : ", parttype, "not found"
-                sys.stdout.flush()
-                sys.exit()
+		if block=="ID  ":
+			alloc_type=np.uint32
+		else:
+			alloc_type=np.float32
+		#if block=="MASS":
+		#	alloc_type=np.float64 #default to float64 for MASS
+			
+	#if alloc_type==None:
+	#	print "[error] block : ", block, "of parttype : ", parttype, "not found"
+        #        sys.stdout.flush()
+        #        sys.exit()
 
  
 	if dim2 > 1:
