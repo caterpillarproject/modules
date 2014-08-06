@@ -484,10 +484,10 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 		#if block=="MASS":
 		#	alloc_type=np.float64 #default to float64 for MASS
 			
-	#if alloc_type==None:
-	#	print "[error] block : ", block, "of parttype : ", parttype, "not found"
-        #        sys.stdout.flush()
-        #        sys.exit()
+	if alloc_type==None:
+		print "[error] block : ", block, "of parttype : ", parttype, "not found"
+                sys.stdout.flush()
+                sys.exit()
 
  
 	if dim2 > 1:
