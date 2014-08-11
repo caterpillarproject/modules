@@ -4,6 +4,7 @@ import pandas
 import struct
 import os
 import sys
+import readsnapshots.readsnapHDF5_greg as rsg
 
 class RSDataReader:
     """
@@ -318,6 +319,16 @@ class RSDataReader:
         thisnum = self.data.ix[haloID]['npart']
         subdat = self.get_all_subhalos_from_halo(haloID)
         return thisnum + np.sum(subdat['npart'])
+
+    def get_block_from_halo(self, snapshot_dir, haloID, blockname, allparticles=True):
+        if allparticles:
+            pids = self.get_all_particles_from_halo(haloID)
+        else:
+            pids = self.get_particles_from_halo(haloID)
+        pids = np.sort(pids)
+        path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
+        return rsg.read_block(path, blockname,parttype=1,ids=pids)
+        
 
     def getversion(self):
         if self.version == 2:
