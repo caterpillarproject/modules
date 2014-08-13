@@ -461,20 +461,30 @@ def read_block(filename, block, parttype=-1, no_mass_replicate=False, fill_block
 
         # set alloc_type here. read in example item to determine data type. -GREG
 	alloc_type=None
-	g=hdf5lib.OpenFile(filename+".0.hdf5")
-	if parttype==-1:
-		for ptype in range(0,6):
-			try: contains=hdf5lib.Contains(g,'PartType'+str(ptype),block_name)
+
+	# need to loop over all files until block is found, or no more files left.
+
+	for subfile in np.arange(filenum):
+		g=hdf5lib.OpenFile(filename+"."+str(subfile)+".hdf5")
+		if parttype==-1:
+			for ptype in range(0,6):
+				try: contains=hdf5lib.Contains(g,'PartType'+str(ptype),block_name)
+				except: contains=False
+				if contains:
+					alloc_type = str(hdf5lib.GetData(g,'PartType'+str(ptype)+'/'+block_name)[0:1].dtype)
+					break
+		else:
+			try: contains=hdf5lib.Contains(g,'PartType'+str(parttype),block_name)
 			except: contains=False
 			if contains:
-				alloc_type = str(hdf5lib.GetData(g,'PartType'+str(ptype)+'/'+block_name)[0:1].dtype)
-				break
-	else:
-		try: contains=hdf5lib.Contains(g,'PartType'+str(parttype),block_name)
-		except: contains=False
-		if contains:
-			alloc_type = str(hdf5lib.GetData(g,'PartType'+str(parttype)+'/'+block_name)[0:1].dtype)
-	g.close()
+				alloc_type = str(hdf5lib.GetData(g,'PartType'+str(parttype)+'/'+block_name)[0:1].dtype)
+		g.close()
+		if contains==True:
+			break
+		
+
+
+
 	# if block does not exist - GREG
 	if alloc_type==None:
 		if block=="ID  ":
