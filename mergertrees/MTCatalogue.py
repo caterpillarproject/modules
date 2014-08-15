@@ -49,8 +49,9 @@ import os
 import pydot
 import subprocess
 import glob
+import functools
 
-def getScaleFactors(path,minsnap=0,digits=3,sub=False):
+def getScaleFactors(path,minsnap=0,digits=3,sub=False,returnminsnap=False):
     scalefile = path+'/outputs/scales.txt'
 
     f = open(scalefile)
@@ -64,6 +65,7 @@ def getScaleFactors(path,minsnap=0,digits=3,sub=False):
         scale_list.append(float(line.split()[1]))
         line = f.readline()
     f.close()
+    if returnminsnap: return minsnap,np.array(scale_list)
     return np.array(scale_list)
     
     ## snap_num = minsnap
@@ -143,7 +145,7 @@ def getScaleFactors(path,minsnap=0,digits=3,sub=False):
 ##     def __call__(self,arg):
 ##         return self.__getitem__(arg)
 
-def writeline_v4(line,fout,fmt):
+def writeline_v4(line,fout,fmt,snapoffset):
     s = line.split()
     data = struct.pack(fmt,
                        float(s[0]), #scale
@@ -186,7 +188,7 @@ def writeline_v4(line,fout,fmt):
                        float(s[51]),#A[y](500c)
                        float(s[52]),#A[z](500c)
                        float(s[53]),#T/|U|
-                       int(s[31]))  #snap
+                       int(s[31])+snapoffset)  #snap
     fout.write(data)
 
 def writeline_v3(line,fout,fmt):
@@ -418,6 +420,7 @@ def convertmt_multiple(dir,version):
     
     ## Convert each individual .dat ASCII file to binary with its own index
     ## I am assuming that if a halo has subs, they are in the same tree.dat file
+    ## This is almost certainly NOT TRUE!!!! TODO
     tmp_fileoutlist = []
     tmp_fileindexlist = []
     for filenamein in filelist:
@@ -454,6 +457,18 @@ def convertmt_multiple(dir,version):
     findex.close()
     print "time:",time.time()-start
 
+
+#def _find_snapoffset(filename,actuallastsnap):
+#    fin = open(filename,'r')
+#    while True:
+#        line = fin.readline()
+#        if line[0:5] == "#tree":
+#            hostline = fin.readline(); hostsplit = hostline.split()    
+#            scale = float(hostsplit[0])
+#            if scale != 1.0: print "WARNING: first scale not 1.0, is %3.2f" % (scale)
+#            supposedlastsnap = int(hostsplit[31])
+#            break
+#    return actuallastsnap-supposedlastsnap
 
 def convertmt(dir,version=2,verbose=True,filenamein=None,filenameout=None,fileindexname=None):
     """
@@ -495,7 +510,8 @@ def convertmt(dir,version=2,verbose=True,filenamein=None,filenameout=None,filein
         mywriteline = writeline_v3
     elif version==4:
         fmt = "fiiiiiifffffiffffffffffffiiiifffffffffffi"
-        mywriteline = writeline_v4
+        snapoffset,scalelist = getScaleFactors(dir+'/..',returnminsnap=True)
+        mywriteline = functools.partial(writeline_v4,snapoffset=snapoffset)
     else:
         print "ERROR, version must be 1, 2, 3, or 4"
         sys.exit()
@@ -713,7 +729,7 @@ class MTCatalogue:
         self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.indexbyrsid = indexbyrsid
-        self.scale_list = getScaleFactors(dir[0:-6],sub=sub) #assumes /trees is current
+        self.scale_list = getScaleFactors(dir+'/../',sub=sub) #assumes /trees is current
                                                      #folder in dir
         if version==1:
             self.fmt = "fiiiiifffffiffffffffffffiii"
