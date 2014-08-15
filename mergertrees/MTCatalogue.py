@@ -143,6 +143,52 @@ def getScaleFactors(path,minsnap=0,digits=3,sub=False):
 ##     def __call__(self,arg):
 ##         return self.__getitem__(arg)
 
+def writeline_v4(line,fout,fmt):
+    s = line.split()
+    data = struct.pack(fmt,
+                       float(s[0]), #scale
+                       int(s[1]),   #id
+                       int(s[3]),   #desc_id
+                       int(s[4]),   #num_prog
+                       int(s[5]),   #pid
+                       int(s[6]),   #upid
+                       int(s[8]),   #phantom
+                       float(s[9]), #sam_mvir
+                       float(s[10]),#mvir
+                       float(s[11]),#rvir
+                       float(s[12]),#rs
+                       float(s[13]),#vrms
+                       int(s[14]),  #mmp
+                       float(s[15]),#scale_of_last_MM
+                       float(s[16]),#vmax
+                       float(s[17]),#x
+                       float(s[18]),#y
+                       float(s[19]),#z
+                       float(s[20]),#vx
+                       float(s[21]),#vy
+                       float(s[22]),#vz
+                       float(s[23]),#jx
+                       float(s[24]),#jy
+                       float(s[25]),#jz
+                       float(s[26]),#spin
+                       int(s[27]),  #bfid [Breadth_first_ID]
+                       int(s[28]),  #dfid [Depth_first_ID]
+                       int(s[30]),  #origid [Orig_halo_ID]
+                       int(s[33]),  #lastprog_dfid [Last_progenitor_depthfirst_ID]
+                       float(s[35]),#m200c_all
+                       float(s[36]),#m200b
+                       float(s[40]),#xoff
+                       float(s[41]),#voff
+                       float(s[42]),#spin_bullock
+                       float(s[48]),#b_to_a(500c)
+                       float(s[49]),#c_to_a(500c)
+                       float(s[50]),#A[x](500c)
+                       float(s[51]),#A[y](500c)
+                       float(s[52]),#A[z](500c)
+                       float(s[53]),#T/|U|
+                       int(s[31]))  #snap
+    fout.write(data)
+
 def writeline_v3(line,fout,fmt):
     s = line.split()
     data = struct.pack(fmt,
@@ -359,6 +405,7 @@ def convertmt_multiple(dir,version):
     version=1: very old Rockstar (e.g. Greg's paper)
     version=2: RC1 before the shape parameters were fixed (default)
     version=3: RC2, probably correct for RC3
+    version=4: same as version=3 but with snap written out
     """
     files = glob.glob(dir+'/tree_*')
     filelist = []
@@ -419,6 +466,7 @@ def convertmt(dir,version=2,verbose=True,filenamein=None,filenameout=None,filein
     version=1: very old Rockstar (e.g. Greg's paper)
     version=2: RC1 before the shape parameters were fixed (default)
     version=3: RC2, probably correct for RC3
+    version=4: same as version=3 but with snap written out
     
     Use convertmt_multiple if you have multiple tree_x_x_x.dat files
     """
@@ -445,8 +493,11 @@ def convertmt(dir,version=2,verbose=True,filenamein=None,filenameout=None,filein
     elif version==3:
         fmt = "fiiiiiifffffiffffffffffffiiiifffffffffff"
         mywriteline = writeline_v3
+    elif version==4:
+        fmt = "fiiiiiifffffiffffffffffffiiiifffffffffffi"
+        mywriteline = writeline_v4
     else:
-        print "ERROR, version must be 1, 2, or 3"
+        print "ERROR, version must be 1, 2, 3, or 4"
         sys.exit()
     fmtsize = struct.calcsize(fmt)
     if verbose: print "Bytes per line:",fmtsize
@@ -592,14 +643,18 @@ class MTCatalogueTree:
             subprocess.call(["rm",filename+'.ps2'])
         return graph
 
-    def getSubTree(self,row):
+    def getSubTree(self,row,dfid=None,lastprog_dfid=None):
         """
         Returns a MTCatalogueTree object that is the subtree of the halo specified by row
         Uses depth-first ID to get the subtree
         (and may be a shallow copy of the data, so don't delete the original tree)
         """
-        dfid_base = self.data[row]['dfid']
-        dfid_last = self.data[row]['lastprog_dfid']
+        if dfid != None and lastprog_dfid != None:
+            dfid_base = dfid
+            dfid_last = lastprog_dfid
+        else:
+            dfid_base = self.data[row]['dfid']
+            dfid_last = self.data[row]['lastprog_dfid']
         mask = np.logical_and(self.data['dfid']>=dfid_base, self.data['dfid']<=dfid_last)
         return MTCatalogueTree(scale_list=self.scale_list,datatable=self.data[mask])
 
@@ -718,8 +773,30 @@ class MTCatalogue:
                                      ('b_to_a(500c)','<f8'),('c_to_a(500c)','<f8'),
                                      ('A[x](500c)','<f8'),('A[y](500c)','<f8'),('A[z](500c)','<f8'),
                                      ('T/|U|','<f8')])
+        elif version==4:
+            self.fmt = "fiiiiiifffffiffffffffffffiiiifffffffffffi"
+            self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
+                                     ('num_prog','<i8'),('pid','<i8'),('upid','<i8'),
+                                     ('phantom','<i8'),
+                                     ('sam_mvir','<f8'),('mvir','<f8'),
+                                     ('rvir','<f8'),('rs','<f8'),
+                                     ('vrms','<f8'),('mmp','<i8'),
+                                     ('scale_of_last_MM','<f8'),('vmax','<f8'),
+                                     ('posX','<f8'),('posY','<f8'),('posZ','<f8'),
+                                     ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),
+                                     ('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),('spin','<f8'),
+                                     ('bfid','<i8'), #breadth first ID
+                                     ('dfid','<i8'), #depth first ID
+                                     ('origid','<i8'), #rockstar cat ID
+                                     ('lastprog_dfid','<i8'), #depth first ID last progenitor
+                                     ('m200c_all','<f8'),('m200b','<f8'),
+                                     ('xoff','<f8'),('voff','<f8'),
+                                     ('spin_bullock','<f8'),
+                                     ('b_to_a(500c)','<f8'),('c_to_a(500c)','<f8'),
+                                     ('A[x](500c)','<f8'),('A[y](500c)','<f8'),('A[z](500c)','<f8'),
+                                     ('T/|U|','<f8'),('snap','<i8')])
         else:
-            print "ERROR, version must be 1, 2, or 3"
+            print "ERROR, version must be 1, 2, 3, or 4"
             sys.exit()
         self.fmtsize = struct.calcsize(self.fmt)
         ## NOTE: the reason I have separated the while loops is to speed up
