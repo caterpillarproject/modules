@@ -1,4 +1,4 @@
-subroutine cic(pos,mpart,boxsize,dim,redshift,npart,mesh_out)
+subroutine cic(pos,mpart,boxsize,dim,redshift,npart)
 use omp_lib
 implicit none 
 
@@ -14,25 +14,27 @@ integer, intent(in) :: dim
 real*4, intent(in) :: redshift
 !f2py intent(in) :: redshift
 
-integer*16, intent(in) :: npart
+integer, intent(in) :: npart
 !f2py intent(hide) :: npart
 
 real*8, intent(in), dimension(0:npart-1,0:2) :: pos
 !f2py intent(in) :: pos
 
-real*8, intent(out),  dimension(0:dim-1,0:dim-1,0:dim-1):: mesh_out
-!f2py intent(out) :: mesh_out
-
-integer*8   i
-integer*8   Ntot
+integer   i
+integer   Ntot
 integer   :: xi,yi,zi,xii,yii,zii
+real*8, dimension(255,255,255) :: mesh_out
 real*8,     dimension(:),   allocatable    :: dx1, dy1, dz1, dx2, dy2, dz2 
 real*8,     dimension(:),   allocatable    :: x0, y0, z0
 real*8,     dimension(:),   allocatable    :: x1, y1, z1, x2, y2, z2
-real*8     ndim, seconds
+
+real*8     ndim,seconds
 integer :: numthreads
 real*8             :: vol_cell, vol_box, co_ph, mu
 character(len=500) :: fname
+
+!real*8,     dimension(:,:,:),   allocatable :: mesh_out
+
 
 numthreads = 12
 
@@ -40,6 +42,14 @@ call omp_set_num_threads(numthreads)
 
 ndim = REAL(dim)
 Ntot = npart - 1
+write(*,*)"Allocating for npart,Ntot",npart,Ntot,huge(npart)
+write(*,*)"Dim:",dim,ndim
+write(*,*)"Boxsize:",boxsize
+write(*,*)"Redshift:",redshift
+
+do i = 1,5
+    write(*,*)pos(i,0),pos(i,1),pos(i,2)
+end do
 
 !###########################################
 !     USING POSITIONS - CREATE mesh_out XYZ
@@ -79,6 +89,8 @@ x2(:) = x1(:) + 1
 y2(:) = y1(:) + 1
 z2(:) = z1(:) + 1
 
+deallocate(dx1, dy1, dz1, dx2, dy2, dz2, x1, y1, z1, x2, y2, z2)
+
 seconds = omp_get_wtime() - seconds
 write(*,"(a,F8.3)")" Time [s] to allocate vecs: ",seconds
 
@@ -86,6 +98,8 @@ write(*,"(a,F8.3)")" Time [s] to allocate vecs: ",seconds
 !  LOOP OVER ALL PARTICLES & POPULATE MESH
 !###########################################
 seconds = omp_get_wtime()
+!allocate(mesh_out(0:dim-1,0:dim-1,0:dim-1))
+!allocate(mesh_out(Ntot,Ntot,Ntot))
 mesh_out(:,:,:) = 0.0
 !$OMP PARALLEL DO PRIVATE(xi,yi,zi,xii,yii,zii)
 do i = 1,Ntot
@@ -108,43 +122,31 @@ do i = 1,Ntot
 end do
 !$OMP END PARALLEL DO
         
-!c  !$OMP PARALLEL DO PRIVATE(xi,yi,zi,xii,yii,zii)
-
-!c  !$OMP END PARALLEL DO
-
-!ifile = redshifts(k-6)
 vol_cell = ((boxsize*3.08568025D24)/dim/0.6711)**3
 vol_box = (boxsize*3.08568025D24/0.6711)**3
 
+co_ph = 1 + redshift
+mu = 1/(1.22*1.67262D-24)
+
 write(*,*)"cell volume [cm^3]:",vol_cell
 write(*,*)"box volume [cm^3]:",vol_box
-
-co_ph = 1 + redshift
-!write(Unit="/bigbang/data/bgriffen/c2ray/red.dat", FMT="(F6.7)")redshifts(k-6)
-
-mu = 1/(1.22*1.67262D-24)
 
 write(*,*)"average mass density [g cm^-3]: ",SUM(mesh_out(:,:,:)*co_ph**3)/vol_box
 write(*,*)"average number density [cm^-3]: ",SUM(mesh_out(:,:,:)*mu*co_ph**3)/vol_box
 
 !write(9,*)redshift, SUM(mesh_out(:,:,:)*co_ph**3)/vol_box, SUM(mesh_out(:,:,:)*mu*co_ph**3)/vol_box
 
-write(fname,'(a,i3,a,f5.3,a)')"/bigbang/data/bgriffen/c2ray/cicfiles/parent/",dim,"/density/z",redshift,"_new.dat"
-write(*,*)"writing output to file: ",fname
+!write(fname,'(a,i3,a,f5.3,a)')"/bigbang/data/bgriffen/c2ray/cicfiles/parent/",dim,"/density/z",redshift,"_new.dat"
+!write(*,*)"writing output to file: ",trim(fname)
 
-!if(redshifts(k-6).ge.10)  &
-!  write(fname,'(a,f6.3,a)')"./outputs_512/",redshifts(k-6),"rho_gadget.dat"
-!if(redshifts(k-6).lt.10) &
-!write(fname,'(a,f5.3,a)')"./outputs_512/",redshifts(k-6),"rho_gadget.dat"
+!mesh_out = (mesh_out(:,:,:))/vol_cell
 
-mesh_out = (mesh_out(:,:,:))/vol_cell
-
-open(unit=8,file=fname,form="unformatted")
-write(8)mesh_out
-close(8)
-
+!open(unit=8,file=fname,form="unformatted")
+!write(8)mesh_out
+!close(8)
 
 seconds = omp_get_wtime() - seconds
 write(*,"(a,F8.3)")" Time [s] to populate mesh: ",seconds
 deallocate(dx1, dy1, dz1, dx2, dy2, dz2, x1, y1, z1, x2, y2, z2)
+
 end subroutine
