@@ -96,6 +96,7 @@ class RSDataReader:
         self.AllParticles = AllParticles
         # open first file, test if it exists
         file_num = 0
+	digits = 3
         if sub:
             file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
         else:
