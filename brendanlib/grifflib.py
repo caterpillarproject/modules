@@ -11,7 +11,27 @@ import math
 import subprocess
 import shlex
 import os
+import readsnapshots.readsnapHDF5_greg as rs
 
+def check_is_sorted(outpath,snap=0,hdf5=True):
+    #TODO: option to check all snaps
+    snap = str(snap).zfill(3)
+    filename = outpath+'/outputs/snapdir_'+snap+'/snap_'+snap+'.0'
+    if hdf5: filename += '.hdf5'
+    h = rs.snapshot_header(filename)
+    try:
+        if h.sorted=='yes': return True
+    except:
+        return False
+    
+def get_size(start_path = '.'):
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+    
 def checkmakedir(folder):
     if not os.path.isdir(folder):
         mkimagedir = 'mkdir -p ' + folder
