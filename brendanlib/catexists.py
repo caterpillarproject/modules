@@ -7,11 +7,12 @@ import time
 from brendanlib.grifflib import getcurrentjobs
 
 jobids,currentjobs,statusjobs = getcurrentjobs()
-
+print jobids,currentjobs,statusjobs
+sys.exit()
 tthresh = 6
 
 if platform.node() == "bigbang.mit.edu":
-    basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
+    basepath = "/bigbang/data/AnnaGroup/caterpillar/halos/oldhalos"
 
 if "harvard.edu" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
@@ -40,7 +41,7 @@ for level in xrange(11,15):
 for haloid in haloidlist:
 
     plotinc += 1
-    ax = fig.add_subplot(3,5,plotinc)
+    ax = fig.add_subplot(10,10,plotinc)
     ax.set_title(haloid)
     ax.set_ylim([2,7])
     ax.set_xlim([10,16])
