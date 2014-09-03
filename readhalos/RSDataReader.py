@@ -371,7 +371,66 @@ class RSDataReader:
         pids = np.sort(pids)
         path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
         return rsg.read_block(path, blockname,parttype=1,ids=pids)
+
+    # compute hubble value for this catalogue
+    # return value in km/s/Mpc
+    def H(self):
+        to_inv_sec = 3.241*10**-20
+        Ok = 1-self.Om-self.Ol
+        a = self.scale
+        return 100*self.h0*(self.Om*(1/a)**3 + Ok*(1/a)**2 + self.Ol)**.5
+
+    # Get most bound particles in a halo
+    def get_most_bound_particles_from_halo(self, snapshot_dir, haloID):
+        pids = self.get_all_particles_from_halo(haloID)
+        pids = np.sort(pids)
+        path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
+        pot = rsg.read_block(path, "POT ", parttype=1, ids=pids)
         
+        pos = rsg.read_block(path, "POS ", parttype=1, ids=pids)
+        vel = rsg.read_block(path, "VEL ", parttype=1, ids=pids)*np.sqrt(self.scale)
+        halopos = np.array(self.ix[haloID][['posX','posY','posZ']])
+        halovel = np.array(self.ix[haloID][['pecVX','pecVY','pecVZ']])
+        dr = self.scale*distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0  #in Mpc physical
+        peculiarVel = vel-halovel
+        Hflow = self.H()*(pos-halopos)*self.scale/self.h0
+        physicalVel = peculiarVel+Hflow
+        T = .5*sum((physicalVel**2).T)
+        U = self.PotentialE(dr)
+
+        Etot = T + U
+        boundsort = np.argsort(Etot)
+        return pids[boundsort]
+
+
+    def PotentialE(self, dr):
+        from scipy import interpolate
+        from scipy.integrate import quad
+        G = 1.326*10**11 # in km^3/s^2/Msun
+        mpc_to_km = 3.086*10**19
+
+        rarr = 10**np.linspace(np.log10(min(dr))-.01, np.log10(max(dr))+.01,70) # in Mpc
+        h_r, x_r = np.histogram(dr, bins=np.concatenate(([0],rarr)))
+        m_lt_r = np.cumsum(h_r)*self.particle_mass/self.h0
+        tck = interpolate.splrep(rarr,m_lt_r) # gives mass in Msun
+        def Ufunc(x):
+            return interpolate.splev(x,tck)/(x**2)
+    
+        # do it even faster by using an interpolative function
+        # for computing potential energy
+        # pick 60 - 100 data points
+        # compute potential for all, then use an interpolation scheme
+        U = np.zeros(len(rarr))
+        for i in range(len(rarr)):
+            r = rarr[i]
+            if r > max(dr)+.05:
+                print 'warning - particle outside of halo. likely inaccurate PE'
+                U[i] = -G*m_lt_r[-1]/(r*mpc_to_km)
+            else:
+                tmp = -G*m_lt_r[-1]/(max(dr)*mpc_to_km)
+                U[i] = tmp+G*quad(Ufunc,max(dr),r,full_output=1)[0]/mpc_to_km
+        tck2 = interpolate.splrep(rarr,U)
+        return interpolate.splev(dr,tck2)
 
     def getversion(self):
         if self.version == 2:
@@ -397,5 +456,17 @@ class RSDataReader:
         out +="Read from "+self.dir+"\n"
         out +="Snap number "+str(self.snap_num)+"\n"
         out +="Number of halos: "+str(self.num_halos)+"\n"
-        return out + "Sorted by "+self.sort_by
-    
+        return out + "Sorted by "+self.sort_by    
+
+
+# compute distance from posA to posB.
+# posA can be an array. boxsize must be in same units as positions.
+def distance(posA, posB,boxsize=100.):
+    dist = abs(posA-posB)
+    tmp = dist > boxsize/2.0
+    dist[tmp] = boxsize-dist[tmp]
+    if dist.shape == (3,):
+        return np.sqrt(np.sum(dist**2))
+    else:
+        return np.sqrt(np.sum(dist**2,axis=1))
+
