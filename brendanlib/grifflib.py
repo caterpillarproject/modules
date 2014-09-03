@@ -12,6 +12,14 @@ import subprocess
 import shlex
 import os
 import readsnapshots.readsnapHDF5_greg as rs
+import asciitable
+
+def convert_pid_zid(pid,lx):
+    htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
+    key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
+    hindex = dict(zip(key,htable['zoomid']))
+    zoomid = hindex[str(pid)+'_'+str(lx)]
+    return zoomid
 
 def check_is_sorted(outpath,snap=0,hdf5=True):
     #TODO: option to check all snaps
@@ -77,12 +85,12 @@ def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f.write("logout\n")
     f.close()
 
-def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=256,queue="general",email=False):
+def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,halotype,time=5000,memory=256,queue="general",email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
     f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
-    f1.write("#SBATCH -o I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
-    f1.write("#SBATCH -e I" + str(haloid) + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
+    f1.write("#SBATCH -o I" + str(haloid) + "B" + halotype + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
+    f1.write("#SBATCH -e I" + str(haloid) + "B" + halotype + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
     #f1.write("#SBATCH -o I" + str(haloid[:5]) + "L" + str(level[1]) + ".o%j \n")
     #f1.write("#SBATCH -e I" + str(haloid[:5]) + "L" + str(level[1]) + ".e%j \n")
 
@@ -110,7 +118,7 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
         f1.write("#SBATCH -t " + str(time) + "\n")
         f1.write("#SBATCH --mem="+str(memory)+"gb\n")
 
-    f1.write("#SBATCH -J I" + str(haloid) + "L" + str(level[1]) + "\n")
+    f1.write("#SBATCH -J I" + str(haloid) + "B" + halotype + "N" + str(nrvir) + "L" + str(level[1]) + "\n")
 
     if email:
         f1.write("#SBATCH --mail-user=brendan.f.griffen@gmail.com \n")
@@ -118,7 +126,6 @@ def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,time=5000,memory=2
 
     f1.write("\n")
     f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
-    f1.write("\n")
 
     if "harvard" in cluster:
         f1.write("module purge \n")
@@ -299,6 +306,7 @@ def getcentext(filename):
         for i in xrange(6):
             lines.append(fp.readline().strip('#\n'))
 
+    #print lines
     lines = map(float, lines)
     return tuple(lines)
 

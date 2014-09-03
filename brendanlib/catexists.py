@@ -7,19 +7,14 @@ import time
 from brendanlib.grifflib import getcurrentjobs
 
 jobids,currentjobs,statusjobs = getcurrentjobs()
-<<<<<<< HEAD
-print jobids,currentjobs,statusjobs
-sys.exit()
+
 tthresh = 6
 
 if platform.node() == "bigbang.mit.edu":
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos/oldhalos"
-=======
-tthresh = 6
 
 if "bigbang" in platform.node() or "antares" in platform.node() or "spacebase" in platform.node():
     basepath = "/bigbang/data/AnnaGroup/caterpillar/halos"
->>>>>>> 0f69b40ca45c59b977beea4c796cd1cdd7f973a2
 
 if "harvard" in platform.node():
     basepath = "/n/home01/bgriffen/data/caterpillar/halos"
@@ -27,6 +22,7 @@ if "harvard" in platform.node():
 levellist = [11,12,13,14,15]
 nrvirlist = [4]
 haloidlist = []
+
 for filename in os.listdir(basepath):
     if filename[0] == "H":
         haloidlist.append(filename)
@@ -56,11 +52,11 @@ nhigh = 0
 for haloid in haloidlist:
 
     plotinc += 1
-<<<<<<< HEAD
+
     ax = fig.add_subplot(10,10,plotinc)
     ax.set_title(haloid)
-=======
     ax = axs[nwide,nhigh]
+
     if plotinc % nplots_wide == 0:
 	nhigh += 1
         nwide = 0
@@ -69,7 +65,6 @@ for haloid in haloidlist:
 
     #ax.set_title(haloid)
     ax.text(0.5,0.80,haloid,fontsize=14, horizontalalignment='center',verticalalignment='center',transform=ax.transAxes)
->>>>>>> 0f69b40ca45c59b977beea4c796cd1cdd7f973a2
     ax.set_ylim([2,7])
     ax.set_xlim([10,16])
     ax.set_yticks((3,4,5,6))
