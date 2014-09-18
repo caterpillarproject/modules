@@ -61,6 +61,81 @@ def getcurrentjobs():
     
     return jobids,currentjobs,jobstatus
 
+def make_destination_folders(folder_paths,suite_names):
+    for folder in folder_paths:
+        folder_single = folder.split("/")[-1]
+        for suite in suite_names:
+            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + folder_single + "_" + suite 
+            subprocess.call([cmd_make_folder],shell=True)
+
+def construct_music_cfg(lagr_file,master_music_cfg_orig,master_music_cfg_dest,typeic):
+
+    xpos_arr = []
+    ypos_arr = []
+    zpos_arr = []
+
+    with open(lagr_file) as infile:
+        for line in infile:
+            xpos_arr.append(float(line.split()[0]))
+            ypos_arr.append(float(line.split()[1]))
+            zpos_arr.append(float(line.split()[2]))
+
+    lagrPos = np.array([xpos_arr,ypos_arr,zpos_arr]).T
+ 
+    xmax = np.max(lagrPos[:,0]); xmin = np.min(lagrPos[:,0])
+    dx = xmax-xmin
+    centx = (xmax+xmin)/2.0
+    ymax = np.max(lagrPos[:,1]); ymin = np.min(lagrPos[:,1])
+    dy = ymax-ymin
+    centy = (ymax+ymin)/2.0
+    zmax = np.max(lagrPos[:,2]); zmin = np.min(lagrPos[:,2])
+    dz = zmax-zmin
+    centz = (zmax+zmin)/2.0
+    
+    need_extent = True
+
+    if typeic == 'A':
+       extx=dx
+       exty=dy
+       extz=dz
+    if typeic == 'B':
+        extx=dx*1.2 
+        exty=dy*1.2 
+        extz=dz*1.2 
+    if typeic == 'C':
+        extx=dx*1.4 
+        exty=dy*1.4 
+        extz=dz*1.4 
+    if typeic == 'D':
+        extx=dx*1.6 
+        exty=dy*1.6 
+        extz=dz*1.6 
+    if typeic == 'CONVEX' or typeic == 'ELLIPSOID':
+        need_extent = False
+
+    fout = open(master_music_cfg_dest,'w')
+    with open(master_music_cfg_orig) as infile:
+        for line in infile:
+            line = line.strip()
+            if need_extent:
+                if "ref_center" in line:
+                    fout.write("ref_center           = "+str(centx)+","+str(centy)+","+str(centz)+"\n")
+                if "ref_extent" in line:
+                    fout.write("ref_extent           = "+str(extx)+","+str(exty)+","+str(extz)+"\n")
+                    
+            if "ref_" not in line and "region " not in line:
+                fout.write(line+"\n")
+
+            if "region " in line:
+                if typeic == "CONVEX":
+                    fout.write("region           = convex_hull\n")
+                if typeic == "ELLIPSOID":
+                    fout.write("region           = ellipsoid\n")
+                if typeic != "ELLIPSOID" and typeic != "CONVEX":
+                    fout.write("region               = box\n")
+
+    fout.close()
+    
 def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/sh\n")
@@ -85,10 +160,41 @@ def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f.write("logout\n")
     f.close()
 
+def make_gadget_submission_script(runpath,cfgname,job_name,ncores,queue):
+    f = open(runpath + "/sgadget",'w')
+    f.write('#!/bin/bash\n')
+    f.write('#SBATCH -n ' + str(ncores) + '\n')
+    f.write('#SBATCH -o gadget.o%j\n')
+    f.write('#SBATCH -e gadget.e%j\n')
+    f.write('#SBATCH -J '+ job_name + '\n')
+    f.write('#SBATCH -p ' + queue + '\n')
+    f.write("\n")
+    f.write("cd " + runpath + "\n")
+    f.write("\n")
+    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+    f.close()
+    
+def make_music_submission_script(runpath,cfgname,job_name,ncores,queue):
+
+    f1 = open(runpath + "/smusic",'w')
+    f1.write("#!/bin/bash \n")
+    f1.write("#SBATCH -o music.o%j \n")
+    f1.write("#SBATCH -e music.e%j \n")
+    f1.write("#SBATCH -N 1\n")
+    f1.write("#SBATCH --exclusive\n")
+    f1.write("#SBATCH -p "+ queue + "\n")
+    f1.write("#SBATCH -J " + job_name + "\n")
+    f1.write("\n")
+    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
+    f1.write("\n")
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + cfgname + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
+    f1.close()
+
 def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,halotype,time=5000,memory=256,queue="general",email=False):
     f1 = open(runpath + "smusic",'w')
     f1.write("#!/bin/bash \n")
-    f1.write("#SBATCH --ntasks-per-node=" + str(ncores) + "\n")
     f1.write("#SBATCH -o I" + str(haloid) + "B" + halotype + "N" + str(nrvir) + "L" + str(level[1]) + ".o%j \n")
     f1.write("#SBATCH -e I" + str(haloid) + "B" + halotype + "N" + str(nrvir) + "L" + str(level[1]) + ".e%j \n")
     #f1.write("#SBATCH -o I" + str(haloid[:5]) + "L" + str(level[1]) + ".o%j \n")
@@ -171,20 +277,21 @@ def plotxyzproj(ax1,ax2,ax3,pos,format='b-'):
     ax3.set_xlabel('y-pos [Mpc/h]')
     ax3.set_ylabel('z-pos [Mpc/h]')
 
-def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-'):
+def plotxyzprojr(ax1,ax2,ax3,pos,radius,axislabels=True,**kwargs):
     xcirc,ycirc = drawcircle(pos[...,0],pos[...,1],radius)
-    ax1.plot(xcirc,ycirc,format,linewidth=3)
+    ax1.plot(xcirc,ycirc,**kwargs)
     xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
-    ax2.plot(xcirc,zcirc,format,linewidth=3)
+    ax2.plot(xcirc,zcirc,**kwargs)
     ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
-    ax3.plot(ycirc,zcirc,format,linewidth=3)
-
-    ax1.set_xlabel('x-pos [Mpc/h]')
-    ax1.set_ylabel('y-pos [Mpc/h]')
-    ax2.set_xlabel('x-pos [Mpc/h]')
-    ax2.set_ylabel('z-pos [Mpc/h]')
-    ax3.set_xlabel('y-pos [Mpc/h]')
-    ax3.set_ylabel('z-pos [Mpc/h]')
+    ax3.plot(ycirc,zcirc,**kwargs)
+    
+    if axislabels:
+        ax1.set_xlabel('x-pos [Mpc/h]')
+        ax1.set_ylabel('y-pos [Mpc/h]')
+        ax2.set_xlabel('x-pos [Mpc/h]')
+        ax2.set_ylabel('z-pos [Mpc/h]')
+        ax3.set_xlabel('y-pos [Mpc/h]')
+        ax3.set_ylabel('z-pos [Mpc/h]')
 
 def getillustrismp(simtype):
     if "1" in simtype:
@@ -274,6 +381,16 @@ def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
         fontsize=fontsize,
         weight=fontweight,
         transform = ax.transAxes)
+
+def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
+    xpos = float(xpos)
+    ypos = float(ypos)
+    ax.text(xpos, ypos,teststr,
+        horizontalalignment='center',
+        verticalalignment='center',
+        color='black',
+        fontsize=fontsize,
+        weight=fontweight)
 
 def getxyzdeltamcut(resolution,icgeometry):
     if icgeometry == 'ellipsoid':
