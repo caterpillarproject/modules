@@ -383,23 +383,38 @@ class RSDataReader:
         a = self.scale
         return 100*self.h0*(self.Om*(1/a)**3 + Ok*(1/a)**2 + self.Ol)**.5
 
+    # get most bound particles according to grav potential only
+    def get_most_gravbound_particles_from_halo(self,snapshot_dir, haloID):
+        pids = self.get_all_particles_from_halo(haloID)
+        pids = np.sort(pids)
+        path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
+        pot = rsg.read_block(path, "POT ", parttype=1, ids=pids)/self.scale
+        boundsort = np.argsort(pot)
+        return pids[boundsort]
+
     # Get most bound particles in a halo
+    # Use gadget Potential block if it exists, otherwise compute estimate of it.
     def get_most_bound_particles_from_halo(self, snapshot_dir, haloID):
         pids = self.get_all_particles_from_halo(haloID)
         pids = np.sort(pids)
         path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
-        pot = rsg.read_block(path, "POT ", parttype=1, ids=pids)
-        
+    
         pos = rsg.read_block(path, "POS ", parttype=1, ids=pids)
         vel = rsg.read_block(path, "VEL ", parttype=1, ids=pids)*np.sqrt(self.scale)
         halopos = np.array(self.ix[haloID][['posX','posY','posZ']])
         halovel = np.array(self.ix[haloID][['pecVX','pecVY','pecVZ']])
-        dr = self.scale*distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0  #in Mpc physical
+        
         peculiarVel = vel-halovel
         Hflow = self.H()*(pos-halopos)*self.scale/self.h0
         physicalVel = peculiarVel+Hflow
-        T = .5*sum((physicalVel**2).T)
-        U = self.PotentialE(dr)
+        T = .5*sum((physicalVel**2).T)    
+
+        try:
+            U = rsg.read_block(path, "POT ", parttype=1, ids=pids)/self.scale
+        except:
+            print 'computing potential instead'
+            dr = distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0#in Mpc physical
+            U = self.PotentialE(dr)
 
         Etot = T + U
         boundsort = np.argsort(Etot)
