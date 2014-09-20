@@ -150,7 +150,7 @@ def find_block(filename, format, swap, block, block_num, only_list_blocks=False)
  
 # ----- read data block -----
  
-def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, no_masses=False, verbose=False, mult=True, doubleprec=True):
+def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, no_masses=False, verbose=False, mult=True, doubleprec=True, memmap=None):
   if (verbose):
 	  print "reading block", block
   
@@ -354,7 +354,10 @@ def read_block(filename, block, parttype=-1, physical_velocities=True, arepo=0, 
       
     if i==0:
       if (mult==True):
-      	data = np.empty(allpartnum,dt)
+        if memmap==None:
+          data = np.empty(allpartnum,dt)
+        else:
+          data = np.memmap(memmap,dtype=dt,mode='w+',shape=(allpartnum))
       else:
       	data = np.empty(nall[parttype],dt)
     

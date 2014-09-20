@@ -10,7 +10,7 @@ class RSDataReader:
     """
     Alex's 10/4/13 rewrite of RSDataReader, combining v2 and v3 and cleaning everything up
     """
-    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, AllParticles=False):
+    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False):
         self.dir = dir
         self.snap_num = snap_num
         self.AllParticles = AllParticles
@@ -174,8 +174,7 @@ class RSDataReader:
         file_num = 0
         file_name = getfilename(file_num)
         if (not os.path.exists(file_name)):
-            print "ERROR: file not found", file_name
-            sys.exit()
+            raise IOError("ERROR: file not found "+file_name)
             
         ## Count total number of particles/halos in all data blocks
         self.num_halos = 0
@@ -234,12 +233,16 @@ class RSDataReader:
             data = data[sortedIndices]
             files= files[sortedIndices]
 
+        if len(files)==0:
+            raise RuntimeError("No halos in snap %i" % (snap_num))
+
         self.files = pandas.DataFrame(files, index=data['id'].astype(int),columns=['file'])
         self.data = pandas.DataFrame(data,index=data['id'])
 
         self.particles = self.particles.astype(int)
-        parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
-        self.data['hostID'].ix[parents[:,0]] = parents[:,1]
+        if not noparents:
+            parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
+            self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
         self.ix = self.data.ix
 

@@ -654,12 +654,18 @@ def getillustrispath():
 def determinebasepath(node):
     if node == "csr-dyn-150.mit.edu":
         basepath = '/Users/griffen/Desktop/'
-    if node == "Brendans-MacBook-Pro.local":
+    elif node == "Brendans-MacBook-Pro.local":
         basepath = '/Users/griffen/Desktop/'
-    if node == "spacebase":
+    elif node == "spacebase":
         basepath = '/spacebase/data/AnnaGroup/'
-    if node == "bigbang.mit.edu":
+    elif node == "bigbang.mit.edu":
         basepath = '/bigbang/data/AnnaGroup/'
+    elif node == "antares":
+        basepath = '/bigbang/data/AnnaGroup/'
+    elif 'compute-0-' in node:
+        basepath = '/bigbang/data/AnnaGroup/'
+    else:
+        raise ValueError(node+" is not a valid node")
         
     return basepath
 
