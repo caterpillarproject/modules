@@ -334,9 +334,9 @@ class RSDataReader:
         # radius specified in kpc
         """
         if radius==None:
-            radius = float(cat.ix[haloID]['rvir'])
-        dists = distance(np.array(cat[['posX','posY','posZ']]), np.array(cat.ix[haloID][['posX','posY','posZ']]))*1000
-        halos = cat[(dists<radius)*(dists>0)] # exclude host
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
         halos = halos[np.logical_or(halos['hostID']==haloID,halos['hostID']==-1)] # only take 1 level deep halos
         return halos
 
@@ -346,9 +346,9 @@ class RSDataReader:
         # radius specified in kpc
         """
         if radius==None:
-            radius = float(cat.ix[haloID]['rvir'])
-        dists = distance(np.array(cat[['posX','posY','posZ']]), np.array(cat.ix[haloID][['posX','posY','posZ']]))*1000
-        halos = cat[(dists<radius)*(dists>0)] # exclude host
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
         return halos
                 
 
