@@ -326,6 +326,32 @@ class RSDataReader:
         """
         return self.data.ix[self.get_all_subs_recurse(haloID)]
 
+        
+    def get_subhalos_within_halo(self, haloID, radius=None):
+        """
+        # return all halos within radis of halo specified by haloID
+        # that are only 1 level deep subhaloes
+        # radius specified in kpc
+        """
+        if radius==None:
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
+        halos = halos[np.logical_or(halos['hostID']==haloID,halos['hostID']==-1)] # only take 1 level deep halos
+        return halos
+
+    def get_all_subhalos_within_halo(self, haloID, radius=None):
+        """
+        # return all halos within radis of halo specified by haloID
+        # radius specified in kpc
+        """
+        if radius==None:
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
+        return halos
+                
+
     def get_all_sub_particles_from_halo(self,haloID):
         """
         returns int array of particle IDs belonging to all substructure
