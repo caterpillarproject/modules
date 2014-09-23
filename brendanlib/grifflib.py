@@ -782,7 +782,7 @@ def determinebasepath(node):
     elif node == "Brendans-MacBook-Pro.local":
         basepath = '/Users/griffen/Desktop/'
     elif node == "spacebase":
-        basepath = '/spacebase/data/AnnaGroup/'
+        basepath = '/bigbang/data/AnnaGroup/'
     elif node == "bigbang.mit.edu":
         basepath = '/bigbang/data/AnnaGroup/'
     elif node == "antares":
