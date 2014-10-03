@@ -440,6 +440,8 @@ class RSDataReader:
         except:
             print 'computing potential instead'
             dr = distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0#in Mpc physical
+            mask = dr==0
+            dr=dr[~mask]
             U = self.PotentialE(dr)
 
         Etot = T + U
@@ -452,7 +454,7 @@ class RSDataReader:
         from scipy.integrate import quad
         G = 1.326*10**11 # in km^3/s^2/Msun
         mpc_to_km = 3.086*10**19
-
+        
         rarr = 10**np.linspace(np.log10(min(dr))-.01, np.log10(max(dr))+.01,70) # in Mpc
         h_r, x_r = np.histogram(dr, bins=np.concatenate(([0],rarr)))
         m_lt_r = np.cumsum(h_r)*self.particle_mass/self.h0
