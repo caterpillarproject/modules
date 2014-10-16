@@ -20,11 +20,11 @@ class RSDataReader:
         self.particlebytes = 8
 
         def getfilename(file_num):
-            if version==7:
+            if version>=7:
                 return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.fullbin'
             return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.bin'
 
-        if version==7:
+        if version>=7:
             self.num_p = 'total_npart'
         else:
             self.num_p = 'npart'
@@ -167,6 +167,29 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffq"
             numbytes = struct.calcsize(datatypesstr) #264
+        if version==8: #RC3+, full particle binary and half mass radius. 10/15/2014
+            headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
+            varlist = np.dtype([('id','<i8'),\
+                                ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
+                                ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),\
+                                ('corevelx','<f8'),('corevely','<f8'),('corevelz','<f8'),\
+                                ('bulkvelx','<f8'),('bulkvely','<f8'),('bulkvelz','<f8'),\
+                                ('mvir','<f8'),('rvir','<f8'),('child_r','<f8'),('vmax_r','<f8'),\
+                                ('mgrav','<f8'),('vmax','<f8'),('rvmax','<f8'),('rs','<f8'),('rs_klypin','<f8'),\
+                                ('vrms','<f8'),('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),\
+                                ('Epot','<f8'),('spin','<f8'),('altm1','<f8'),('altm2','<f8'),('altm3','<f8'),('altm4','<f8'),\
+                                ('Xoff','<f8'),('Voff','<f8'),\
+                                ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
+                                ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
+                                ('spin_bullock','<f8'),('T/|U|','<f8'),\
+                                ('m_pe_b','<f8'),('m_pe_d','<f8'),('halfmassrad','<f8'),\
+                                ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
+                                ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
+                                ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
+                                ('total_npart','<i8'),\
+                                ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
+            datatypesstr = "qffffffffffffffffffffffffffffffffffffffffffffffffqqqqqqfffq"
+            numbytes = struct.calcsize(datatypesstr)
 
 
         self.datatypesstr = datatypesstr
@@ -359,14 +382,14 @@ class RSDataReader:
         # updated 3/26 2013 to include support for array/list input of haloID. Also streamlined the code.
         """
         if type(haloID) == list or type(haloID)==np.ndarray:
-            if self.version==7:
+            if self.version>=7:
                 subids = [self.get_subhalos_from_halo(id)['id'] for id in haloID]
             else:
                 subids = [self.get_all_subhalos_from_halo(id)['id'] for id in haloID]
             idlist = [[item for s in sid for item in self.get_particles_from_halo(s)] for sid in subids]
             return idlist
         else:
-            if self.version==7:
+            if self.version>=7:
                 subids = self.get_subhalos_from_halo(haloID)['id']
             else:
                 subids = self.get_all_subhalos_from_halo(haloID)['id']
@@ -381,12 +404,12 @@ class RSDataReader:
         """
         returns int array of all particles belonging to haloID
         """
-        if self.version==7:
+        if self.version>=7:
             return self.get_particles_from_halo(haloID)
         return np.append(self.get_particles_from_halo(haloID), self.get_all_sub_particles_from_halo(haloID)).astype(int)
 
     def get_all_num_particles_from_halo(self,haloID):
-        if self.version ==7:
+        if self.version>=7:
             return self.data.ix[haloID]['total_npart']
         thisnum = self.data.ix[haloID]['npart']
         subdat = self.get_all_subhalos_from_halo(haloID)
@@ -489,6 +512,8 @@ class RSDataReader:
             return "Version 6: Rockstar 0.99.9 RC3"
         if self.version == 7:
             return "Version 7: Rockstar 0.99.9 RC3 with full particles on"
+        if self.version == 8:
+            return "Version 8: Rockstar 0.99.9 RC3+/4 with full particles on"
         return "ERROR: Not a valid version number!"
 
     def __getitem__(self,key):
