@@ -935,3 +935,10 @@ class MTCatalogue:
             return out+"Indexed by Rockstar halo ids"
         else:
             return out+"Indexed by sequential integers in order of mass"
+
+    def __iter__(self):
+        """
+        Allows loops such as this..
+        for mt in mtc: print mt
+        """
+        return self.Trees.itervalues()

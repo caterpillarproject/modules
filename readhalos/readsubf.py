@@ -35,6 +35,7 @@ class subfind_catalog:
       
       if (not os.path.exists(curfile)):
         print "file not found:", curfile
+        raise IOError()
         sys.exit()
       
       f = open(curfile,'rb')
@@ -142,7 +143,7 @@ class subfind_catalog:
 
       curpos = f.tell()
       f.seek(0,os.SEEK_END)
-      if curpos != f.tell(): print "Warning: finished reading before EOF for file",filenum
+      #if curpos != f.tell(): print "Warning: finished reading before EOF for file",filenum
       f.close()  
       #print 'finished with file number',filenum,"of",ntask
       filenum += 1
@@ -224,6 +225,7 @@ class subf_ids:
       
       if (not os.path.exists(curfile)):
         print "file not found:", curfile
+        raise IOError()
         sys.exit()
       
       f = open(curfile,'rb')
