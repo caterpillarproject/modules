@@ -69,6 +69,7 @@ class snapshot_header:
     self.omega_m = (np.fromfile(f,dtype=np.float64,count=1))[0]
     self.omega_l = (np.fromfile(f,dtype=np.float64,count=1))[0]
     self.hubble = (np.fromfile(f,dtype=np.float64,count=1))[0]
+    self.doubleprecision = (np.fromfile(f,dtype=np.int32,count=1))[0]
     
     if swap:
       self.npart.byteswap(True)
@@ -84,7 +85,7 @@ class snapshot_header:
       self.omega_m = self.omega_m.byteswap()
       self.omega_l = self.omega_l.byteswap()
       self.hubble = self.hubble.byteswap()
-     
+      self.doubleprecision = self.doubleprec.byteswap()
     f.close()
  
 # ----- find offset and size of data block ----- 

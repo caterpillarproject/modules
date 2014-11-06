@@ -7,12 +7,320 @@ from scipy.optimize import leastsq
 from math import *
 import numpy.random as nprnd
 import matplotlib.colors as col
-import math
-import subprocess
-import shlex
-import os
+import math,glob,subprocess,shlex,os,asciitable
 import readsnapshots.readsnapHDF5_greg as rs
 import asciitable
+
+def convert_pid_zid(pid,lx):
+    htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
+    key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
+    hindex = dict(zip(key,htable['zoomid']))
+    zoomid = hindex[str(pid)+'_'+str(lx)]
+    return zoomid
+
+def get_completed_list(suite_paths,verbose=True):
+    gadget_done = []
+    subfind_done = []
+    ic_done = []
+    for suite in suite_paths:
+
+        if os.path.isdir(suite + "/outputs/snapdir_255"):
+            gadget_done.append(1)
+        else:
+            gadget_done.append(0)
+
+        if os.path.isfile(suite + "/ics.0") and os.path.getsize(suite + "/ics.0") > 0:
+            ic_done.append(1)
+        else:
+            ic_done.append(0)
+
+        if os.path.isdir(suite + "/outputs/groups_255"):
+            subfind_done.append(1)
+        else:
+            subfind_done.append(0)
+
+    if verbose:
+        print "----------------------------"
+        print "   RUN               I G S"
+        print "----------------------------"
+        #print "H299792_A            "
+        for suite,gadget,ic,subfind in zip(suite_paths,gadget_done,ic_done,subfind_done):
+            print suite.split("/")[-1].replace("_BB_Z127_P7_LN7_LX11_O4_NV4","").ljust(20),ic,gadget,subfind 
+
+    return gadget_done,ic_done,subfind_done
+
+def make_gadget_submission_script(runpath,cfgname,job_name,ncores,queue):
+    f = open(runpath + "/sgadget",'w')
+    f.write('#!/bin/bash\n')
+    f.write('#SBATCH -n ' + str(ncores) + '\n')
+    f.write('#SBATCH -o gadget.o%j\n')
+    f.write('#SBATCH -e gadget.e%j\n')
+    f.write('#SBATCH -J '+ job_name + '\n')
+    f.write('#SBATCH -p ' + queue + '\n')
+    f.write("\n")
+    f.write("cd " + runpath + "\n")
+    f.write("\n")
+    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+    f.close()
+
+def make_subfind_submission_script(runpath,cfgname,job_name,ncores,queue):
+    f = open(runpath + "/ssubfind",'w')
+    f.write('#!/bin/bash\n')
+    f.write('#SBATCH -n ' + str(ncores) + '\n')
+    f.write('#SBATCH -o subfind.o%j\n')
+    f.write('#SBATCH -e subfind.e%j\n')
+    f.write('#SBATCH -J '+ job_name + 's\n')
+    f.write('#SBATCH -p ' + queue + '\n')
+    f.write("\n")
+    f.write("cd " + runpath + "\n")
+    f.write("\n")
+    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3_sub param_sub.txt 1>OUTPUTsub 2>ERRORsub\n')
+    f.close()
+
+def make_music_submission_script(runpath,cfgname,job_name,ncores,queue):
+    f1 = open(runpath + "/smusic",'w')
+    f1.write("#!/bin/bash \n")
+    f1.write("#SBATCH -o music.o%j \n")
+    f1.write("#SBATCH -e music.e%j \n")
+    f1.write("#SBATCH -N 1\n")
+    f1.write("#SBATCH --exclusive\n")
+    f1.write("#SBATCH -p "+ queue + "\n")
+    f1.write("#SBATCH -J " + job_name + "\n")
+    f1.write("\n")
+    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
+    f1.write("\n")
+    f1.write("cd " + runpath + "\n")
+    f1.write("\n")
+    f1.write("./MUSIC ./" + cfgname + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
+    f1.close()
+
+
+def run_gadget(suite_paths,gadget_file_path,ncores=8,queue="RegNodes"):
+    job_name_list = []
+    current_jobs,jobids,jobstatus = getcurrentjobs()
+    for folder in suite_paths:
+        folder_single = folder.split("/")[-1]
+        halo_label = folder_single.split("_")[0]
+        job_name = halo_label+"LX11"+folder_single.split("_")[-1]
+        if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") > 0 and \
+            job_name not in current_jobs and job_name not in job_name_list:
+            if not os.path.isdir(folder + "/outputs/snapdir_255"):
+                print "COPYING GADGET FILES..."
+                mkdir_outputs = "mkdir -p " + folder + "/outputs/"
+                file_times  = "cp " + gadget_file_path + "ExpansionList_256contam " + folder + "/ExpansionList"
+                file_exe    = "cp " + gadget_file_path + "P-Gadget3_256 " + folder + "/P-Gadget3"
+                file_param  = "cp " + gadget_file_path + "param_11contam.txt " + folder + "/param.txt"
+                file_config = "cp " + gadget_file_path + "Config_256.sh " + folder + "/Config.sh"
+                cmd_copy_all_files = [mkdir_outputs,file_times,file_exe,file_param,file_config]
+                subprocess.call([";".join(cmd_copy_all_files)],shell=True)
+                print "SUBMITTING GADGET..."
+                make_gadget_submission_script(folder,folder_single,job_name,ncores,queue)
+                cmd_submit_gadget = "sbatch " + folder + "/sgadget"
+                subprocess.call([cmd_submit_gadget],shell=True)
+                job_name_list.append(job_name)
+
+def run_subfind(suite_paths,gadget_file_path,ncores=8,queue="RegNodes"):
+    job_name_list = []
+    current_jobs,jobids,jobstatus = getcurrentjobs()
+    for folder in suite_paths:
+        folder_single = folder.split("/")[-1]
+        halo_label = folder_single.split("_")[0]
+        job_name = halo_label+"LX11"+folder_single.split("_")[-1]
+        if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") > 0 and not os.path.isdir(folder + "/outputs/") and \
+            job_name not in current_jobs and job_name not in job_name_list:
+            if not os.path.isdir(folder + "/outputs/snapdir_255") and not os.path.isdir(folder + "/outputs/groups_255"):
+                print "COPYING SUBFIND FILES..."
+                file_exe    = "cp " + gadget_file_path + "P-Gadget3_256sub " + folder + "/P-Gadget3_sub"
+                file_param  = "cp " + gadget_file_path + "paramsub_11.txt " + folder + "/param_sub.txt"
+                file_config = "cp " + gadget_file_path + "Configsub_256.sh " + folder + "/Config_sub.sh"
+                cmd_copy_all_files = [file_times,file_exe,file_param,file_config]
+                subprocess.call([";".join(cmd_copy_all_files)],shell=True)
+                print "SUBMITTING SUBFIND..."
+                make_subfind_submission_script(folder,folder_single,job_name,ncores,queue)
+                cmd_submit_gadget = "sbatch " + folder + "/ssubfind"
+                subprocess.call([cmd_submit_subfind],shell=True)
+                job_name_list.append(job_name)
+
+def run_music(suite_paths,music_path,lagr_path,ncores=24,queue="HyperNodes"):
+     for folder in suite_paths:
+         folder_single = folder.split("/")[-1]
+         halo_label = folder_single.split("_")[0]
+         job_name = "I"+halo_label[1:]+"X11"+folder_single.split("_")[-1]
+         
+         job_name_list = []
+         current_jobs,jobids,jobstatus = getcurrentjobs()
+         if not os.path.isfile(folder + "/ics.0") or os.path.getsize(folder + "/ics.0") == 0 and job_name not in current_jobs and job_name not in job_name_list:
+             print
+             print "RUNNING:",folder_single
+             print "MAKING MUSIC SUBMISSION SCRIPT..."
+             
+             make_music_submission_script(folder,folder_single,job_name,ncores=24,queue="HyperNodes")
+             
+             print "COPYING MUSIC FILES..."
+             cmd_cp_music = "cp " + music_path + " " + folder
+             subprocess.call([cmd_cp_music],shell=True)
+         
+             print "CONSTRUCTING MUSIC CONFIGURATION FILES..."
+             lagr_file = lagr_path + folder_single.split("_")[0]
+             master_music_cfg_orig = folder.split("/contamination")[0] + "/" + folder.split("/")[-3] + ".conf"
+             master_music_cfg_dest = folder + "/" + folder_single + ".conf"
+             subprocess.call([cmd_cp_music],shell=True)
+             #construct_music_cfg(lagr_file+"NRVIR4",master_music_cfg_orig,master_music_cfg_dest,folder_single.split("_")[-1])
+             #construct_music_cfg(lagr_file+"NRVIR4",master_music_cfg_orig,master_music_cfg_dest,folder_single.split("_")[-1])
+             
+             region_point_file = lagr_path+"H"+halo_label[1:]
+             seed = int(halo_label[1:])
+
+             if os.path.isfile(lagr_path+"H"+halo_label[1:]+".head"):
+                 if "_A" in folder_single or "_B" in folder_single or "_C" in folder_single or "_D" in folder_single:
+                    ictype = 'box'
+                    extents = getcentext(lagr_path+"H"+halo_label[1:]+".head")
+                    ref_center = [extents[0],extents[1],extents[2]]
+                    ref_extent = [extents[3],extents[4],extents[5]]
+                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file,ref_center=ref_center,ref_extent=ref_extent)
+    
+                 if "ELLIPSOID" in folder_single:
+                    ictype = "ellipsoid"
+                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
+    
+                 if "CONVEX" in folder_single:
+                    ictype = "convex_hull"
+                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
+
+             #np.loadtxt(lagr_path+"H"+halo_label[1:]+".head")
+             #with open(lagr_path+"H"+halo_label[1:]+".head") as myfile:
+
+             #make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
+             print "SUBMITTING INITIAL CONDITIONS..."
+             
+             cmd_submit_ics = "sbatch " + folder + "/smusic"
+             #subprocess.call([cmd_submit_ics],shell=True)
+             job_name_list.append(job_name)
+             
+def constructresimconf(confname,boxlength,zstart,lmin,lTF,lmax,padding,overlap,refcentx,refcenty,refcentz, \
+                        refextx,refexty,refextz,align,baryons,use2LPT,useLLA,omegam,omegal,omegab,hubble, \
+                        sigma8,nspec,transfer,seednum,seedlevel,outformat,icfilename,fftfine,accuracy,presmooth,postsmooth, \
+                        smoother,laplaceorder,gradorder,boxlevel,periodicTFstr,pointfile,boxtype,noutput,haloid,nrvir):
+
+    f = open(confname,'w')
+    f.write('[setup]' + '\n')
+    f.write('boxlength            = ' + str(boxlength) + '\n')
+    f.write('zstart               = ' + str(zstart) + '\n')
+    f.write('levelmin             = ' + str(lmin) + '\n')
+    f.write('levelmin_TF          = ' + str(lTF) + '\n')
+    f.write('levelmax             = ' + str(lmax) + '\n')
+    f.write('padding              = ' + str(padding) + '\n')
+    f.write('overlap              = ' + str(overlap) + '\n')
+    
+    if boxtype == 'box':
+        f.write('ref_center           = ' + str(refcentx) + ',' + str(refcenty) + ',' + str(refcentz) + '\n')
+        f.write('ref_extent           = ' + str(refextx) + ',' + str(refexty) + ',' + str(refextz) + '\n')
+
+    if boxtype == 'convex':
+      f.write('region               = convex_hull' + '\n')
+    else:
+      f.write('region               = ' + str(boxtype) + '\n')
+
+    #    f.write('ref_center           = ' + str(refcentx) + ',' + str(refcenty) + ',' + str(refcentz) + '\n')
+    #    f.write('ref_extent           = ' + str(refextx) + ',' + str(refexty) + ',' + str(refextz) + '\n')
+   
+    f.write('region_point_file    = ' + str(pointfile) + '\n')
+    f.write('align_top            = ' + str(align) + '\n')
+    f.write('baryons              = ' + str(baryons) + '\n')
+    f.write('use_2LPT             = ' + str(use2LPT) + '\n')
+    f.write('use_2LLA             = ' + str(useLLA) + '\n')
+    f.write('periodic_TF          = ' + str(periodicTFstr) + '\n')
+    f.write('\n')
+    f.write('[cosmology]'+ '\n')
+    f.write('Omega_m              = ' + str(omegam) + '\n')
+    f.write('Omega_L              = ' + str(omegal) + '\n')
+    f.write('Omega_b              = ' + str(omegab) + '\n')
+    f.write('H0                   = ' + str(hubble) + '\n')
+    f.write('sigma_8              = ' + str(sigma8) + '\n')
+    f.write('nspec                = ' + str(nspec) + '\n')
+    f.write('transfer             = ' + str(transfer) + '\n')
+    f.write('\n')
+    f.write('[random]' + '\n')
+    delta = int(nrvir)
+    for level in range(seedlevel,int(lmax)+1):
+        delta += delta*2 + 1
+        if level != seedlevel:
+            seeduse = int(haloid) + int(delta)
+            #seeduse = seednumnew[seedi]
+            f.write('seed[' + str(level) + ']              = ' + str(seeduse) + '\n')
+        elif level == seedlevel:
+            f.write('seed[' + str(seedlevel) + ']              = ' + str(seednum) + '\n')
+            #seedi += 1
+
+    f.write('\n')
+    f.write('[output]' + '\n')
+    f.write('format               = ' + str(outformat) + '\n')
+    f.write('filename             = ' + str(icfilename) + '\n')
+    f.write('gadget_num_files     = ' + str(noutput) + '\n')
+    f.write('gadget_spreadcoarse  = yes\n')
+    f.write('\n')
+    f.write('[poisson]' + '\n')
+    f.write('fft_fine             = ' + str(fftfine) + '\n')
+    f.write('accuracy             = ' + str(accuracy) + '\n')
+    f.write('pre_smooth           = ' + str(presmooth) + '\n')
+    f.write('post_smooth          = ' + str(postsmooth) + '\n')
+    f.write('smoother             = ' + str(smoother)  + '\n')
+    f.write('laplace_order        = ' + str(laplaceorder) + '\n')
+    f.write('grad_order           = ' + str(gradorder) + '\n')
+    f.close()
+
+
+def make_LX11_musicfile(master_music_cfg_dest,boxtype,seed,region_point_file,ref_center=[0,0,0],ref_extent=[0,0,0]):
+    f.open(master_music_cfg_dest,'w')
+    f.write("[setup]\n")
+    f.write("boxlength            = 100\n")
+    f.write("zstart               = 127\n")
+    f.write("levelmin             = 7\n")
+    f.write("levelmin_TF          = 10\n")
+    f.write("levelmax             = 11\n")
+    f.write("padding              = 7\n")
+    f.write("overlap              = 4\n")
+    f.write("region               = " + boxtype + "\n")
+    
+    if boxtype == 'box':
+        f.write("ref_center           = " + str(ref_center[0]) + "," + str(ref_center[1]) + "," + str(ref_center[2])+"\n")
+        f.write("ref_extent           = " + str(ref_extent[0]) + "," + str(ref_extent[1]) + "," + str(ref_extent[2])+"\n")
+    
+    f.write("region_point_file    = " + region_point_file + "\n")
+    f.write("align_top            = no\n")
+    f.write("baryons              = no\n")
+    f.write("use_2LPT             = no\n")
+    f.write("use_2LLA             = no\n")
+    f.write("periodic_TF          = yes\n")
+    f.write("\n")
+    f.write("[cosmology]\n")
+    f.write("Omega_m              = 0.3175\n")
+    f.write("Omega_L              = 0.6825\n")
+    f.write("Omega_b              = 0.049\n")
+    f.write("H0                   = 67.11\n")
+    f.write("sigma_8              = 0.8344\n")
+    f.write("nspec                = 0.9624\n")
+    f.write("transfer             = eisenstein\n")
+    f.write("\n")
+    f.write("[random]\n")
+    f.write("seed[10]              = 34567\n")
+    f.write("seed[11]              = " + str(seed) + "\n")
+    f.write("\n")
+    f.write("[output]\n")
+    f.write("format               = gadget2_double\n")
+    f.write("filename             = ./ics\n")
+    f.write("gadget_num_files     = 8\n")
+    f.write("gadget_spreadcoarse  = yes\n")
+    f.write("\n")
+    f.write("[poisson]\n")
+    f.write("fft_fine             = yes\n")
+    f.write("accuracy             = 1e-05\n")
+    f.write("pre_smooth           = 3\n")
+    f.write("post_smooth          = 3\n")
+    f.write("smoother             = gs\n")
+    f.write("laplace_order        = 6\n")
+    f.write("grad_order           = 6\n")
+    f.close()
 
 def convert_pid_zid(pid,lx):
     htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
@@ -46,20 +354,46 @@ def checkmakedir(folder):
         subprocess.call([mkimagedir],shell=True)
         
 def getcurrentjobs():
-    pipemyq = "squeue -u bgriffen,alexji > currentqueue.out"
+    #pipemyq = "squeue -u bgriffen,alexji > currentqueue.out"
     pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen,alexji > currentqueue.out'
     subprocess.call(';'.join([pipemyq]),shell=True)
     lines = [line.strip() for line in open('currentqueue.out')]
+    subprocess.call(["rm currentqueue.out"],shell=True)
     currentjobs = []
     jobstatus = []
     jobids = []
     
     for i in xrange(1,len(lines)):
-	currentjobs.append(lines[i].split(",")[0])
-	jobids.append(lines[i].split(",")[1])
-	jobstatus.append(lines[i].split(",")[2])
+        currentjobs.append(lines[i].split(",")[0])
+        jobids.append(lines[i].split(",")[1])
+        jobstatus.append(lines[i].split(",")[2])
     
     return jobids,currentjobs,jobstatus
+
+def get_unrun_halos(base_halo_path):
+    folder_paths_output = []
+    for folder in base_halo_path:
+        need_to_run = False
+        for sub_dir in glob.glob(folder+"/H*BB*NV4"):
+            if os.path.isdir(sub_dir+"/outputs/snapdir_255/"):
+                need_to_run = True
+
+        if not need_to_run:
+            run_folder = glob.glob(folder+"/H*BB*LX11*NV4")
+            #print run_folder
+            folder_paths_output.append(run_folder[0])
+
+    return folder_paths_output
+    
+
+def make_destination_folders_clean(base_path,suite_names):
+    for folder in glob.glob(base_path+"H*"):
+        haloid = folder.split("halos/")[-1].split("_")[0]
+        new_folder_name = haloid + "_BB_Z127_P7_LN7_LX11_O4_NV4"
+        #folder_single = folder_path.split("/")[-1]
+        for suite in suite_names:
+            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + new_folder_name + "_" + suite 
+            subprocess.call([cmd_make_folder],shell=True)
 
 def make_destination_folders(folder_paths,suite_names):
     for folder in folder_paths:
@@ -67,6 +401,7 @@ def make_destination_folders(folder_paths,suite_names):
         for suite in suite_names:
             cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + folder_single + "_" + suite 
             subprocess.call([cmd_make_folder],shell=True)
+
 
 def construct_music_cfg(lagr_file,master_music_cfg_orig,master_music_cfg_dest,typeic):
 
@@ -126,13 +461,14 @@ def construct_music_cfg(lagr_file,master_music_cfg_orig,master_music_cfg_dest,ty
             if "ref_" not in line and "region " not in line:
                 fout.write(line+"\n")
 
-            if "region " in line:
-                if typeic == "CONVEX":
-                    fout.write("region           = convex_hull\n")
-                if typeic == "ELLIPSOID":
-                    fout.write("region           = ellipsoid\n")
-                if typeic != "ELLIPSOID" and typeic != "CONVEX":
-                    fout.write("region               = box\n")
+
+    if "region " in line:
+        if typeic == "CONVEX":
+            fout.write("region           = convex_hull\n")
+        if typeic == "ELLIPSOID":
+            fout.write("region           = ellipsoid\n")
+        if typeic != "ELLIPSOID" and typeic != "CONVEX":
+            fout.write("region               = box\n")
 
     fout.close()
     
@@ -159,38 +495,6 @@ def makePBSicfile(cluster,runpath,ncores,haloid,nrvir,level,email=False):
     f.write("qsub " + runpath + "smusic" + " > submitlist\n")
     f.write("logout\n")
     f.close()
-
-def make_gadget_submission_script(runpath,cfgname,job_name,ncores,queue):
-    f = open(runpath + "/sgadget",'w')
-    f.write('#!/bin/bash\n')
-    f.write('#SBATCH -n ' + str(ncores) + '\n')
-    f.write('#SBATCH -o gadget.o%j\n')
-    f.write('#SBATCH -e gadget.e%j\n')
-    f.write('#SBATCH -J '+ job_name + '\n')
-    f.write('#SBATCH -p ' + queue + '\n')
-    f.write("\n")
-    f.write("cd " + runpath + "\n")
-    f.write("\n")
-    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
-    f.close()
-    
-def make_music_submission_script(runpath,cfgname,job_name,ncores,queue):
-
-    f1 = open(runpath + "/smusic",'w')
-    f1.write("#!/bin/bash \n")
-    f1.write("#SBATCH -o music.o%j \n")
-    f1.write("#SBATCH -e music.e%j \n")
-    f1.write("#SBATCH -N 1\n")
-    f1.write("#SBATCH --exclusive\n")
-    f1.write("#SBATCH -p "+ queue + "\n")
-    f1.write("#SBATCH -J " + job_name + "\n")
-    f1.write("\n")
-    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
-    f1.write("\n")
-    f1.write("cd " + runpath + "\n")
-    f1.write("\n")
-    f1.write("./MUSIC ./" + cfgname + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
-    f1.close()
 
 def makeSLURMicfile(cluster,runpath,ncores,haloid,nrvir,level,halotype,time=5000,memory=256,queue="general",email=False):
     f1 = open(runpath + "smusic",'w')
@@ -325,6 +629,8 @@ def CorrectPos(pos, box):
         else:
             pos[index]=pos[index]+box
 
+    return pos
+    
 def COM(posX,posY,posZ):
 
     tmpX=np.float64(posX)
@@ -361,26 +667,20 @@ def tick_function(X):
 def calcT(p):
     return 1 - (1./p)**2
 
-def placenormtext(ax,xpos,ypos,teststr,fontsize):
+def placenormtext(ax,xpos,ypos,teststr,**kwargs):
     xpos = float(xpos)
     ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,
-        horizontalalignment='left',
-        verticalalignment='center',
-        color='black',
-        fontsize=fontsize,
-        transform = ax.transAxes)
+    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
 
-def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
+def placetext(ax,xpos,ypos,teststr,**kwargs):
     xpos = float(xpos)
     ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,
-        horizontalalignment='left',
-        verticalalignment='center',
-        color='black',
-        fontsize=fontsize,
-        weight=fontweight,
-        transform = ax.transAxes)
+    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
+
+def placetext_direct(ax,xpos,ypos,teststr,**kwargs):
+    xpos = float(xpos)
+    ypos = float(ypos)
+    ax.text(xpos, ypos,teststr,horizontalalignment='center',verticalalignment='center',**kwargs)
 
 def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
@@ -391,6 +691,7 @@ def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
         color='black',
         fontsize=fontsize,
         weight=fontweight)
+
 
 def getxyzdeltamcut(resolution,icgeometry):
     if icgeometry == 'ellipsoid':
@@ -779,12 +1080,18 @@ def getillustrispath():
 def determinebasepath(node):
     if node == "csr-dyn-150.mit.edu":
         basepath = '/Users/griffen/Desktop/'
-    if node == "Brendans-MacBook-Pro.local":
+    elif node == "Brendans-MacBook-Pro.local":
         basepath = '/Users/griffen/Desktop/'
-    if node == "spacebase":
-        basepath = '/spacebase/data/AnnaGroup/'
-    if node == "bigbang.mit.edu":
+    elif node == "spacebase":
         basepath = '/bigbang/data/AnnaGroup/'
+    elif node == "bigbang.mit.edu":
+        basepath = '/bigbang/data/AnnaGroup/'
+    elif node == "antares":
+        basepath = '/bigbang/data/AnnaGroup/'
+    elif 'compute-0-' in node:
+        basepath = '/bigbang/data/AnnaGroup/'
+    else:
+        raise ValueError(node+" is not a valid node")
         
     return basepath
 
@@ -822,66 +1129,3 @@ def makecolormap():
     lambda2 = np.zeros(vals)
     lambda2 = np.arange(0.0,1.0,1.0/(vals))
     s=1.5
-    gamma=0.90
-    h=1.0
-    r=1.5
-    phi = 2*(3.14159)*(s/3.0 + r*lambda2)
-    a = h*lambda2**gamma *( 1 - lambda2**gamma) / 2.0
-
-    for color in range(0, vals):
-        rgbg[color,0] = lambda2[color]**gamma - a[color] * 0.14871 * math.cos(phi[color]) + a[color] * 1.78277 * math.sin(phi[color])
-        rgbg[color,1] = lambda2[color]**gamma - a[color] * 0.29227 * math.cos(phi[color]) - a[color] * 0.90649 * math.sin(phi[color])
-        rgbg[color,2] = lambda2[color]**gamma + a[color] * 1.97249 * math.cos(phi[color])
-
-    return col.LinearSegmentedColormap.from_list('newmap',rgbg,N=vals)
-
-def cosmoconstant(cosmology):
-#    if cosmology == 'WMAP1':
-#        omegam = 
-#        omegal = 
-#        omegab = 
-#        hubble = 
-#        sigma8 = 
-#        nspec = 
-#    
-#    if cosmology == 'WMAP3':
-#        omegam = 
-#        omegal = 
-#        omegab = 
-#        hubble = 
-#        sigma8 = 
-#        nspec = 
-#  
-#    if cosmology == 'WMAP5':
-#        omegam = 
-#        omegal = 
-#        omegab = 
-#        hubble = 
-#        sigma8 = 
-#        nspec = 
-    
-    if cosmology == 'WMAP7':
-        omegam = 0.276
-        omegal = 0.724
-        omegab = 0.045
-        hubble = 70.3
-        sigma8 = 0.811
-        nspec = 0.961
-    
-#    if cosmology == 'WMAP9':
-#        omegam = 
-#        omegal = 
-#        omegab = 
-#        hubble = 
-#        sigma8 = 
-#        nspec = 
-    
-    if cosmology == 'PLANCK':
-        omegam = 0.3175
-        omegal = 0.6825
-        omegab = 0.0489991
-        hubble = 67.11
-        sigma8 = 0.8344
-        nspec = 0.9624
-
-    return omegam,omegal,omegab,hubble,sigma8,nspec
