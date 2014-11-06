@@ -1,5 +1,6 @@
 from math import *
 import numpy as np
+import constants as const
 
 #constants
 ProtonMass=1.6725e-24
@@ -182,7 +183,7 @@ def GetRhoCrit():
     	"""
 	return 3.*Hubble**2./(8.*pi*G)
 
-def GetnH(rho, ascale, h=0.7):
+def GetnH(rho, ascale, h=const.h):
 	"""
 	RETURNS: physical hydrogen number density in h^2 cm^-3
 	INPUT: rho    : density
@@ -191,7 +192,7 @@ def GetnH(rho, ascale, h=0.7):
     	"""
 	return (rho*UnitDensity_in_cgs*h**2.) * (Hydrogen_MassFrac/ProtonMass) / ascale**3.
 
-def GetTime(ascale, OmegaM=0.27,OmegaL=0.73,h=0.7):
+def GetTime(ascale, OmegaM=const.Omega0,OmegaL=const.OmegaL,h=const.h):
 	"""
 	RETURNS: time for given cosmology and scale factor in simulation units
 	INPUT: ascale : scale factor
@@ -202,7 +203,7 @@ def GetTime(ascale, OmegaM=0.27,OmegaL=0.73,h=0.7):
 	aml=(OmegaM/OmegaL)**(1./3.)
 	return 1./(h*Hubble) * 2./(3.* (1.-OmegaM)**0.5) * np.log((ascale/aml)**1.5 + (1.+(ascale/aml)**3.)**0.5) * UnitTime_in_Gyr
 
-def GetLookBackTime(ascale, OmegaM=0.27,OmegaL=0.73,h=0.7):
+def GetLookBackTime(ascale, OmegaM=const.Omega0,OmegaL=const.OmegaL,h=const.h):
 	"""
 	RETURNS: lookback time in simulation units
 	INPUT: ascale : scale factor
@@ -213,7 +214,7 @@ def GetLookBackTime(ascale, OmegaM=0.27,OmegaL=0.73,h=0.7):
 
 	return GetTime(1.,OmegaM, OmegaL, h) - GetTime(ascale,OmegaM, OmegaL, h)
 	
-def CoolingRate_cgs(coor, h=0.7):
+def CoolingRate_cgs(coor, h=const.h):
         """
         RETURNS: cooling rate in erg s^-1 g^-1 
         INPUT: coor   : cooling rate in code units (Gadget and Arepo both save du/dt, where u is energy per mass)
@@ -245,7 +246,7 @@ def PhiNFW(r, M200, R200, c):
 	return -G*M200/(rs*(np.log(1+c)-c/(1+c)))*np.log(1+r/rs)/(r/rs)
 
 
-def hubble_function(ascale, OmegaM=0.27,OmegaL=0.73):
+def hubble_function(ascale, OmegaM=const.Omega0,OmegaL=const.OmegaL):
         """
         RETURNS: hubble constant in simulation units
         INPUT: ascale : scale factor

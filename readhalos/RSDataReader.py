@@ -10,7 +10,7 @@ class RSDataReader:
     """
     Alex's 10/4/13 rewrite of RSDataReader, combining v2 and v3 and cleaning everything up
     """
-    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, AllParticles=False):
+    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False):
         self.dir = dir
         self.snap_num = snap_num
         self.AllParticles = AllParticles
@@ -20,11 +20,11 @@ class RSDataReader:
         self.particlebytes = 8
 
         def getfilename(file_num):
-            if version==7:
+            if version>=7:
                 return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.fullbin'
             return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.bin'
 
-        if version==7:
+        if version>=7:
             self.num_p = 'total_npart'
         else:
             self.num_p = 'npart'
@@ -167,6 +167,29 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffq"
             numbytes = struct.calcsize(datatypesstr) #264
+        if version==8: #RC3+, full particle binary and half mass radius. 10/15/2014
+            headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
+            varlist = np.dtype([('id','<i8'),\
+                                ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
+                                ('pecVX','<f8'),('pecVY','<f8'),('pecVZ','<f8'),\
+                                ('corevelx','<f8'),('corevely','<f8'),('corevelz','<f8'),\
+                                ('bulkvelx','<f8'),('bulkvely','<f8'),('bulkvelz','<f8'),\
+                                ('mvir','<f8'),('rvir','<f8'),('child_r','<f8'),('vmax_r','<f8'),\
+                                ('mgrav','<f8'),('vmax','<f8'),('rvmax','<f8'),('rs','<f8'),('rs_klypin','<f8'),\
+                                ('vrms','<f8'),('Jx','<f8'),('Jy','<f8'),('Jz','<f8'),\
+                                ('Epot','<f8'),('spin','<f8'),('altm1','<f8'),('altm2','<f8'),('altm3','<f8'),('altm4','<f8'),\
+                                ('Xoff','<f8'),('Voff','<f8'),\
+                                ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
+                                ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
+                                ('spin_bullock','<f8'),('T/|U|','<f8'),\
+                                ('m_pe_b','<f8'),('m_pe_d','<f8'),('halfmassrad','<f8'),\
+                                ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
+                                ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
+                                ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
+                                ('total_npart','<i8'),\
+                                ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
+            datatypesstr = "qffffffffffffffffffffffffffffffffffffffffffffffffqqqqqqfffq"
+            numbytes = struct.calcsize(datatypesstr)
 
 
         self.datatypesstr = datatypesstr
@@ -174,8 +197,7 @@ class RSDataReader:
         file_num = 0
         file_name = getfilename(file_num)
         if (not os.path.exists(file_name)):
-            print "ERROR: file not found", file_name
-            sys.exit()
+            raise IOError("ERROR: file not found "+file_name)
             
         ## Count total number of particles/halos in all data blocks
         self.num_halos = 0
@@ -234,12 +256,16 @@ class RSDataReader:
             data = data[sortedIndices]
             files= files[sortedIndices]
 
+        if len(files)==0:
+            raise RuntimeError("No halos in snap %i" % (snap_num))
+
         self.files = pandas.DataFrame(files, index=data['id'].astype(int),columns=['file'])
         self.data = pandas.DataFrame(data,index=data['id'])
 
         self.particles = self.particles.astype(int)
-        parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
-        self.data['hostID'].ix[parents[:,0]] = parents[:,1]
+        if not noparents:
+            parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
+            self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
         self.ix = self.data.ix
 
@@ -323,6 +349,32 @@ class RSDataReader:
         """
         return self.data.ix[self.get_all_subs_recurse(haloID)]
 
+        
+    def get_subhalos_within_halo(self, haloID, radius=None):
+        """
+        # return all halos within radis of halo specified by haloID
+        # that are only 1 level deep subhaloes
+        # radius specified in kpc
+        """
+        if radius==None:
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
+        halos = halos[np.logical_or(halos['hostID']==haloID,halos['hostID']==-1)] # only take 1 level deep halos
+        return halos
+
+    def get_all_subhalos_within_halo(self, haloID, radius=None):
+        """
+        # return all halos within radis of halo specified by haloID
+        # radius specified in kpc
+        """
+        if radius==None:
+            radius = float(self.ix[haloID]['rvir'])
+        dists = distance(np.array(self[['posX','posY','posZ']]), np.array(self.ix[haloID][['posX','posY','posZ']]))*1000
+        halos = self[(dists<radius)*(dists>0)] # exclude host
+        return halos
+                
+
     def get_all_sub_particles_from_halo(self,haloID):
         """
         returns int array of particle IDs belonging to all substructure
@@ -330,14 +382,14 @@ class RSDataReader:
         # updated 3/26 2013 to include support for array/list input of haloID. Also streamlined the code.
         """
         if type(haloID) == list or type(haloID)==np.ndarray:
-            if self.version==7:
+            if self.version>=7:
                 subids = [self.get_subhalos_from_halo(id)['id'] for id in haloID]
             else:
                 subids = [self.get_all_subhalos_from_halo(id)['id'] for id in haloID]
             idlist = [[item for s in sid for item in self.get_particles_from_halo(s)] for sid in subids]
             return idlist
         else:
-            if self.version==7:
+            if self.version>=7:
                 subids = self.get_subhalos_from_halo(haloID)['id']
             else:
                 subids = self.get_all_subhalos_from_halo(haloID)['id']
@@ -352,12 +404,12 @@ class RSDataReader:
         """
         returns int array of all particles belonging to haloID
         """
-        if self.version==7:
+        if self.version>=7:
             return self.get_particles_from_halo(haloID)
         return np.append(self.get_particles_from_halo(haloID), self.get_all_sub_particles_from_halo(haloID)).astype(int)
 
     def get_all_num_particles_from_halo(self,haloID):
-        if self.version ==7:
+        if self.version>=7:
             return self.data.ix[haloID]['total_npart']
         thisnum = self.data.ix[haloID]['npart']
         subdat = self.get_all_subhalos_from_halo(haloID)
@@ -380,23 +432,40 @@ class RSDataReader:
         a = self.scale
         return 100*self.h0*(self.Om*(1/a)**3 + Ok*(1/a)**2 + self.Ol)**.5
 
+    # get most bound particles according to grav potential only
+    def get_most_gravbound_particles_from_halo(self,snapshot_dir, haloID):
+        pids = self.get_all_particles_from_halo(haloID)
+        pids = np.sort(pids)
+        path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
+        pot = rsg.read_block(path, "POT ", parttype=1, ids=pids)/self.scale
+        boundsort = np.argsort(pot)
+        return pids[boundsort]
+
     # Get most bound particles in a halo
+    # Use gadget Potential block if it exists, otherwise compute estimate of it.
     def get_most_bound_particles_from_halo(self, snapshot_dir, haloID):
         pids = self.get_all_particles_from_halo(haloID)
         pids = np.sort(pids)
         path = snapshot_dir+'/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
-        pot = rsg.read_block(path, "POT ", parttype=1, ids=pids)
-        
+    
         pos = rsg.read_block(path, "POS ", parttype=1, ids=pids)
         vel = rsg.read_block(path, "VEL ", parttype=1, ids=pids)*np.sqrt(self.scale)
         halopos = np.array(self.ix[haloID][['posX','posY','posZ']])
         halovel = np.array(self.ix[haloID][['pecVX','pecVY','pecVZ']])
-        dr = self.scale*distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0  #in Mpc physical
+        
         peculiarVel = vel-halovel
         Hflow = self.H()*(pos-halopos)*self.scale/self.h0
         physicalVel = peculiarVel+Hflow
-        T = .5*sum((physicalVel**2).T)
-        U = self.PotentialE(dr)
+        T = .5*sum((physicalVel**2).T)    
+
+        try:
+            U = rsg.read_block(path, "POT ", parttype=1, ids=pids)/self.scale
+        except:
+            print 'computing potential instead'
+            dr = distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0#in Mpc physical
+            mask = dr==0
+            dr=dr[~mask]
+            U = self.PotentialE(dr)
 
         Etot = T + U
         boundsort = np.argsort(Etot)
@@ -408,7 +477,7 @@ class RSDataReader:
         from scipy.integrate import quad
         G = 1.326*10**11 # in km^3/s^2/Msun
         mpc_to_km = 3.086*10**19
-
+        
         rarr = 10**np.linspace(np.log10(min(dr))-.01, np.log10(max(dr))+.01,70) # in Mpc
         h_r, x_r = np.histogram(dr, bins=np.concatenate(([0],rarr)))
         m_lt_r = np.cumsum(h_r)*self.particle_mass/self.h0
@@ -445,6 +514,8 @@ class RSDataReader:
             return "Version 6: Rockstar 0.99.9 RC3"
         if self.version == 7:
             return "Version 7: Rockstar 0.99.9 RC3 with full particles on"
+        if self.version == 8:
+            return "Version 8: Rockstar 0.99.9 RC3+/4 with full particles on"
         return "ERROR: Not a valid version number!"
 
     def __getitem__(self,key):

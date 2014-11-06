@@ -7,8 +7,7 @@ import time
 from brendanlib.grifflib import getcurrentjobs
 
 currentjobs,jobids,statusjobs = getcurrentjobs()
-#print jobids,currentjobs,statusjobs
-#sys.exit()
+
 tthresh = 6
 
 if platform.node() == "bigbang.mit.edu":
@@ -23,6 +22,7 @@ if "harvard" in platform.node():
 levellist = [11,12,13,14,15]
 nrvirlist = [4]
 haloidlist = []
+
 for filename in os.listdir(basepath):
     if filename[0] == "H":
         haloidlist.append(filename)
@@ -52,9 +52,11 @@ nhigh = 0
 for haloid in haloidlist:
 
     plotinc += 1
-    #ax = fig.add_subplot(10,10,plotinc)
+
+    ax = fig.add_subplot(10,10,plotinc)
+    ax.set_title(haloid)
     ax = axs[nwide,nhigh]
-    #ax.set_title(haloid)
+
     if plotinc % nplots_wide == 0:
 	nhigh += 1
         nwide = 0
