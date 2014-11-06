@@ -13,6 +13,22 @@ import shlex
 import os
 import readsnapshots.readsnapHDF5_greg as rs
 
+def create_slurm_job(submit_line,job_name,ncores,queue,snapshot):
+    f = open("sjob.slurm",'w')
+    f.write('#!/bin/bash\n')
+    f.write('#SBATCH -n ' + str(ncores) + '\n')
+    f.write('#SBATCH -o job.o'+str(snapshot)+'\n')
+    f.write('#SBATCH -e job.e'+str(snapshot)+'\n')
+    f.write('#SBATCH -J '+ job_name + '\n')
+    f.write('#SBATCH -p ' + queue + '\n')
+    f.write('#SBATCH -t 03:00:00\n')
+    f.write('#SBATCH --mem=512gb\n')
+    f.write('\n')
+    f.write('source new-modules.sh; module load python')
+    f.write("\n")
+    f.write(submit_line+"\n")
+    f.close()
+
 def check_is_sorted(outpath,snap=0,hdf5=True):
     #TODO: option to check all snaps
     snap = str(snap).zfill(3)
@@ -38,8 +54,8 @@ def checkmakedir(folder):
         subprocess.call([mkimagedir],shell=True)
         
 def getcurrentjobs():
-    pipemyq = "squeue -u bgriffen,alexji > currentqueue.out"
-    pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen,alexji > currentqueue.out'
+    pipemyq = "squeue -u bgriffen > currentqueue.out"
+    pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen > currentqueue.out'
     subprocess.call(';'.join([pipemyq]),shell=True)
     lines = [line.strip() for line in open('currentqueue.out')]
     currentjobs = []
@@ -164,20 +180,22 @@ def plotxyzproj(ax1,ax2,ax3,pos,format='b-'):
     ax3.set_xlabel('y-pos [Mpc/h]')
     ax3.set_ylabel('z-pos [Mpc/h]')
 
-def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-'):
+def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-',linewidth=3):
     xcirc,ycirc = drawcircle(pos[...,0],pos[...,1],radius)
-    ax1.plot(xcirc,ycirc,format,linewidth=3)
-    xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
-    ax2.plot(xcirc,zcirc,format,linewidth=3)
-    ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
-    ax3.plot(ycirc,zcirc,format,linewidth=3)
+    ax1.plot(xcirc,ycirc,format,linewidth=linewidth)
 
-    ax1.set_xlabel('x-pos [Mpc/h]')
-    ax1.set_ylabel('y-pos [Mpc/h]')
-    ax2.set_xlabel('x-pos [Mpc/h]')
-    ax2.set_ylabel('z-pos [Mpc/h]')
-    ax3.set_xlabel('y-pos [Mpc/h]')
-    ax3.set_ylabel('z-pos [Mpc/h]')
+    xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
+    ax2.plot(xcirc,zcirc,format,linewidth=linewidth)
+
+    ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
+    ax3.plot(ycirc,zcirc,format,linewidth=linewidth)
+
+    ax1.set_xlabel('x-pos [kpc/h]')
+    ax1.set_ylabel('y-pos [kpc/h]')
+    ax2.set_xlabel('x-pos [kpc/h]')
+    ax2.set_ylabel('z-pos [kpc/h]')
+    ax3.set_xlabel('y-pos [kpc/h]')
+    ax3.set_ylabel('z-pos [kpc/h]')
 
 def getillustrismp(simtype):
     if "1" in simtype:

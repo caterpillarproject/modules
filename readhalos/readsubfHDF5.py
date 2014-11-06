@@ -243,3 +243,96 @@ class subfind_catalog:
 
 			filenum += 1
 			if filenum == nfiles: doneflag = True
+
+
+
+def group_offsets(snap = 135, run='Illustris-1'):
+    snaptag = str(snap)
+    file = '/n/ghernquist/Illustris/Runs/'+run+'/postprocessing/offsets/snap_offsets_group_'+snaptag+'.hdf5'
+    if os.path.isfile(file):
+        f=hdf5lib.OpenFile(file, mode ='r' )
+        data=hdf5lib.GetData(f, "Offsets")[:]
+        f.close()
+    else:
+
+	print "No pre-tabulated file found, calculating offsets for..."
+	cat = subfind_catalog('/n/ghernquist/Illustris/Runs/'+run+'/output/', 107, keysel=['ngroups', 'nsubs', 'SubhaloLenType', 'GroupLenType', 'GroupNsubs'])
+
+	PartTypeArray = [0, 1, 4, 5]
+	GroupOffset = np.zeros( (cat.ngroups, 6) )
+	HaloOffset  = np.zeros( (cat.nsubs  , 6) )
+        for parttype in PartTypeArray:
+	    print "  PartType:"+str(parttype)
+            k=0
+            for i in range(0, cat.ngroups):
+                        if (i>0):
+                               GroupOffset[i, parttype] =  GroupOffset[i-1, parttype] + cat.GroupLenType[i-1, parttype]
+#                               print GroupOffset[i, parttype]
+#                               print " "
+                        if (cat.GroupNsubs[i]>0):
+                                HaloOffset[k, parttype] = GroupOffset[i, parttype]
+                                k+=1
+                                for j in range(1, cat.GroupNsubs[i]):
+                                        HaloOffset[k, parttype] =  HaloOffset[k-1, parttype] + cat.SubhaloLenType[k-1, parttype]
+                                        k+=1
+	data = GroupOffset
+        if (k!=cat.nsubs):
+                        print "READHALO: problem with offset table", k, cat.nsubs
+                        sys.exit()
+
+    return np.array(data)
+
+
+def subhalo_offsets(snap = 135, run='Illustirs-1'):
+    snaptag=str(snap)
+    f=hdf5lib.OpenFile('/n/ghernquist/Illustris/Runs/'+run+'/postprocessing/offsets/snap_offsets_subhalo_'+snaptag+'.hdf5', mode ='r' )
+    data=hdf5lib.GetData(f, "Offsets")[:]
+    f.close()
+    return np.array(data)
+
+def subhalo_insitu_fraction(snap = 135):
+    snaptag='000'+str(snap)
+    snaptag=snaptag[-3:]
+    f=hdf5lib.OpenFile('/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/InSituFraction/insitu_stellar_fraction_'+snaptag+'.hdf5', mode ='r' )
+    data=hdf5lib.GetData(f, "InSitu")[:]
+    f.close()
+    return np.array(data)
+
+def subhalo_overdensity(snap = 135):
+    snaptag='000'+str(snap)
+    snaptag=snaptag[-3:]
+    f=hdf5lib.OpenFile('/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/environment/environment_'+snaptag+'.hdf5', mode ='r' )
+    delta=hdf5lib.GetData(f, "delta")[:]
+    f.close()
+    return np.array(delta)
+
+def subhalo_circularities(snap = 135):
+    snaptag='000'+str(snap)
+    snaptag=snaptag[-3:]
+    f=hdf5lib.OpenFile('/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/circularities/circularities_'+snaptag+'.hdf5', mode ='r' )
+    data=np.array(hdf5lib.GetData(f, "CircAbove05Frac")[:])
+    data=np.reshape(data, -1)
+    f.close()
+    return data
+
+def subhalo_stellar_metallicities(snap = 135):
+    snaptag='000'+str(snap)
+    snaptag=snaptag[-3:]
+    file='/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/galprop/galprop_'+snaptag+'.hdf5'
+    if os.path.exists(file):
+        f=hdf5lib.OpenFile('/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/galprop/galprop_'+snaptag+'.hdf5', mode='r')
+        data=np.array(hdf5lib.GetData(f, "stellar_metallicity_inrad")[:])
+        f.close()
+    else:
+	data = None
+    return data
+
+
+
+#   _NAME           STRING    'stellar_metallicity_inrad'
+#   _ICONTYPE       STRING    'binary'
+#   _TYPE           STRING    'DATASET'
+#   _FILE           STRING    '/n/ghernquist/Illustris/Runs/Illustris-1/postprocessing/galprop/galprop_135.hdf5'
+
+
+
