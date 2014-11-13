@@ -10,7 +10,30 @@ import matplotlib.colors as col
 import math,glob,subprocess,shlex,os,asciitable
 import readsnapshots.readsnapHDF5_greg as rs
 import asciitable
+import sys,os,time
 
+def get_folder_size(folder):
+    total_size = os.path.getsize(folder)
+    for item in os.listdir(folder):
+        itempath = os.path.join(folder, item)
+        if os.path.isfile(itempath):
+            total_size += os.path.getsize(itempath)
+        elif os.path.isdir(itempath):
+            total_size += getFolderSize(itempath)
+    return total_size
+    
+def get_last_modified(file_name):
+    if os.path.isfile(file_name):
+        tnow = time.time()
+        #should_time = tnow - (tthresh * 3600)
+        file_mod_time = os.stat(file_name).st_mtime
+        last_modified = round((int(tnow) - file_mod_time) / 3600, 2)
+        last_modified = "%3.2f" % (last_modified)
+    else:
+        last_modified = ""
+        
+    return last_modified
+    
 def convert_pid_zid(pid,lx):
     htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
     key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
@@ -22,8 +45,10 @@ def get_completed_list(suite_paths,verbose=True):
     gadget_done = []
     subfind_done = []
     ic_done = []
-    for suite in suite_paths:
+    haloids = []
 
+    suite_paths = sorted(suite_paths)
+    for suite in suite_paths:
         if os.path.isdir(suite + "/outputs/snapdir_255"):
             gadget_done.append(1)
         else:
@@ -40,92 +65,170 @@ def get_completed_list(suite_paths,verbose=True):
             subfind_done.append(0)
 
     if verbose:
-        print "----------------------------"
-        print "   RUN               I G S"
-        print "----------------------------"
+        print "-----------------------------------"
+        print "     RUN                  I G S"
+        print "-----------------------------------"
         #print "H299792_A            "
         for suite,gadget,ic,subfind in zip(suite_paths,gadget_done,ic_done,subfind_done):
-            print suite.split("/")[-1].replace("_BB_Z127_P7_LN7_LX11_O4_NV4","").ljust(20),ic,gadget,subfind 
+            print suite.split("/")[-1].replace("Z127_P7_LN7_","").replace("O4_","").ljust(25),ic,gadget,subfind 
 
     return gadget_done,ic_done,subfind_done
 
-def make_gadget_submission_script(runpath,cfgname,job_name,ncores,queue):
+def make_gadget_submission_script(runpath,job_name):
     f = open(runpath + "/sgadget",'w')
     f.write('#!/bin/bash\n')
-    f.write('#SBATCH -n ' + str(ncores) + '\n')
     f.write('#SBATCH -o gadget.o%j\n')
     f.write('#SBATCH -e gadget.e%j\n')
     f.write('#SBATCH -J '+ job_name + '\n')
-    f.write('#SBATCH -p ' + queue + '\n')
+
+    if "LX11" in runpath or "LX12" in runpath:
+        f.write('#SBATCH -p RegNodes\n')
+        ncores = 16
+
+    if "LX13" in runpath:
+        f.write('#SBATCH -p HyperNodes\n')
+        ncores = 144
+
+    if "LX14" in runpath:
+        f.write('#SBATCH -p AMD64\n')
+        ncores = 256
+    
+    f.write('#SBATCH -n ' + str(ncores) + '\n')
     f.write("\n")
     f.write("cd " + runpath + "\n")
     f.write("\n")
-    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+    
+    if "LX13" in runpath:
+        f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+    else:
+        f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+
     f.close()
 
-def make_subfind_submission_script(runpath,cfgname,job_name,ncores,queue):
+def make_subfind_submission_script(runpath,job_name):
     f = open(runpath + "/ssubfind",'w')
     f.write('#!/bin/bash\n')
+    f.write('#SBATCH -o gadget.o%j\n')
+    f.write('#SBATCH -e gadget.e%j\n')
+    f.write('#SBATCH -J '+ job_name + '\n')
+
+    if "LX11" in runpath or "LX12" in runpath:
+        f.write('#SBATCH -p RegNodes\n')
+        ncores = 8
+
+    if "LX13" in runpath:
+        f.write('#SBATCH -p HyperNodes\n')
+        ncores = 144
+
+    if "LX14" in runpath:
+        f.write('#SBATCH -p AMD64\n')
+        ncores = 256
+    
     f.write('#SBATCH -n ' + str(ncores) + '\n')
-    f.write('#SBATCH -o subfind.o%j\n')
-    f.write('#SBATCH -e subfind.e%j\n')
-    f.write('#SBATCH -J '+ job_name + 's\n')
-    f.write('#SBATCH -p ' + queue + '\n')
     f.write("\n")
     f.write("cd " + runpath + "\n")
     f.write("\n")
-    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3_sub param_sub.txt 1>OUTPUTsub 2>ERRORsub\n')
+    f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3_sub param_sub.txt --bind-to-core 1>OUTPUTsub 2>ERRORsub\n')
     f.close()
 
-def make_music_submission_script(runpath,cfgname,job_name,ncores,queue):
-    f1 = open(runpath + "/smusic",'w')
-    f1.write("#!/bin/bash \n")
-    f1.write("#SBATCH -o music.o%j \n")
-    f1.write("#SBATCH -e music.e%j \n")
-    f1.write("#SBATCH -N 1\n")
-    f1.write("#SBATCH --exclusive\n")
-    f1.write("#SBATCH -p "+ queue + "\n")
-    f1.write("#SBATCH -J " + job_name + "\n")
-    f1.write("\n")
-    f1.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
-    f1.write("\n")
-    f1.write("cd " + runpath + "\n")
-    f1.write("\n")
-    f1.write("./MUSIC ./" + cfgname + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
-    f1.close()
+def make_music_submission_script(runpath,cfgname,job_name):
+    f = open(runpath + "/smusic",'w')
+    f.write("#!/bin/bash \n")
+    f.write("#SBATCH -o music.o%j \n")
+    f.write("#SBATCH -e music.e%j \n")
+    f.write("#SBATCH -N 1\n")
+    f.write("#SBATCH --exclusive\n")
+    
+    if "LX11" in runpath:
+        f.write('#SBATCH -p HyperNodes\n')
+        ncores = 24
+	    
+    if "LX12" in runpath or "LX13" in runpath or "LX14" in runpath:
+        f.write('#SBATCH -p AMD64\n')
+        ncores = 64
 
+    f.write("#SBATCH -J " + job_name + "\n")
+    f.write("\n")
+    f.write("export OMP_NUM_THREADS=" + str(ncores) + "\n")
+    f.write("\n")
+    f.write("cd " + runpath + "\n")
+    f.write("\n")
+    f.write("./MUSIC ./" + cfgname + ".conf 1>OUTPUTmusic 2>ERRORmusic\n")
+    f.close()
 
-def run_gadget(suite_paths,gadget_file_path,ncores=8,queue="RegNodes"):
+def get_sim_info_from_lx(lx,ncores,queue):
+    if lx == 1:
+        pmgrid = 256
+    if lx == 2:
+        pmgrid = 512
+    if lx == 3:
+        pmgrid = 512
+        queue = "HyperNodes"
+        ncores = 256
+    if lx == 4:
+        pmgrid = 512
+        queue = "AMD64"
+        ncores = 512
+
+    return pmgrid,queue,ncores	
+
+def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
     job_name_list = []
     current_jobs,jobids,jobstatus = getcurrentjobs()
     for folder in suite_paths:
         folder_single = folder.split("/")[-1]
         halo_label = folder_single.split("_")[0]
-        job_name = halo_label+"LX11"+folder_single.split("_")[-1]
+        nrvir_label = folder_single.split("NV")[1][0]
+        lx_label = folder_single.split("LX")[1][1:2]
+        job_name = halo_label+"X"+lx_label+"N"+nrvir_label+folder_single.split(halo_label+"_")[1][:2]
         if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") > 0 and \
             job_name not in current_jobs and job_name not in job_name_list:
-            if not os.path.isdir(folder + "/outputs/snapdir_255"):
-                print "COPYING GADGET FILES..."
+            if not os.path.isdir(folder + "/outputs/snapdir_255") and lx_label in lx_list:
+                print "COPYING GADGET FILES...",folder_single
                 mkdir_outputs = "mkdir -p " + folder + "/outputs/"
-                file_times  = "cp " + gadget_file_path + "ExpansionList_256contam " + folder + "/ExpansionList"
-                file_exe    = "cp " + gadget_file_path + "P-Gadget3_256 " + folder + "/P-Gadget3"
-                file_param  = "cp " + gadget_file_path + "param_11contam.txt " + folder + "/param.txt"
-                file_config = "cp " + gadget_file_path + "Config_256.sh " + folder + "/Config.sh"
+                
+                if "LX11" in folder or "LX12" in folder:
+                    queue = "RegNodes"
+                    ncores = 16
+                    pmgrid = 256
+
+                if "LX13" in folder:
+                    queue = "HyperNodes"
+                    ncores = 144
+                    pmgrid = 512
+                    
+                if "LX14" in folder:
+                    queue = "AMD64"
+                    ncores = 512
+                    pmgrid = 512
+
+                if "contamination" in folder:
+                    file_times  = "cp " + gadget_file_path + "ExpansionList_256contam " + folder + "/ExpansionList"
+                else:
+                    file_times  = "cp " + gadget_file_path + "ExpansionList_256 " + folder + "/ExpansionList"
+                
+                file_exe    = "cp " + gadget_file_path + "P-Gadget3_"+str(pmgrid)+ " "  + folder + "/P-Gadget3"
+                file_param  = "cp " + gadget_file_path + "param_1"+lx_label+"_" + queue + ".txt " + folder + "/param.txt"
+                file_config = "cp " + gadget_file_path + "Config_"+str(pmgrid)+".sh " + folder + "/Config.sh"
+
                 cmd_copy_all_files = [mkdir_outputs,file_times,file_exe,file_param,file_config]
                 subprocess.call([";".join(cmd_copy_all_files)],shell=True)
-                print "SUBMITTING GADGET..."
-                make_gadget_submission_script(folder,folder_single,job_name,ncores,queue)
-                cmd_submit_gadget = "sbatch " + folder + "/sgadget"
-                subprocess.call([cmd_submit_gadget],shell=True)
-                job_name_list.append(job_name)
+                
+                make_gadget_submission_script(folder,job_name)
+                cd_folder = "cd " + folder
+                cmd_submit_gadget = "sbatch sgadget"
+                if submit == True:
+                    print "SUBMITTING GADGET..."
+                    subprocess.call([cd_folder+"; "+cmd_submit_gadget],shell=True)
+                    job_name_list.append(job_name)
 
-def run_subfind(suite_paths,gadget_file_path,ncores=8,queue="RegNodes"):
+def run_subfind(suite_paths,gadget_file_path):
     job_name_list = []
     current_jobs,jobids,jobstatus = getcurrentjobs()
     for folder in suite_paths:
         folder_single = folder.split("/")[-1]
         halo_label = folder_single.split("_")[0]
-        job_name = halo_label+"LX11"+folder_single.split("_")[-1]
+        job_name = "G"+halo_label[1:]+"LX11"+folder_single.split(halo_label+"_")[1][:2]
         if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") > 0 and not os.path.isdir(folder + "/outputs/") and \
             job_name not in current_jobs and job_name not in job_name_list:
             if not os.path.isdir(folder + "/outputs/snapdir_255") and not os.path.isdir(folder + "/outputs/groups_255"):
@@ -136,25 +239,32 @@ def run_subfind(suite_paths,gadget_file_path,ncores=8,queue="RegNodes"):
                 cmd_copy_all_files = [file_times,file_exe,file_param,file_config]
                 subprocess.call([";".join(cmd_copy_all_files)],shell=True)
                 print "SUBMITTING SUBFIND..."
-                make_subfind_submission_script(folder,folder_single,job_name,ncores,queue)
-                cmd_submit_gadget = "sbatch " + folder + "/ssubfind"
-                subprocess.call([cmd_submit_subfind],shell=True)
+                make_subfind_submission_script(folder,folder_single,job_name)
+                cd_folder = "cd " + folder
+                cmd_submit_gadget = "sbatch ssubfind"
+                subprocess.call([cd_folder+"; "+cmd_submit_subfind],shell=True)
                 job_name_list.append(job_name)
 
-def run_music(suite_paths,music_path,lagr_path,ncores=24,queue="HyperNodes"):
+def run_music(suite_paths,music_path,lagr_path,lx_list):
      for folder in suite_paths:
          folder_single = folder.split("/")[-1]
          halo_label = folder_single.split("_")[0]
-         job_name = "I"+halo_label[1:]+"X11"+folder_single.split("_")[-1]
-         
+         nrvir_label = folder_single.split("NV")[1][0]
+         lx_label = folder_single.split("LX")[1][1:2]
+         #job_name = halo_label[:4]+"X"+lx_label+"N"+nrvir_label+folder_single.split("_")[-1]
+         job_name = "I"+halo_label[1:]+"X"+lx_label+"N"+nrvir_label+folder_single.split(halo_label+"_")[1][:2]
          job_name_list = []
          current_jobs,jobids,jobstatus = getcurrentjobs()
-         if not os.path.isfile(folder + "/ics.0") or os.path.getsize(folder + "/ics.0") == 0 and job_name not in current_jobs and job_name not in job_name_list:
+
+#         if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") == 0:
+#             print "NEED TO RERUN ICS:",job_name
+
+         if not os.path.isfile(folder + "/ics.0") and job_name not in current_jobs and job_name not in job_name_list and lx_label in lx_list:
              print
              print "RUNNING:",folder_single
              print "MAKING MUSIC SUBMISSION SCRIPT..."
-             
-             make_music_submission_script(folder,folder_single,job_name,ncores=24,queue="HyperNodes")
+
+             make_music_submission_script(folder,folder_single,job_name)
              
              print "COPYING MUSIC FILES..."
              cmd_cp_music = "cp " + music_path + " " + folder
@@ -162,41 +272,50 @@ def run_music(suite_paths,music_path,lagr_path,ncores=24,queue="HyperNodes"):
          
              print "CONSTRUCTING MUSIC CONFIGURATION FILES..."
              lagr_file = lagr_path + folder_single.split("_")[0]
-             master_music_cfg_orig = folder.split("/contamination")[0] + "/" + folder.split("/")[-3] + ".conf"
              master_music_cfg_dest = folder + "/" + folder_single + ".conf"
-             subprocess.call([cmd_cp_music],shell=True)
-             #construct_music_cfg(lagr_file+"NRVIR4",master_music_cfg_orig,master_music_cfg_dest,folder_single.split("_")[-1])
-             #construct_music_cfg(lagr_file+"NRVIR4",master_music_cfg_orig,master_music_cfg_dest,folder_single.split("_")[-1])
              
-             region_point_file = lagr_path+"H"+halo_label[1:]
+             region_point_file = lagr_path+"H"+halo_label[1:]+"NRVIR"+nrvir_label
              seed = int(halo_label[1:])
-
-             if os.path.isfile(lagr_path+"H"+halo_label[1:]+".head"):
-                 if "_A" in folder_single or "_B" in folder_single or "_C" in folder_single or "_D" in folder_single:
+             
+             if os.path.isfile(region_point_file + ".head"):
+                 if halo_label+"_B" in folder_single:
                     ictype = 'box'
-                    extents = getcentext(lagr_path+"H"+halo_label[1:]+".head")
-                    ref_center = [extents[0],extents[1],extents[2]]
-                    ref_extent = [extents[3],extents[4],extents[5]]
-                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file,ref_center=ref_center,ref_extent=ref_extent)
-    
-                 if "ELLIPSOID" in folder_single:
+                    
+                 if halo_label+"_E" in folder_single:
                     ictype = "ellipsoid"
-                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
-    
-                 if "CONVEX" in folder_single:
+
+                 if halo_label+"_C" in folder_single:
                     ictype = "convex_hull"
-                    make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
+
+             #print master_music_cfg_dest,folder_single,ictype,seed,region_point_file,nrvir_label
+             #sys.exit()
+             make_music_file(master_music_cfg_dest,ictype,seed,region_point_file,nrvir_label)
 
              #np.loadtxt(lagr_path+"H"+halo_label[1:]+".head")
              #with open(lagr_path+"H"+halo_label[1:]+".head") as myfile:
 
              #make_LX11_musicfile(master_music_cfg_dest,ictype,seed,region_point_file)
              print "SUBMITTING INITIAL CONDITIONS..."
-             
-             cmd_submit_ics = "sbatch " + folder + "/smusic"
-             #subprocess.call([cmd_submit_ics],shell=True)
+             cd_folder = "cd " + folder
+             cmd_submit_ics = "sbatch smusic"
+             subprocess.call([cd_folder+"; "+cmd_submit_ics],shell=True)
              job_name_list.append(job_name)
-             
+
+def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_list):
+    #print halo_geometries
+    for halo_name,ic_info in halo_geometries.iteritems():
+        geometry = ic_info.split("_")[0]
+        nvir = ic_info.split("_")[1]
+        
+        for LX in ["11","12","13","14"]:
+	    if LX[1] in lx_list:
+                folder = base_path + halo_name + "/" + halo_name +  "_"+geometry+"_Z127_P7_LN7_LX"+LX+"_O4_NV"+nvir
+                cmd_make_next_level = "mkdir -p " + folder
+                subprocess.call([cmd_make_next_level],shell=True)
+        
+        sub_suite_paths = glob.glob(base_path + "/"+halo_name+"/H*")
+        run_music(sub_suite_paths,music_path,lagr_path,lx_list)
+
 def constructresimconf(confname,boxlength,zstart,lmin,lTF,lmax,padding,overlap,refcentx,refcenty,refcentz, \
                         refextx,refexty,refextz,align,baryons,use2LPT,useLLA,omegam,omegal,omegab,hubble, \
                         sigma8,nspec,transfer,seednum,seedlevel,outformat,icfilename,fftfine,accuracy,presmooth,postsmooth, \
@@ -270,22 +389,59 @@ def constructresimconf(confname,boxlength,zstart,lmin,lTF,lmax,padding,overlap,r
     f.close()
 
 
-def make_LX11_musicfile(master_music_cfg_dest,boxtype,seed,region_point_file,ref_center=[0,0,0],ref_extent=[0,0,0]):
-    f.open(master_music_cfg_dest,'w')
+def make_music_file(master_music_cfg_dest,boxtype,seed,region_point_file,nrvir_label):
+    haloid = float(master_music_cfg_dest.split("/")[-1].split("_")[0][1:])
+    folder_single = master_music_cfg_dest.split("/")[-1].replace("cfg","")
+    halo_label = folder_single.split("_")[0]
+    lx_label = folder_single.split("LX")[1][1:2]
+
+    f = open(master_music_cfg_dest,'w')
     f.write("[setup]\n")
     f.write("boxlength            = 100\n")
     f.write("zstart               = 127\n")
     f.write("levelmin             = 7\n")
     f.write("levelmin_TF          = 10\n")
-    f.write("levelmax             = 11\n")
+    f.write("levelmax             = 1"+lx_label+"\n")
     f.write("padding              = 7\n")
     f.write("overlap              = 4\n")
     f.write("region               = " + boxtype + "\n")
     
     if boxtype == 'box':
-        f.write("ref_center           = " + str(ref_center[0]) + "," + str(ref_center[1]) + "," + str(ref_center[2])+"\n")
-        f.write("ref_extent           = " + str(ref_extent[0]) + "," + str(ref_extent[1]) + "," + str(ref_extent[2])+"\n")
+        centx,centy,centz,dx,dy,dz = getcentext(region_point_file+".head")
+        
+        if "_BA_" in master_music_cfg_dest:
+            extx=dx
+            exty=dy
+            extz=dz
+        if "_BB_" in master_music_cfg_dest:
+            extx=dx*1.2 
+            exty=dy*1.2 
+            extz=dz*1.2 
+        if "_BC_" in master_music_cfg_dest:
+            extx=dx*1.4 
+            exty=dy*1.4 
+            extz=dz*1.4 
+        if "_BD_" in master_music_cfg_dest:
+            extx=dx*1.6 
+            exty=dy*1.6 
+            extz=dz*1.6 
+
+        f.write("ref_center           = " + str(centx) + "," + str(centy) + "," + str(centz)+"\n")
+        f.write("ref_extent           = " + str(extx) + "," + str(exty) + "," + str(extz)+"\n")
     
+    if boxtype == 'ellipsoid':
+        #print nrvir_label
+        if "_EA_" in master_music_cfg_dest:
+            hipadding = 1.0
+        if "_EB_" in master_music_cfg_dest:
+            hipadding =	1.1
+        if "_EC_" in master_music_cfg_dest:
+            hipadding =	1.2      
+        if "_ED_" in master_music_cfg_dest:
+            hipadding = 1.3     
+
+        f.write("hipadding            = " + str(hipadding) + "\n")
+
     f.write("region_point_file    = " + region_point_file + "\n")
     f.write("align_top            = no\n")
     f.write("baryons              = no\n")
@@ -304,7 +460,13 @@ def make_LX11_musicfile(master_music_cfg_dest,boxtype,seed,region_point_file,ref
     f.write("\n")
     f.write("[random]\n")
     f.write("seed[10]              = 34567\n")
-    f.write("seed[11]              = " + str(seed) + "\n")
+#    f.write("seed[11]              = " + str(seed) + "\n")
+
+    for LX in xrange(1,int(lx_label)+1):
+        seed = int(haloid*(float(LX % 10)))
+        f.write("seed[1"+str(LX)+"]              = " + str(seed) + "\n")
+        #print LX,seed
+
     f.write("\n")
     f.write("[output]\n")
     f.write("format               = gadget2_double\n")
@@ -328,22 +490,6 @@ def convert_pid_zid(pid,lx):
     hindex = dict(zip(key,htable['zoomid']))
     zoomid = hindex[str(pid)+'_'+str(lx)]
     return zoomid
-
-def create_slurm_job(submit_line,job_name,ncores,queue,snapshot):
-    f = open("sjob.slurm",'w')
-    f.write('#!/bin/bash\n')
-    f.write('#SBATCH -n ' + str(ncores) + '\n')
-    f.write('#SBATCH -o job.o'+str(snapshot)+'\n')
-    f.write('#SBATCH -e job.e'+str(snapshot)+'\n')
-    f.write('#SBATCH -J '+ job_name + '\n')
-    f.write('#SBATCH -p ' + queue + '\n')
-    f.write('#SBATCH -t 03:00:00\n')
-    f.write('#SBATCH --mem=512gb\n')
-    f.write('\n')
-    f.write('source new-modules.sh; module load python')
-    f.write("\n")
-    f.write(submit_line+"\n")
-    f.close()
 
 def check_is_sorted(outpath,snap=0,hdf5=True):
     #TODO: option to check all snaps
@@ -400,13 +546,13 @@ def get_unrun_halos(base_halo_path):
     return folder_paths_output
     
 
-def make_destination_folders_clean(base_path,suite_names):
+def make_destination_folders_clean(base_path,suite_names,lx,nrvir):
     for folder in glob.glob(base_path+"H*"):
         haloid = folder.split("halos/")[-1].split("_")[0]
-        new_folder_name = haloid + "_BB_Z127_P7_LN7_LX11_O4_NV4"
+        new_folder_name = haloid + "_BB_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
         #folder_single = folder_path.split("/")[-1]
         for suite in suite_names:
-            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + new_folder_name + "_" + suite 
+            cmd_make_folder = "mkdir -p " + folder +  "/contamination_suite/" + new_folder_name + "_" + suite 
             subprocess.call([cmd_make_folder],shell=True)
 
 def make_destination_folders(folder_paths,suite_names):
@@ -595,22 +741,21 @@ def plotxyzproj(ax1,ax2,ax3,pos,format='b-'):
     ax3.set_xlabel('y-pos [Mpc/h]')
     ax3.set_ylabel('z-pos [Mpc/h]')
 
-def plotxyzprojr(ax1,ax2,ax3,pos,radius,format='b-',linewidth=3):
+def plotxyzprojr(ax1,ax2,ax3,pos,radius,axislabels=True,**kwargs):
     xcirc,ycirc = drawcircle(pos[...,0],pos[...,1],radius)
-    ax1.plot(xcirc,ycirc,format,linewidth=linewidth)
-
+    ax1.plot(xcirc,ycirc,**kwargs)
     xcirc,zcirc = drawcircle(pos[...,0],pos[...,2],radius)
-    ax2.plot(xcirc,zcirc,format,linewidth=linewidth)
-
+    ax2.plot(xcirc,zcirc,**kwargs)
     ycirc,zcirc = drawcircle(pos[...,1],pos[...,2],radius)
-    ax3.plot(ycirc,zcirc,format,linewidth=linewidth)
-
-    ax1.set_xlabel('x-pos [kpc/h]')
-    ax1.set_ylabel('y-pos [kpc/h]')
-    ax2.set_xlabel('x-pos [kpc/h]')
-    ax2.set_ylabel('z-pos [kpc/h]')
-    ax3.set_xlabel('y-pos [kpc/h]')
-    ax3.set_ylabel('z-pos [kpc/h]')
+    ax3.plot(ycirc,zcirc,**kwargs)
+    
+    if axislabels:
+        ax1.set_xlabel('x-pos [Mpc/h]')
+        ax1.set_ylabel('y-pos [Mpc/h]')
+        ax2.set_xlabel('x-pos [Mpc/h]')
+        ax2.set_ylabel('z-pos [Mpc/h]')
+        ax3.set_xlabel('y-pos [Mpc/h]')
+        ax3.set_ylabel('z-pos [Mpc/h]')
 
 def getillustrismp(simtype):
     if "1" in simtype:
@@ -644,8 +789,6 @@ def CorrectPos(pos, box):
         else:
             pos[index]=pos[index]+box
 
-    return pos
-    
 def COM(posX,posY,posZ):
 
     tmpX=np.float64(posX)
