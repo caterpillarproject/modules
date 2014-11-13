@@ -3,7 +3,7 @@ import subprocess
 import numpy as np
 import pylab as plt
 import platform
-import time
+import time,glob
 from brendanlib.grifflib import getcurrentjobs
 
 currentjobs,jobids,statusjobs = getcurrentjobs()
@@ -58,7 +58,7 @@ for haloid in haloidlist:
     ax = axs[nwide,nhigh]
 
     if plotinc % nplots_wide == 0:
-	nhigh += 1
+        nhigh += 1
         nwide = 0
     else:
         nwide += 1
@@ -72,118 +72,126 @@ for haloid in haloidlist:
     ax.set_xticks((11,12,13,14,15))
     ax.set_xticklabels(('11','12','13','14','15'))
 
-    for level in levellist:
-        for nrvir in nrvirlist:
-
-            ext = haloid + "_BB_Z127_P7_LN7_LX" + str(level) + "_O4_NV" + str(nrvir) + "/"
-            corepath =  basepath + "/" + haloid + "/" + ext
-            marker = 'yD'
-            markerface = 'yellow'
-            if os.path.isfile(corepath + "ics.0"):
-                icfilesize = os.path.getsize(corepath + "ics.0")
-                if icfilesize > 0:
-                    marker = 'rD'
-                    markerface = 'red'
-                elif icfilesize == 0:
-                     marker = 'gx'
-                     markerface = 'green'
-
-                if os.path.isdir(corepath + "outputs/"):
+    run_list = glob.glob("/bigbang/data/AnnaGroup/caterpillar/halos/"+haloid+"/H*")
+    for run in run_list:
+        level = int("1"+run.split("LX")[1][:1])
+        nrvir = int(run.split("NV")[1][0])
+        marker = 'yD'
+        markerface = 'yellow'
+        corepath = run + "/"
+        if os.path.isfile(corepath + "ics.0"):
+            icfilesize = os.path.getsize(corepath + "ics.0")
+            if icfilesize > 0:
+                marker = 'rD'
+                markerface = 'red'
+            elif icfilesize == 0:
+                 marker = 'gx'
+                 markerface = 'green'
+            if os.path.isdir(corepath + "outputs/"):
+                if os.path.isfile(corepath+"ExpansionList"):
                     explist = np.loadtxt(corepath+"ExpansionList",delimiter=' ')
                     maxsnap = len(explist)-1
+                else:
+                    maxsnap = 255
+                
+                ext = run.split("/")[-1]
+                strprog = ext + " ["
+                #subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
+                subdirnames = glob.glob(run + "/outputs/snapdir_*")
+                snapshotvec = []
+                for subname in subdirnames:
+                    snapshotvec.append(int(subname.split("snapdir_")[-1]))
                     
-                    strprog = ext + " ["
-                    subdirnames = basepath + "/" + haloid + "/" + ext + "outputs/"
-                    snapshotvec = []
-                    for subname in os.listdir(subdirnames):
-                        if "snapdir" in subname and "BACK" not in subname:
-                            snapshotvec.append(int(subname.replace("snapdir_","")))
-                        
-                    if not snapshotvec:
-                        snapshot = -1
-  		        strprog = ext + "Completed: 0% -/" + str(maxsnap)
-                    else:
-                        snapshot = max(snapshotvec)
-			strprog = ext + "Completed: %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
+                if not snapshotvec:
+                    snapshot = -1
 
-		    try:
-		        lastsnapfile = corepath + "/outputs/snapdir_"+str(snapshot).zfill(3)+"/snap_"+str(snapshot).zfill(3)+".0.hdf5"
-                        with open(lastsnapfile):
-                            file_mod_time = os.stat(lastsnapfile).st_mtime
-                            last_time = round((int(tnow) - file_mod_time) / 3600, 2)
-			    snaptimestr = "-- wrote out last snapshot {:.2f} hours ago.".format(last_time)
-                    except:
-			pass
+                    strprog = ext + "Completed: 0% -/" + str(maxsnap)
+                else:
+                    snapshot = max(snapshotvec)
 
-                    try:
-                        with open(corepath+"/outputs/cpu.txt"):
-                            file_mod_time = os.stat(corepath+"/outputs/cpu.txt").st_mtime
-                            last_time = round((int(tnow) - file_mod_time) / 3600, 2)
-			    cputimestr = "-- wrote out 'cpu.txt'     {:.2f} hours ago.".format(last_time)
-                    except:
-                        pass
+        strprog = ext + "Completed: %0.2f" % (float(snapshot)*100./float(maxsnap)) + "%, " + str(snapshot)+ "/" + str(maxsnap)
 
-		    jobname = haloid+"N"+str(nrvir)+"L"+str(level)[-1]
+        try:
+            lastsnapfile = corepath + "/outputs/snapdir_"+str(snapshot).zfill(3)+"/snap_"+str(snapshot).zfill(3)+".0.hdf5"
+            with open(lastsnapfile):
+                file_mod_time = os.stat(lastsnapfile).st_mtime
+                last_time = round((int(tnow) - file_mod_time) / 3600, 2)
 
-		    if jobname in currentjobs:
-			idx = currentjobs.index(jobname)
-	                statusi = statusjobs[idx]
-  		        if snapshot != maxsnap and "-/" not in strprog and (file_mod_time - should_time) < tthresh and statusi == "R":
-			    print
-			    print ext
- 		            print "--",strprog.replace(ext,"")
-			    print snaptimestr
-			    print cputimestr			    
-			    jobstocancel.append(int(jobids[idx]))
-			
+                snaptimestr = "-- wrote out last snapshot {:.2f} hours ago.".format(last_time)
 
-		    if snapshot == maxsnap:
-			leveldone[level] += 1
+        except:
+            pass
 
-		    nhalolevels[level] += 1
+        try:
+            with open(corepath+"/outputs/cpu.txt"):
+                file_mod_time = os.stat(corepath+"/outputs/cpu.txt").st_mtime
+                last_time = round((int(tnow) - file_mod_time) / 3600, 2)
+                cputimestr = "-- wrote out 'cpu.txt'     {:.2f} hours ago.".format(last_time)
+        except:
+            pass
 
-                    if snapshot != -1 and jobname not in currentjobs:
-                        ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
-		        marker = 'k^'
-                        markerface = 'white'
+        jobname = haloid+"N"+str(nrvir)+"L"+str(level)[-1]
 
-		    #elif snapshot != -1 and jobname in currentjobs: 
-			#ax.text(int(level),int(nrvir), str(snapshot)+"+", fontsize=9)                      
-			#marker = 'k^'
+        if jobname in currentjobs:
+            idx = currentjobs.index(jobname)
+            statusi = statusjobs[idx]
+            if snapshot != maxsnap and "-/" not in strprog and (file_mod_time - should_time) < tthresh and statusi == "R":
+                print
+                print ext
+                print "--",strprog.replace(ext,"")
+                print snaptimestr
+                print cputimestr
+                jobstocancel.append(int(jobids[idx]))
+            
 
-                    if snapshot != -1:
-                        marker = 'k^'
-                        markerface = 'white'
-			if jobname in currentjobs:
-  			    idx = currentjobs.index(jobname)
-                            statusi = statusjobs[idx]
-			    print statusi
-		
-			    if statusi == 'R':
-			        ax.text(int(level),int(nrvir), str(snapshot)+'R', fontsize=9)
-			    else:
-			        ax.text(int(level),int(nrvir), str(snapshot)+'P', fontsize=9)
-			else:
-			    ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
+        if snapshot == maxsnap:
+            leveldone[level] += 1
 
-		    if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
-                        marker = 'k^'
-                        markerface = 'k'
+            nhalolevels[level] += 1
 
-                    if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
-                        marker = 'bo'
-                        markerface = 'b'
+            if snapshot != -1 and jobname not in currentjobs:
+                ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
+                marker = 'k^'
+                markerface = 'white'
 
-                    if os.path.isdir(corepath + "halos/halo_"+str(maxsnap).zfill(3)+"/"):
-                        marker = 'co'
-                        markerface = 'c'
+        elif snapshot != -1 and jobname in currentjobs: 
+            ax.text(int(level),int(nrvir), str(snapshot)+"+", fontsize=9)                      
+            marker = 'k^'
 
-                    if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
-                       and os.path.isdir(corepath + "halos/halos_"+str(maxsnap).zfill(3)+"/"):
-                        marker = 'go'
-                        markerface = 'g'
+        if snapshot != -1:
+            marker = 'k^'
+            markerface = 'white'
 
-            ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
+        if jobname in currentjobs:
+            idx = currentjobs.index(jobname)
+            statusi = statusjobs[idx]
+            print statusi
+
+            if statusi == 'R':
+                ax.text(int(level),int(nrvir), str(snapshot)+'R', fontsize=9)
+            else:
+                ax.text(int(level),int(nrvir), str(snapshot)+'P', fontsize=9)
+        #else:
+        #    ax.text(int(level),int(nrvir), str(snapshot), fontsize=9)
+
+        if os.path.isdir(corepath + "outputs/snapdir_"+str(maxsnap).zfill(3)+"/"):
+            marker = 'k^'
+            markerface = 'k'
+
+        if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/"):
+            marker = 'bo'
+            markerface = 'b'
+
+        if os.path.isdir(corepath + "halos/halo_"+str(maxsnap).zfill(3)+"/"):
+            marker = 'co'
+            markerface = 'c'
+
+        if os.path.isdir(corepath + "outputs/groups_"+str(maxsnap).zfill(3)+"/") \
+           and os.path.isdir(corepath + "halos/halos_"+str(maxsnap).zfill(3)+"/"):
+            marker = 'go'
+            markerface = 'g'
+
+        ax.plot(int(level),int(nrvir),marker,markerfacecolor=markerface,markeredgewidth=None)
 
 
 
@@ -205,6 +213,6 @@ print
 print "| Level | % Completed |"
 for key,value in leveldone.iteritems():
     if nhalolevels[key] != 0:
-	print "   %i        %3.2f" % (key,float(value)/float(nhalolevels[key])*100)
+        print "   %i        %3.2f" % (key,float(value)/float(nhalolevels[key])*100)
 
 plt.show()
