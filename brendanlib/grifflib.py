@@ -1279,7 +1279,6 @@ def forceAspect(ax,aspect=1):
     extent =  im[0].get_extent()
     ax.set_aspect(abs((extent[1]-extent[0])/(extent[3]-extent[2]))/aspect)
 
-
 def makecolormap():
     vals=5020
     rgbg=np.zeros([vals,4])
@@ -1287,3 +1286,67 @@ def makecolormap():
     lambda2 = np.zeros(vals)
     lambda2 = np.arange(0.0,1.0,1.0/(vals))
     s=1.5
+    gamma=0.90
+    h=1.0
+    r=1.5
+    phi = 2*(3.14159)*(s/3.0 + r*lambda2)
+    a = h*lambda2**gamma *( 1 - lambda2**gamma) / 2.0
+
+    for color in range(0, vals):
+        rgbg[color,0] = lambda2[color]**gamma - a[color] * 0.14871 * math.cos(phi[color]) + a[color] * 1.78277 * math.sin(phi[color])
+        rgbg[color,1] = lambda2[color]**gamma - a[color] * 0.29227 * math.cos(phi[color]) - a[color] * 0.90649 * math.sin(phi[color])
+        rgbg[color,2] = lambda2[color]**gamma + a[color] * 1.97249 * math.cos(phi[color])
+
+    return col.LinearSegmentedColormap.from_list('newmap',rgbg,N=vals)
+
+def cosmoconstant(cosmology):
+#    if cosmology == 'WMAP1':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+#    
+#    if cosmology == 'WMAP3':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+#  
+#    if cosmology == 'WMAP5':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+    
+    if cosmology == 'WMAP7':
+        omegam = 0.276
+        omegal = 0.724
+        omegab = 0.045
+        hubble = 70.3
+        sigma8 = 0.811
+        nspec = 0.961
+    
+#    if cosmology == 'WMAP9':
+#        omegam = 
+#        omegal = 
+#        omegab = 
+#        hubble = 
+#        sigma8 = 
+#        nspec = 
+    
+    if cosmology == 'PLANCK':
+        omegam = 0.3175
+        omegal = 0.6825
+        omegab = 0.0489991
+        hubble = 67.11
+        sigma8 = 0.8344
+        nspec = 0.9624
+
+    return omegam,omegal,omegab,hubble,sigma8,nspec
+
