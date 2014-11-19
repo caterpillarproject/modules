@@ -430,7 +430,8 @@ def convertmt(dir,version=2,verbose=True):
                 print line
                 raise RuntimeError("line is not a #tree, comment, or empty string indicating end of file")
         fin.close()
-        print "finished "+os.path.basepath(os.path.normpath(fpath))
+
+        print "finished "+os.path.basename(os.path.normpath(fpath))
         print "%.2f" % (time.time()-start)
 
     fout.close()
