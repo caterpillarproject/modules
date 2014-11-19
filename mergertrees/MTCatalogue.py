@@ -465,7 +465,7 @@ class MTCatalogueTree:
             if f==None or halotype==-1 or nrow==-1 or fmt=="" or fmttype==np.dtype([]):
                 print "ERROR: must specify all of these variables:"
                 print "f,halotype,nrow,fmt,fmttype"
-                raise RuntimeException("Didn't specify all variables")
+                raise RuntimeError("Didn't specify all variables")
             self.fileloc = f.tell()
             self.halotype=halotype #0 or 1
             self.nrow = nrow
