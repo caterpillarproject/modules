@@ -569,11 +569,17 @@ def make_destination_folders_clean(base_path,suite_names,lx,nrvir):
             cmd_make_folder = "mkdir -p " + folder +  "/contamination_suite/" + new_folder_name + "_" + suite 
             subprocess.call([cmd_make_folder],shell=True)
 
-def make_destination_folders(folder_paths,suite_names):
-    for folder in folder_paths:
-        folder_single = folder.split("/")[-1]
+def make_destination_folders(base_path,suite_names,lx,nrvir):
+    for folder in glob.glob(base_path+"H*"):
+        haloid = folder.split("halos/")[-1].split("_")[0]
+        #folder_single = folder.split("/")[-1]
         for suite in suite_names:
-            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + folder_single + "_" + suite 
+            new_folder_name = haloid + "_" + suite + "_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
+            #old_folder_name = haloid + "_BB_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
+            #print new_folder_name
+            #cmd_rm_folder = "rm -rf " + folder +  "/contamination_suite/" + old_folder_name + "_" + suite 
+            #subprocess.call([cmd_rm_folder],shell=True)
+            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + new_folder_name
             subprocess.call([cmd_make_folder],shell=True)
 
 
