@@ -12,6 +12,26 @@ import readsnapshots.readsnapHDF5_greg as rs
 import asciitable
 import sys,os,time
 
+def get_quant_zoom(halo_path,quant):
+    import alexlib.haloutils as haloutils
+    htable = haloutils.get_parent_zoom_index()
+    halo_split = halo_path.split("_")
+    haloid = int(halo_split[0].split("H")[1])
+    geom,lx,nrvir = haloutils.get_zoom_params(halo_path)
+
+    mask = (haloid == htable['parentid']) & \
+           (geom == htable['ictype']) & \
+           (int(lx) == htable['LX']) & \
+           (int(nrvir) == htable['NV']) 
+
+    print np.sum(geom == htable['ictype'])
+    print np.sum(int(lx) == htable['LX'])
+    print np.sum(int(nrvir) == htable['NV'])
+    print np.sum(haloid == htable['parentid'])
+    print np.sum(mask)
+    print
+    return htable[mask][quant]
+    
 def get_folder_size(folder):
     total_size = os.path.getsize(folder)
     for item in os.listdir(folder):
@@ -34,11 +54,11 @@ def get_last_modified(file_name):
         
     return last_modified
     
-def convert_pid_zid(pid,lx):
+def convert_pid_zid(pid_in,lx_in):
     htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
     key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
     hindex = dict(zip(key,htable['zoomid']))
-    zoomid = hindex[str(pid)+'_'+str(lx)]
+    zoomid = hindex[str(pid_in)+'_'+str(lx_in)]
     return zoomid
 
 def get_completed_list(suite_paths,verbose=True):
@@ -484,12 +504,6 @@ def make_music_file(master_music_cfg_dest,boxtype,seed,region_point_file,nrvir_l
     f.write("grad_order           = 6\n")
     f.close()
 
-def convert_pid_zid(pid,lx):
-    htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
-    key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
-    hindex = dict(zip(key,htable['zoomid']))
-    zoomid = hindex[str(pid)+'_'+str(lx)]
-    return zoomid
 
 def check_is_sorted(outpath,snap=0,hdf5=True):
     #TODO: option to check all snaps
