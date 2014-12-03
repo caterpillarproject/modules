@@ -845,20 +845,10 @@ def tick_function(X):
 def calcT(p):
     return 1 - (1./p)**2
 
-def placenormtext(ax,xpos,ypos,teststr,**kwargs):
+def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
     ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
-
-def placetext(ax,xpos,ypos,teststr,**kwargs):
-    xpos = float(xpos)
-    ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
-
-def placetext_direct(ax,xpos,ypos,teststr,**kwargs):
-    xpos = float(xpos)
-    ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='center',verticalalignment='center',**kwargs)
+    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,fontsize=fontsize,fontweight=fontsize)
 
 def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
@@ -870,6 +860,8 @@ def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
         fontsize=fontsize,
         weight=fontweight)
 
+#placetext_direct(ax3,0.,0.,mstring,'bold',12)
+#placetext(ax1,0.05,0.9,"LX: "+LX,'bold',12)
 
 def getxyzdeltamcut(resolution,icgeometry):
     if icgeometry == 'ellipsoid':
