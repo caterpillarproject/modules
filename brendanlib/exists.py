@@ -25,7 +25,7 @@ haloidlist = []
 for folder_name in halo_list:
     halo_name = folder_name.split("/")[-1]
     haloidlist.append(halo_name)
-
+print
 print "------------------------------------------------------------------------------------------------------"
 print "  HALO   | NV | ICG | LX | ICS | SNAP | %PC | S | R | CPU.TXT | OUTPUT | IC SIZE | SNAP SIZE | STATUS"
 print "------------------------------------------------------------------------------------------------------"
@@ -63,12 +63,12 @@ for haloid in haloidlist:
             pc_complete = "  -"
             
         if os.path.isdir(run + "/outputs/groups_255"):
-            subfind = "x"
+            subfind = "+"
         else:
             subfind = "-"
 
         if os.path.isdir(run + "/halos/"):
-            rockstar = "x"
+            rockstar = "+"
         else:
             rockstar = "-"
 

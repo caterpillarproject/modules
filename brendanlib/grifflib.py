@@ -27,6 +27,26 @@ def create_slurm_job(submit_line,job_name,ncores,queue,snap,memory,hours):
     f.write("python construct_index.py " + str(snap) + "\n")
     f.close()
 
+def get_quant_zoom(halo_path,quant):
+    import alexlib.haloutils as haloutils
+    htable = haloutils.get_parent_zoom_index()
+    halo_split = halo_path.split("_")
+    haloid = int(halo_split[0].split("H")[1])
+    geom,lx,nrvir = haloutils.get_zoom_params(halo_path)
+
+    mask = (haloid == htable['parentid']) & \
+           (geom == htable['ictype']) & \
+           (int(lx) == htable['LX']) & \
+           (int(nrvir) == htable['NV']) 
+
+    print np.sum(geom == htable['ictype'])
+    print np.sum(int(lx) == htable['LX'])
+    print np.sum(int(nrvir) == htable['NV'])
+    print np.sum(haloid == htable['parentid'])
+    print np.sum(mask)
+    print
+    return htable[mask][quant]
+    
 def get_folder_size(folder):
     total_size = os.path.getsize(folder)
     for item in os.listdir(folder):
@@ -49,11 +69,11 @@ def get_last_modified(file_name):
         
     return last_modified
     
-def convert_pid_zid(pid,lx):
+def convert_pid_zid(pid_in,lx_in):
     htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
     key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
     hindex = dict(zip(key,htable['zoomid']))
-    zoomid = hindex[str(pid)+'_'+str(lx)]
+    zoomid = hindex[str(pid_in)+'_'+str(lx_in)]
     return zoomid
 
 def get_completed_list(suite_paths,verbose=True):
@@ -499,12 +519,6 @@ def make_music_file(master_music_cfg_dest,boxtype,seed,region_point_file,nrvir_l
     f.write("grad_order           = 6\n")
     f.close()
 
-def convert_pid_zid(pid,lx):
-    htable = asciitable.read("/bigbang/data/AnnaGroup/caterpillar/halos/parent_zoom_index.txt",Reader=asciitable.FixedWidth)
-    key = [str(pid)+'_'+str(lx) for pid,lx in zip(htable['parentid'],htable['LX'])]
-    hindex = dict(zip(key,htable['zoomid']))
-    zoomid = hindex[str(pid)+'_'+str(lx)]
-    return zoomid
 
 def check_is_sorted(outpath,snap=0,hdf5=True):
     #TODO: option to check all snaps
@@ -846,20 +860,10 @@ def tick_function(X):
 def calcT(p):
     return 1 - (1./p)**2
 
-def placenormtext(ax,xpos,ypos,teststr,**kwargs):
+def placetext(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
     ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
-
-def placetext(ax,xpos,ypos,teststr,**kwargs):
-    xpos = float(xpos)
-    ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,**kwargs)
-
-def placetext_direct(ax,xpos,ypos,teststr,**kwargs):
-    xpos = float(xpos)
-    ypos = float(ypos)
-    ax.text(xpos, ypos,teststr,horizontalalignment='center',verticalalignment='center',**kwargs)
+    ax.text(xpos, ypos,teststr,horizontalalignment='left',verticalalignment='center',transform = ax.transAxes,fontsize=fontsize,fontweight=fontsize)
 
 def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
     xpos = float(xpos)
@@ -871,6 +875,8 @@ def placetext_direct(ax,xpos,ypos,teststr,fontweight,fontsize):
         fontsize=fontsize,
         weight=fontweight)
 
+#placetext_direct(ax3,0.,0.,mstring,'bold',12)
+#placetext(ax1,0.05,0.9,"LX: "+LX,'bold',12)
 
 def getxyzdeltamcut(resolution,icgeometry):
     if icgeometry == 'ellipsoid':
