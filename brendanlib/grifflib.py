@@ -9,8 +9,30 @@ import numpy.random as nprnd
 import matplotlib.colors as col
 import math,glob,subprocess,shlex,os,asciitable
 import readsnapshots.readsnapHDF5_greg as rs
+import mergertrees.MTCatalogue as MT
 import asciitable
 import sys,os,time
+import pickle
+#import haloutils as htils
+from haloutils import get_quant_zoom
+
+def first_twelve():
+    first_twelve = ["H1631506", "H1195448", "H1725139", "H447649", "H5320", "H581141", "H94687", "H1130025", "H1387186", "H581180", "H1725372", "H1354437"]
+    return first_twelve
+
+def load_dict(file_name):
+    dict = pickle.load( open( file_name, "rb" ) )
+    return dict
+
+def save_dict(file_name, dict):
+    pickle.dump( dict, open( file_name, "wb" ) )
+
+def load_halo_alias():
+    base_path = "/bigbang/data/AnnaGroup/caterpillar/halos/"
+    file_name = base_path+"public_halo_names.p"
+    dict = load_dict(file_name)
+
+    return dict
 
 def create_slurm_job(submit_line,job_name,ncores,queue,snap,memory,hours):
     f = open("sjob.slurm",'w')
@@ -473,7 +495,10 @@ def make_music_file(master_music_cfg_dest,boxtype,seed,region_point_file,nrvir_l
         if "_EC_" in master_music_cfg_dest:
             hipadding =	1.2      
         if "_ED_" in master_music_cfg_dest:
-            hipadding = 1.3     
+            hipadding = 1.3  
+
+        if "_EX_" in master_music_cfg_dest:
+            hipadding = 1.05    
 
         f.write("hipadding            = " + str(hipadding) + "\n")
 
@@ -1262,25 +1287,6 @@ def getillustrispath():
 
     return basepath
 
-def determinebasepath(node):
-    if node == "csr-dyn-150.mit.edu":
-        basepath = '/Users/griffen/Desktop/'
-    elif node == "Brendans-MacBook-Pro.local":
-        basepath = '/Users/griffen/Desktop/'
-    elif node == "spacebase":
-        basepath = '/bigbang/data/AnnaGroup/'
-    elif node == "bigbang.mit.edu":
-        basepath = '/bigbang/data/AnnaGroup/'
-    elif node == "antares":
-        basepath = '/bigbang/data/AnnaGroup/'
-    elif 'compute-0-' in node:
-        basepath = '/bigbang/data/AnnaGroup/'
-    else:
-        raise ValueError(node+" is not a valid node")
-        
-    return basepath
-
-
 def makelegend(ax,line=0,location=1):
     handles, labels = ax.get_legend_handles_labels()
     
@@ -1377,3 +1383,451 @@ def cosmoconstant(cosmology):
 
     return omegam,omegal,omegab,hubble,sigma8,nspec
 
+
+def create_mt_image(hpath,header,zoomid,parentid,image_path):
+    
+    fig1 = plt.figure(figsize=(22.0,12.0))
+    ax1 = fig1.add_subplot(3,5,1)
+    ax2 = fig1.add_subplot(3,5,2)
+    ax3 = fig1.add_subplot(3,5,3)
+    ax4 = fig1.add_subplot(3,5,4)
+    ax5 = fig1.add_subplot(3,5,5)
+    ax6 = fig1.add_subplot(3,5,6)
+    ax7 = fig1.add_subplot(3,5,7)
+    ax8 = fig1.add_subplot(3,5,8)
+    ax9 = fig1.add_subplot(3,5,9)
+    ax10 = fig1.add_subplot(3,5,10)
+    ax11 = fig1.add_subplot(3,5,11)
+    ax12 = fig1.add_subplot(3,5,12)
+    ax13 = fig1.add_subplot(3,5,13)
+    ax14 = fig1.add_subplot(3,5,14)
+    ax15 = fig1.add_subplot(3,5,15)
+
+    plt.subplots_adjust(hspace=0.1,wspace=0.3)
+
+    zoomid = int(zoomid)
+
+    if 'parent' in hpath:
+        cat = MT.MTCatalogue(hpath + '/trees',indexbyrsid=False,haloids=[zoomid])
+    else:
+        cat = MT.MTCatalogue(hpath + '/trees',indexbyrsid=False,haloids=[zoomid],version=4)
+
+    tree = cat[0]
+
+    mainbranch = tree.getMainBranch()
+    
+    scale = mainbranch['scale']
+    rvir = mainbranch['rvir']
+    posX = mainbranch['posX']/header.hubble
+    posY = mainbranch['posY']/header.hubble
+    posZ = mainbranch['posZ']/header.hubble
+    mvir = mainbranch['mvir']/header.hubble
+    mall = mainbranch['m200c_all']/header.hubble
+    m200b = mainbranch['m200b']/header.hubble
+    vmax = mainbranch['vmax']
+    vrms = mainbranch['vrms']
+    rs = mainbranch['rs']
+    xoff = mainbranch['xoff']
+    voff = mainbranch['voff']
+    virrat = mainbranch['T/|U|']
+    spin = mainbranch['spin']
+    spinb = mainbranch['spin_bullock']
+    pecvx = mainbranch['pecVX']
+    pecvy = mainbranch['pecVY']
+    pecvz = mainbranch['pecVZ']
+    jx = mainbranch['Jx']
+    jy = mainbranch['Jy']
+    jz = mainbranch['Jz']
+    last_mmr = mainbranch['scale_of_last_MM']
+
+    try:
+        bta = mainbranch['b_to_a']
+        cta = mainbranch['c_to_a']
+    except:
+        bta = mainbranch['b_to_a(500c)']
+        cta = mainbranch['c_to_a(500c)']
+
+    try:
+        Ax = mainbranch['A[x]']
+        Ay = mainbranch['A[y]']
+        Az = mainbranch['A[z]']
+    except:
+        Ax = mainbranch['A[x](500c)']
+        Ay = mainbranch['A[y](500c)']
+        Az = mainbranch['A[z](500c)']
+
+    ctb = bta*(1/cta)
+    Tch = calcT(ctb)
+
+    npart = mvir/(header.massarr[1]*10**10/header.hubble)
+
+    normmvir = mvir/mvir[0]
+    normvmax = vmax**2/vmax[0]**2
+
+    #icand += 1
+
+    #print "---------------------------------------"
+    #print "         Candidate:",icand
+    print "---------------------------------------"
+    print "     rockstar id: %i" % (parentid)
+    print "  merger tree id: %i" % (mainbranch['id'][0])
+    print "           x-pos:",'{:.2f}'.format(posX[0]), "   \ [Mpc]"
+    print "           y-pos:",'{:.2f}'.format(posY[0]), "   \ [Mpc]"
+    print "           z-pos:",'{:.2f}'.format(posZ[0]), "   \ [Mpc]"
+    print "            vmax:",'{:.2f}'.format(vmax[0]),"  \ [km/s]"
+    print "     virial mass:",'{0:.2e}'.format(mvir[0]),"\ [Msol]"
+    print "   virial radius:",'{:.2f}'.format(rvir[0]),"  \ [kpc]"
+    print "---------------------------------------"
+
+    plotquantl(ax1,scale,np.log10(mvir),'virial')
+    #print scale
+    #plt.show()
+
+    plotquantl(ax1,scale,np.log10(mall),'+unbound')
+    plotquantl(ax1,scale,np.log10(m200b),'m200')
+    plotquant(ax2,scale,normmvir)
+    plotquant(ax2,scale,last_mmr)
+
+    plotquantl(ax3,scale,vmax,'max')
+    plotquantl(ax3,scale,vrms,'rms')
+    plotquant(ax4,scale,normvmax)
+    plotquantl(ax5,scale,rvir,'virial')  
+    plotquantl(ax5,scale,rs,'scale')
+    plotquantl(ax6,scale,spin,'normal')
+    plotquantl(ax6,scale,spinb,'bullock')
+    plotquantl(ax7,scale,xoff,'position')
+    plotquantl(ax7,scale,voff,'velocity')
+    plotquant(ax8,scale,virrat)
+    plotquantl(ax9,scale,np.log10(npart),parentid)
+    plotquantl(ax10,scale,bta,'b/a')
+    plotquantl(ax10,scale,cta,'c/a')
+    plotquant(ax11,scale,Tch)
+    plotquantl(ax12,scale,pecvx,'Vx')
+    plotquantl(ax12,scale,pecvy,'Vy')
+    plotquantl(ax12,scale,pecvz,'Vz')
+    plotquantl(ax13,scale,jx,'Jx')
+    plotquantl(ax13,scale,jy,'Jy')
+    plotquantl(ax13,scale,jz,'Jz')
+    plotquantl(ax14,scale,Ax,'Ax')
+    plotquantl(ax14,scale,Ay,'Ay')
+    plotquantl(ax14,scale,Az,'Az')
+
+    if os.path.isfile("H"+str(parentid)+"_subhalo_mass_fraction.txt"):
+        shmf = np.loadtxt("H"+str(parentid)+"_subhalo_mass_fraction.txt",delimiter=",")
+        snap_shmf = shmf[:,0]
+        scale_shmf = shmf[:,1]
+        shmf_shmf = shmf[:,2]
+        #print scale_shmf,shmf_shmf
+        plotquant(ax15,scale_shmf,shmf_shmf)
+
+    #if icand % 3 != 0:
+    #    ncols += 1
+    
+    new_tick_locations = np.array([.2, .5, .9])
+    
+    ax11.text(0.5, 0.05,'oblate', horizontalalignment='center', verticalalignment='center', color='black', fontsize=11, transform = ax11.transAxes)
+    ax11.text(0.5, 0.95,'prolate', horizontalalignment='center', verticalalignment='center', color='black', fontsize=11, transform = ax11.transAxes)
+    
+    #ax15.text(0.5, 0.5,'spare', horizontalalignment='center', verticalalignment='center', color='black', fontsize=11, transform = ax15.transAxes)
+    
+    ax1.set_xlim([0,1])
+    ax2.set_xlim([0,1])
+    ax3.set_xlim([0,1])
+    ax4.set_xlim([0,1])
+    ax5.set_xlim([0,1])
+    ax6.set_xlim([0,1])
+    ax7.set_xlim([0,1])
+    ax8.set_xlim([0,1])
+    ax9.set_xlim([0,1])
+    ax10.set_xlim([0,1])
+    ax11.set_xlim([0,1])
+    ax12.set_xlim([0,1])
+    ax13.set_xlim([0,1])
+    ax14.set_xlim([0,1])
+    ax15.set_xlim([0,1])
+    #ax15.set_ylim([0,0.3])
+    ax11.set_ylim([0,1])
+    
+    plotlegend(ax1,10,location=4)
+    plotlegend(ax3,10,location=4)
+    plotlegend(ax5,10,location=7)
+    plotlegend(ax6,10)
+    plotlegend(ax7,10)
+    plotlegend(ax10,10,location=4)
+    plotlegend(ax12,10)
+    plotlegend(ax13,10)
+    plotlegend(ax14,10)
+    
+    #plt.show()
+
+    new_tick_locations = np.array([0.,.2, .4, 0.6, 0.8, 1.])
+    
+    ax1top = ax1.twiny()
+    ax1top.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax2top = ax2.twiny()
+    ax2top.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax3top = ax3.twiny()
+    ax3top.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax4top = ax4.twiny()
+    ax4top.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax5top = ax5.twiny()
+    ax5top.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax1top.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax2top.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax3top.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax4top.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax5top.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    
+    ax1.set_xticks([])
+    ax2.set_xticks([])
+    ax3.set_xticks([])
+    ax4.set_xticks([])
+    ax5.set_xticks([])
+    ax6.set_xticks([])
+    ax7.set_xticks([])
+    ax8.set_xticks([])
+    ax9.set_xticks([])
+    ax10.set_xticks([])
+    
+    ax1.set_ylabel(r'$\mathrm{log_{10}\ M(z)\ [M_\odot]}$',size=14)
+    ax2.set_ylabel(r'$\mathrm{M_v(z)/M_v(z=0)}$',size=14)
+    ax3.set_ylabel(r'$\mathrm{V(z)\ [km/s]}$',size=14)
+    ax4.set_ylabel(r'$\mathrm{V_{max}(z)^2/V_{max}(z=0)^2}$',size=14)
+    ax5.set_ylabel(r'$\mathrm{radius\ [kpc]}$',size=14)
+    ax6.set_ylabel(r'$\mathrm{spin}$',size=14)
+    ax7.set_ylabel(r'$\mathrm{offset}$',size=14)
+    ax8.set_ylabel(r'$\mathrm{virial\ ratio}$',size=14)
+    ax9.set_ylabel(r'$\mathrm{log_{10}\ number\ of\ particles}$',size=14)
+    ax10.set_ylabel(r'$\mathrm{axis\ ratios}$',size=14)
+    ax11.set_ylabel(r'$\mathrm{triaxiality\ parameter}$',size=14)
+    ax12.set_ylabel(r'$\mathrm{peculiar\ V_x,\ V_y,\ V_z\ [km/s]}$',size=14)
+    ax13.set_ylabel(r'$\mathrm{J_x, J_y, J_z}$',size=14)
+    ax14.set_ylabel(r'$\mathrm{ellipticity\ axis}$',size=14)
+    ax15.set_ylabel(r'$\mathrm{subhalo\ mass\ fraction}$',size=14)
+
+    ax11.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+    ax12.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+    ax13.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+    ax14.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+    ax15.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+
+    fig1.savefig(image_path + 'H'+str(parentid)+'_all_mt_properties.png',bbox_inches='tight')
+    plt.close(fig1)
+
+    # -----------------------------------------------------------------
+
+    fig2 = plt.figure(figsize=(15.0,6.0))
+    ax1a = fig2.add_subplot(1,2,1)
+    ax2a = fig2.add_subplot(1,2,2)
+
+    plotquant(ax2a,scale,normvmax)
+    plotquantl(ax1a,scale,normmvir,parentid)
+    
+    ax1a.set_xlim([0,1])
+    ax2a.set_xlim([0,1])
+    ax1a.set_ylim([0,1.1])
+    ax2a.set_ylim([0,1.1])
+
+    ax1a.set_ylabel(r'$\mathrm{M_v(z)/M_v(z=0)}$',size=14)
+    ax2a.set_ylabel(r'$\mathrm{V_{max}(z)^2/V_{max}(z=0)^2}$',size=14)
+    
+    ax1atop = ax1a.twiny()
+    ax1atop.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax2atop = ax2a.twiny()
+    ax2atop.set_xticklabels(tick_function(new_tick_locations))
+    
+    ax1atop.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax2atop.set_xlabel(r'$\mathrm{redshift}$',size=14)
+    ax1a.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+    ax2a.set_xlabel(r'$\mathrm{scale\ factor}$',size=14)
+
+    handles, labels = ax1a.get_legend_handles_labels()
+    ax1a.legend(handles, labels, fontsize=9,loc=4,frameon=False)
+    fig2.savefig(image_path + 'all_stacked_mvir_vmax.png',bbox_inches='tight')
+    
+def get_subhalo_mass_fraction(halodata,haloid):
+    mhost = float(halodata.ix[haloid]['mvir'])
+    subhalos = halodata.get_all_subhalos_within_halo(haloid)
+    if len(subhalos) > 0:
+        submass = np.array(subhalos['mvir']).sum()
+        fsub = submass/mhost
+    else:
+        fsub = 0.0
+
+    return fsub
+    
+def get_min_distance_to_contam(halopath,part_type=2):
+    halox = get_quant_zoom(halopath,'x')
+    haloy = get_quant_zoom(halopath,'y')
+    haloz = get_quant_zoom(halopath,'z')
+    pos = rs.read_block(halopath + "/outputs/snapdir_255/snap_255","POS ",parttype=part_type)
+    head = rs.snapshot_header(halopath + "/outputs/snapdir_255/snap_255.0.hdf5")
+    dx = halox - pos[:,0]
+    dy = haloy - pos[:,1]
+    dz = haloz - pos[:,2]
+    R = np.sqrt(dx**2+dy**2+dz**2)*1000./head.hubble
+    return np.min(R)
+    
+def get_force_res(parameter_file):
+    with open(parameter_file) as f:
+        for line in f:
+            if "SofteningHaloMaxPhys" in line:
+                force_res = line.split()[-1]
+    return force_res
+
+def get_ncores(node_name):
+    if node_name == "AMD":
+        ncores = 64
+    if node_name == "HyperNodes":
+        ncores = 24
+    if node_name == "RegNodes":
+        ncores = 8
+    return ncores
+
+def write_SLURM_file(job_name,node_name,cfg_file,rsdir,halo_path,restart=False):
+    f = open(halo_path + 'rockstar.sbatch','w')
+    f.write('#!/bin/sh\n')
+    f.write('#SBATCH -J ' + job_name + '\n')
+    f.write('#SBATCH -o rockstar.o\n')
+    f.write('#SBATCH -e rockstar.e\n')
+    f.write('#SBATCH -p ' + node_name + '\n')
+    f.write('#SBATCH -N 1\n')
+    f.write('#SBATCH -t infinite\n')
+    f.write('#SBATCH --exclusive\n')
+    f.write('\n')
+
+    f.write('rsdir=/home/bgriffen/data/lib/Rockstar-0.99.9-RC3/\n')
+    f.write('exe=$rsdir/rockstar\n')
+    sub.call(['mkdir -p ' + halo_path + 'halos/'],shell=True)
+    f.write('outdir=' + halo_path + 'halos/\n')
+    f.write('cd $rsdir\n')
+
+    if restart:
+        f.write('$exe -c $outdir/restart.cfg &\n')
+    else:
+        f.write('$exe -c $outdir/' + cfg_file + ' &\n')
+    
+    ncores = get_ncores(node_name)
+    
+    f.write('cd $outdir\n')
+    #f.write('echo $outdir\n')
+    f.write('''perl -e 'sleep 1 while (!(-e "auto-rockstar.cfg"))'\n''')
+    f.write('srun -n ' + str(ncores) + ' $exe -c auto-rockstar.cfg')
+    f.close()
+
+def get_num_snaps(halo_path):
+    dir_list = glob.glob(halo_path + 'outputs/snapdir_*')
+    nsnaps = len(dir_list)
+    return nsnaps
+
+def get_nfiles(parameter_file):
+    with open(parameter_file) as f:
+        for line in f:
+            if "NumFilesPerSnapshot" in line:
+                nfiles = line.split()[-1]
+    return nfiles
+
+def write_rockstar_cfg(cfg_file,halo_path,num_blocks,num_writers,file_format,force_res):
+    nsnaps = get_num_snaps(halo_path)
+
+    f = open(halo_path + '/halos/rockstar.cfg','w')
+    f.write('PARALLEL_IO=1\n')
+    f.write('INBASE=' + halo_path + 'outputs' + '\n')
+    f.write('OUTBASE=' + halo_path + 'halos\n')
+
+    f.write('NUM_BLOCKS='+ str(num_blocks) + '\n')
+    f.write('NUM_WRITERS=' + str(num_writers) + '\n')
+    f.write('FORK_READERS_FROM_WRITERS=1\n')
+    f.write('FILE_FORMAT="' + file_format + '"\n')
+    #print file_format.lower()
+    if file_format.lower() == "arepo":
+        f.write('FILENAME=snapdir_<snap>/snap_<snap>.<block>.hdf5\n')
+        f.write('AREPO_LENGTH_CONVERSION = 1\n')
+        #f.write('AREPO_LENGTH_CONVERSION = 1e-3\n')
+        f.write('AREPO_MASS_CONVERSION = 1e+10\n')
+
+    if file_format.lower() == "gadget":
+        f.write('FILENAME=snapdir_<snap>/snap_<snap>.<block>\n')
+        f.write('GADGET_LENGTH_CONVERSION = 1\n')
+        f.write('GADGET_MASS_CONVERSION = 1e+10\n')
+        
+    #f.write('NUM_SNAPS=' + str(nsnaps) + '\n')
+    f.write('SNAPSHOT_NAMES= ' + halo_path + 'halos/snapshotlist.dat\n')
+    f.write('FULL_PARTICLE_CHUNKS=0\n')
+    f.write('FORCE_RES=' + str(force_res) + '\n')
+    f.write('FULL_PARTICLE_BINARY=' + str(num_writers) + '\n')
+    f.write('OUTPUT_FORMAT="BINARY"\n')
+    f.write('MASS_DEFINITION="vir"\n')
+    f.write('DELETE_BINARY_OUTPUT_AFTER_FINISHED=1\n')
+    f.close()
+
+def run_rockstar(halo_path,rsdir,ctrees,node_name="RegNodes",cfg_file="rockstar.cfg",file_format="AREPO",job_name="rockstar"):
+
+    parameter_file = halo_path + "param.txt"
+    
+    print "Running:",halo_path
+    nsnaps = get_num_snaps(halo_path)
+    job_name_list = []
+    if not os.path.isfile(halo_path+"halos/halos_"+str(nsnaps-1)+".0.fullbin") \
+        and not os.path.isfile(halo_path + "halos/trees/tree_0_0_0.dat"):
+
+        force_res = get_force_res(parameter_file)
+        num_blocks = get_nfiles(parameter_file)
+        num_writers = get_ncores(node_name)
+        
+        write_SLURM_file(job_name,node_name,cfg_file,rsdir,halo_path)
+        write_rockstar_cfg(cfg_file,halo_path,num_blocks,num_writers,file_format,force_res)
+        
+        f = open(halo_path + "/halos/snapshotlist.dat","w")
+        for snap in xrange(0,nsnaps):
+            f.write(str(snap).zfill(3)+'\n')
+        f.close()
+
+        current_jobs,jobids,jobstatus = glib.getcurrentjobs()
+        run_rockstar = "cd " + halo_path + "; sbatch rockstar.sbatch"
+        
+        if job_name not in current_jobs and job_name not in job_name_list:
+            sub.call([run_rockstar],shell=True)
+
+        job_name_list.append(job_name)
+
+def run_consistent_trees(halo_path,rsdir,ctrees):
+    nsnaps = get_num_snaps(halo_path)
+    if not os.path.isfile(halo_path + "halos/trees/tree_0_0_0.dat"):
+        cmd1 = "perl " + rsdir + "/scripts/gen_merger_cfg.pl " + halo_path + "halos/rockstar.cfg"
+        cmd2 = "cd " + ctrees
+        cmd3 = "perl do_merger_tree.pl " + halo_path + "halos/outputs/merger_tree.cfg"
+        sub.call(';'.join([cmd1,cmd2,cmd3]), shell=True)
+
+    zfillhalos = 3
+    
+    if not os.path.isdir(halo_path + "halos/halos_"+str(nsnaps-1)):
+        print "WILL BE RUNNING TO SNAPSHOT:",nsnaps
+        for i in range(0,nsnaps):
+            print "Moving snapshot...",i
+            cmd_make_halos_dir = "mkdir -p " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos)
+            cmd_mv_rockstar_files = "mv " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos) + ".* " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos)
+            cmd_mv_outlists = "mv " + halo_path + "halos/out_" + str(i) + ".list " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos)
+            sub.call(';'.join([cmd_make_halos_dir,cmd_mv_rockstar_files,cmd_mv_outlists]), shell=True)
+    
+def run_parents_list(halo_path,rsdir):
+    nsnaps = get_num_snaps(halo_path)
+    zfillhalos = 3
+    if not os.path.isfile(halo_path + "halos/halos_"+str(nsnaps-1).zfill(zfillhalos)+"/parents.list"):
+        print "CONSTRUCTING PARENTS LIST"
+        for i in range(0,nsnaps):
+            print "Constructing snapshot...",i
+            cmd_find_parents = rsdir + "/util/find_parents " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos) + "/out_" + str(i) + ".list > " + halo_path + "halos/halos_" + str(i).zfill(zfillhalos) + "/parents.list"
+            sub.call([cmd_find_parents],shell=True)
+
+def run_convert_mt(halo_path):
+    if not os.path.isfile(halo_path + "halos/trees/treeindex.csv"):
+        print "CREATING MERGER TREE INDEX FILE"
+        MT.convertmt(halo_path + 'halos/trees/',version=4)
+        print "MERGER TREE READY FOR ACTION!"
