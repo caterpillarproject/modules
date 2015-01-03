@@ -261,7 +261,6 @@ class RSDataReader:
 
         self.files = pandas.DataFrame(files, index=data['id'].astype(int),columns=['file'])
         self.data = pandas.DataFrame(data,index=data['id'])
-
         self.particles = self.particles.astype(int)
         if not noparents:
             parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
