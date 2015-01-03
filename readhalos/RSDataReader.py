@@ -10,7 +10,7 @@ class RSDataReader:
     """
     Alex's 10/4/13 rewrite of RSDataReader, combining v2 and v3 and cleaning everything up
     """
-    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False):
+    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False, unboundfrac=None):
         self.dir = dir
         self.snap_num = snap_num
         self.AllParticles = AllParticles
@@ -201,7 +201,7 @@ class RSDataReader:
             
         ## Count total number of particles/halos in all data blocks
         self.num_halos = 0
-        self.total_particles = 0
+        #self.total_particles = 0
         while os.path.exists(file_name):
             f = open(file_name)
             h = f.read(numheaderbytes)
@@ -210,14 +210,15 @@ class RSDataReader:
              num_halos,num_particles,\
              self.boxsize,self.particle_mass,self.particle_type) = struct.unpack(headerfmt,h)
             self.num_halos += num_halos
-            self.total_particles += num_particles
+            #self.total_particles += num_particles
             f.close()
             file_num += 1
             file_name = getfilename(file_num)
         ## Initialize empty data structure
         data = np.zeros(self.num_halos,dtype=varlist)
         files = np.array(['']*self.num_halos, dtype='|S'+str(len(file_name)*2))
-        self.particles = np.array([])
+        if AllParticles:
+            self.particles = np.array([])
 
         ## Now, read in the actual data
         file_num = 0 # reset file name
@@ -261,12 +262,25 @@ class RSDataReader:
 
         self.files = pandas.DataFrame(files, index=data['id'].astype(int),columns=['file'])
         self.data = pandas.DataFrame(data,index=data['id'])
-        self.particles = self.particles.astype(int)
+
+        if AllParticles:
+            self.particles = self.particles.astype(int)
+
         if not noparents:
             parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
             self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
+        self.unboundfrac = unboundfrac
+        if unboundfrac != None:
+            assert unboundfrac >= 0.0 and unboundfrac <= 1.0
+            iibound = self.data['mgrav']/self.data['mvir'] > unboundfrac
+            iiunbound = self.data['mgrav']/self.data['mvir'] <= unboundfrac
+            self.unbounddata = self.data.ix[iiunbound]
+            self.data = self.data.ix[iibound]
+            self.num_halos = len(self.data)
+
         self.ix = self.data.ix
+        self.index = self.data.index
 
     def get_particles_from_halo(self, haloID):
         """
@@ -526,6 +540,7 @@ class RSDataReader:
         out +="Read from "+self.dir+"\n"
         out +="Snap number "+str(self.snap_num)+"\n"
         out +="Number of halos: "+str(self.num_halos)+"\n"
+        if self.unboundfrac != None: out += "Unbound frac: %3.2f excluded %i halos\n" % (self.unboundfrac,len(self.unbounddata))
         return out + "Sorted by "+self.sort_by    
 
 

@@ -7,7 +7,7 @@ import brendanlib.grifflib as glib
 
 def get_subhalo_mass_fraction(halodata,haloid):
     mhost = float(halodata.data[halodata.data['id'] == haloid]['mvir'])
-    subhalos = halodata.get_all_subhalos_from_halo(haloid)
+    subhalos = halodata.get_all_subhalos_within_halo(haloid)
     if len(subhalos) > 0:
         submass = np.array(subhalos['mvir']).sum()
         fsub = submass/mhost
