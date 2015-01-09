@@ -34,6 +34,41 @@ def load_halo_alias():
 
     return dict
 
+def create_slurm_job(submit_line,job_name,ncores,queue,snap,memory,hours):
+    f = open("sjob.slurm",'w')
+    f.write("#!/bin/bash\n")
+    f.write("#SBATCH -n " + str(ncores) + "\n")
+    f.write("#SBATCH -o job.o" + str(snap) + "\n")
+    f.write("#SBATCH -e job.e" + str(snap) + "\n")
+    f.write("#SBATCH -J " + job_name + "\n")
+    f.write("#SBATCH -p " + str(queue) + "\n")
+    f.write("#SBATCH -t " + str(hours) + ":00:00\n")
+    f.write("#SBATCH --mem=" + str(memory) + "gb\n")
+    f.write("\n")
+    f.write("source new-modules.sh; module load python\n")
+    f.write("python construct_index.py " + str(snap) + "\n")
+    f.close()
+
+def get_quant_zoom(halo_path,quant):
+    import alexlib.haloutils as haloutils
+    htable = haloutils.get_parent_zoom_index()
+    halo_split = halo_path.split("_")
+    haloid = int(halo_split[0].split("H")[1])
+    geom,lx,nrvir = haloutils.get_zoom_params(halo_path)
+
+    mask = (haloid == htable['parentid']) & \
+           (geom == htable['ictype']) & \
+           (int(lx) == htable['LX']) & \
+           (int(nrvir) == htable['NV']) 
+
+    print np.sum(geom == htable['ictype'])
+    print np.sum(int(lx) == htable['LX'])
+    print np.sum(int(nrvir) == htable['NV'])
+    print np.sum(haloid == htable['parentid'])
+    print np.sum(mask)
+    print
+    return htable[mask][quant]
+    
 def get_folder_size(folder):
     total_size = os.path.getsize(folder)
     for item in os.listdir(folder):
@@ -535,7 +570,7 @@ def checkmakedir(folder):
         subprocess.call([mkimagedir],shell=True)
         
 def getcurrentjobs():
-    pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen,alexji > currentqueue.out'
+    pipemyq = 'squeue -o "%i,%j,%t" -u bgriffen > currentqueue.out'
     subprocess.call(';'.join([pipemyq]),shell=True)
     lines = [line.strip() for line in open('currentqueue.out')]
     subprocess.call(["rm currentqueue.out"],shell=True)

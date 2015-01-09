@@ -5,19 +5,30 @@ import struct
 import os
 import sys
 import readsnapshots.readsnapHDF5_greg as rsg
+try: #don't want to force dependence on haloutils
+    from haloutils import load_rsboundindex #from caterpillar analysis
+except ImportError:
+    import asciitable
+    def load_rsboundindex(hpath,snap):
+        return asciitable.read(hpath+'/halos/halos_'+str(snap)+'/iterboundindex.csv',names=['hid','numbound','numtot','loc','numiter'])
 
 class RSDataReader:
     """
     Alex's 10/4/13 rewrite of RSDataReader, combining v2 and v3 and cleaning everything up
     """
-    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False, unboundfrac=None):
+    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False, unboundfrac=None, minboundpart=None):
         self.dir = dir
         self.snap_num = snap_num
+        self.base = base
         self.AllParticles = AllParticles
         self.version=version
         self.sort_by = sort_by
 
         self.particlebytes = 8
+
+        if minboundpart != None:
+            assert os.path.exists(dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundindex.csv')
+            assert os.path.exists(dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundparts.dat')
 
         def getfilename(file_num):
             if version>=7:
@@ -270,11 +281,22 @@ class RSDataReader:
             parents = rp.readParents(dir+'/'+base+str(snap_num).zfill(digits),'parents.list',self.num_halos)
             self.data['hostID'].ix[parents[:,0]] = parents[:,1]
 
+        assert (unboundfrac == None) or (minboundpart == None)
         self.unboundfrac = unboundfrac
         if unboundfrac != None:
             assert unboundfrac >= 0.0 and unboundfrac <= 1.0
             iibound = self.data['mgrav']/self.data['mvir'] > unboundfrac
             iiunbound = self.data['mgrav']/self.data['mvir'] <= unboundfrac
+            self.unbounddata = self.data.ix[iiunbound]
+            self.data = self.data.ix[iibound]
+            self.num_halos = len(self.data)
+        self.minboundpart = minboundpart
+        if minboundpart != None:
+            assert minboundpart >= 0
+            boundindex = load_rsboundindex(self.dir+'/..',self.snap_num)
+            boundrows = boundindex['numbound'] >= minboundpart
+            iibound   = boundindex['hid'][boundrows]
+            iiunbound = boundindex['hid'][~boundrows]
             self.unbounddata = self.data.ix[iiunbound]
             self.data = self.data.ix[iibound]
             self.num_halos = len(self.data)
@@ -531,6 +553,7 @@ class RSDataReader:
             return "Version 8: Rockstar 0.99.9 RC3+/4 with full particles on"
         return "ERROR: Not a valid version number!"
 
+
     def __getitem__(self,key):
         return self.data[key]
     def __len__(self):
@@ -541,6 +564,7 @@ class RSDataReader:
         out +="Snap number "+str(self.snap_num)+"\n"
         out +="Number of halos: "+str(self.num_halos)+"\n"
         if self.unboundfrac != None: out += "Unbound frac: %3.2f excluded %i halos\n" % (self.unboundfrac,len(self.unbounddata))
+        if self.minboundpart != None: out += "Minboundpart %i: excluded %i halos\n" % (self.minboundpart,len(self.unbounddata))
         return out + "Sorted by "+self.sort_by    
 
 
