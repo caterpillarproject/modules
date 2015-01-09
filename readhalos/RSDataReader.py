@@ -294,8 +294,10 @@ class RSDataReader:
         if minboundpart != None:
             assert minboundpart >= 0
             boundindex = load_rsboundindex(self.dir+'/..',self.snap_num)
-            iibound = boundindex['numbound'] >= minboundpart
-            self.unbounddata = self.data.ix[~iibound]
+            boundrows = boundindex['numbound'] >= minboundpart
+            iibound   = boundindex['hid'][boundrows]
+            iiunbound = boundindex['hid'][~boundrows]
+            self.unbounddata = self.data.ix[iiunbound]
             self.data = self.data.ix[iibound]
             self.num_halos = len(self.data)
 
