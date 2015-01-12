@@ -1166,8 +1166,8 @@ def addsubtitle(ax,string,color='black',box=False,boxcolor='white'):
             transform = ax.transAxes)
 
 
-def create31fig(size,xmin,xmax,ymin,ymax,xlabel,ylabel,title=None):
-    fig = plt.figure(figsize=(size,size))
+def create31fig(figx,figy,xmin,xmax,ymin,ymax,xlabel,ylabel,title=None):
+    fig = plt.figure(figsize=(figx,figy))
     ax1 = fig.add_subplot(311)
     ax2 = fig.add_subplot(312)
     ax3 = fig.add_subplot(313)
