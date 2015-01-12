@@ -5,12 +5,10 @@ import struct
 import os
 import sys
 import readsnapshots.readsnapHDF5_greg as rsg
-try: #don't want to force dependence on haloutils
-    from haloutils import load_rsboundindex #from caterpillar analysis
-except ImportError:
-    import asciitable
-    def load_rsboundindex(hpath,snap):
-        return asciitable.read(hpath+'/halos/halos_'+str(snap)+'/iterboundindex.csv',names=['hid','numbound','numtot','loc','numiter'])
+
+import asciitable
+def load_rsboundindex(hpath,snap):
+    return asciitable.read(hpath+'/halos/halos_'+str(snap)+'/iterboundindex.csv',names=['hid','numbound','numtot','loc','numiter'])
 
 class RSDataReader:
     """
