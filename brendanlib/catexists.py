@@ -4,7 +4,7 @@ import numpy as np
 import pylab as plt
 import platform
 import time,glob
-from brendanlib.grifflib import getcurrentjobs
+from brendanlib.grifflib import getcurrentjobs,get_folder_size
 
 currentjobs,jobids,statusjobs = getcurrentjobs()
 
