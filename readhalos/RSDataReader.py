@@ -25,8 +25,10 @@ class RSDataReader:
         self.particlebytes = 8
 
         if minboundpart != None:
-            assert os.path.exists(dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundindex.csv')
-            assert os.path.exists(dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundparts.dat')
+            self.boundindexpath = dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundindex.csv'
+            self.boundpartspath = dir+'/'+base+str(snap_num).zfill(digits)+'/iterboundparts.dat'
+            assert os.path.exists(self.boundindexpath)
+            assert os.path.exists(self.boundpartspath)
 
         def getfilename(file_num):
             if version>=7:
@@ -295,6 +297,7 @@ class RSDataReader:
             boundrows = boundindex['numbound'] >= minboundpart
             iibound   = boundindex['hid'][boundrows]
             iiunbound = boundindex['hid'][~boundrows]
+            self.boundindex = boundindex
             self.unbounddata = self.data.ix[iiunbound]
             self.data = self.data.ix[iibound]
             self.num_halos = len(self.data)
@@ -441,6 +444,7 @@ class RSDataReader:
             return self.get_particles_from_halo(haloID)
         return np.append(self.get_particles_from_halo(haloID), self.get_all_sub_particles_from_halo(haloID)).astype(int)
 
+
     def get_all_num_particles_from_halo(self,haloID):
         if self.version>=7:
             return self.data.ix[haloID]['total_npart']
@@ -448,6 +452,19 @@ class RSDataReader:
         subdat = self.get_all_subhalos_from_halo(haloID)
         return thisnum + np.sum(subdat['npart'])
 
+    def get_bound_particles_from_halo(self,haloID):
+        assert self.minboundpart != None        
+        ixid = self.boundindex['hid']
+        row = np.where(ixid==haloID)[0][0]
+        loc = self.boundindex[row]['loc']
+        numbound = self.boundindex[row]['numbound']
+        fmt = "q"*numbound
+        with open(self.boundpartspath,'rb') as f:
+            f.seek(loc)
+            line = f.read(struct.calcsize(fmt))
+            boundids = struct.unpack(fmt,line)
+        return boundids
+        
     def get_block_from_halo(self, snapshot_dir, haloID, blockname, allparticles=True):
         if allparticles:
             pids = self.get_all_particles_from_halo(haloID)
