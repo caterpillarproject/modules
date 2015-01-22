@@ -5,16 +5,12 @@ import matplotlib.colors
 import matplotlib.font_manager
 from matplotlib.ticker import MaxNLocator
 from matplotlib.font_manager import FontProperties
-cm = plt.cm.get_cmap('RdYlBu')
+import haloutils as htils
 
-basedir = "/spacebase/data/bgriffen/data/caterpillar/halos/halo80609"
+cm = plt.cm.get_cmap('RdYlBu')
 
 snapnum = 63
 fontsize = 12
-padlist = ['p6','p7','p8','p9','p10']
-reslist = ['l11']
-nvirlist= ['nvir3','nvir4','nvir5','nvir6','nvir7','nvir8','nvir9']
-regionlist = ['ellipsoid']
 TimeStepMod=100
 subtags = ["total", "treegrav", "pmgrav", "voronoi", "hydro", "domain", "sph", "i/o"]
 label_subtags={"total": "total", 
@@ -25,22 +21,26 @@ label_subtags={"total": "total",
                "domain": "domain decomp.", 
                "sph": "SPH", 
                "i/o": "I/O"}
+
 tcolors = ["Azure", "Blue", "Green", "Red", "SpringGreen", "DarkTurquoise", "Red", "Black", "FireBrick", "Purple", "OrangeRed", "SeaGreen", "Navy", "Yellow", "Tomato", "Violet", "Tan", "Olive", "Gold"] 
 
-nwide = len(nvirlist)
-nhigh = len(padlist)
-fig1 = plt.figure(figsize=(23.0,14.0))
-fig2 = plt.figure(figsize=(23.0,14.0))
+fig1 = plt.figure(figsize=(16,8))
+fig2 = plt.figure(figsize=(16,8))
 figi = 0
-for res in reslist:
-    for pad in padlist:
-        for nvir in nvirlist:
+
+hpaths = htils.get_paper_paths_lx(14)
+#for res in reslist:
+#    for pad in padlist:
+#        for nvir in nvirlist:
+for hpath in hpaths:
             figi += 1
-            ax1 = fig1.add_subplot(nhigh,nwide,figi)
-            ax2 = fig2.add_subplot(nhigh,nwide,figi)
-            tmppath = basedir + '/' + res + '/' + pad + '/' + nvir + '/outputs'
+            ax1 = fig1.add_subplot(3,4,figi)
+            ax2 = fig2.add_subplot(3,4,figi)
+            #tmppath = basedir + '/' + res + '/' + pad + '/' + nvir + '/outputs'
+            tmppath = hpath + '/outputs'
             print tmppath
-            titlestr = pad + ", " + nvir
+            titlestr = hpath.split("/")[-2]
+            #titlestr = pad + ", " + nvir
             cputxt = tmppath + '/cpu.txt'
             timingstxt = tmppath + '/timings.txt'
             energytxt = tmppath + '/energy.txt'
@@ -133,7 +133,14 @@ for res in reslist:
                 #plt.savefig(tmppath+"/times_rel_cum.pdf", bbox_inches='tight')
             
             except IOError:
-                print 'cpu.txt does not exist for:',nvir,pad
+                print 'cpu.txt does not exist for:',titlestr
+                ax1.text(0.5,0.5,"IOError", transform=ax1.transAxes,horizontalalignment='center',verticalalignment='center')
+                ax2.text(0.5,0.5,"IOError", transform=ax2.transAxes,horizontalalignment='center',verticalalignment='center')
+                ax1.set_yticks([])
+                ax1.set_xticks([])
+                ax2.set_yticks([])
+                ax2.set_xticks([])
+
             if figi == 15:
                 ax1.set_ylabel("relative (%)", fontsize=fontsize)
                 ax2.set_ylabel("cumulative (%)", fontsize=fontsize)
@@ -151,8 +158,15 @@ for res in reslist:
                     verticalalignment='bottom',
                     color='white',
                     transform = ax2.transAxes)
+
+            if figi == 5:
+                ax1.set_ylabel('relative cpu usage')
+                ax2.set_ylabel('cumulative cpu usage')
+
+        #if figi == 
             #plt.clf()
-#fig1.savefig('./figs/' + regionlist[0] + 'cpu_relative.png')
-#fig2.savefig('./figs/' + regionlist[0] + 'cpu_cumulative.png')
+
+fig1.savefig("/bigbang/data/bgriffen/modules/brendanlib/cpu_relative.png")
+fig2.savefig("/bigbang/data/bgriffen/modules/brendanlib/cpu_cumulative.png")
 
 plt.show()
