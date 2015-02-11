@@ -31,11 +31,15 @@ class RSDataReader:
             assert os.path.exists(self.boundpartspath)
 
         def getfilename(file_num):
-            if version==7 or version == 8:
+            if version==10:
+                return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.boundbin'
+            elif version==7 or version == 8:
                 return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.fullbin'
             return dir+'/'+base+str(snap_num).zfill(digits)+'/'+base+str(snap_num).zfill(digits)+'.'+str(file_num)+'.bin'
 
-        if version==7 or version == 8:
+        if version==10:
+            self.num_p ='num_bound'
+        elif version==7 or version == 8:
             self.num_p = 'total_npart'
         else:
             self.num_p = 'npart'
@@ -201,7 +205,7 @@ class RSDataReader:
                                 ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
             datatypesstr = "qffffffffffffffffffffffffffffffffffffffffffffffffqqqqqqfffq"
             numbytes = struct.calcsize(datatypesstr)
-        if version==9: # Alex's iterunbind. Added Feb 4, 2015
+        if version==9 or version==10: # Alex's iterunbind. Added Feb 4, 2015
             headerfmt = "qqqffffffffffqqffq"+"x"*(256-96)
             varlist = np.dtype([('id','<i8'),\
                         ('posX','<f8'),('posY','<f8'),('posZ','<f8'),\
@@ -468,7 +472,9 @@ class RSDataReader:
 
 
     def get_all_num_particles_from_halo(self,haloID):
-        if self.version>=7:
+        if self.version==10:
+            return self.data.ix[haloID]['num_bound']
+        elif self.version==7 or self.version==8:
             return self.data.ix[haloID]['total_npart']
         thisnum = self.data.ix[haloID]['npart']
         subdat = self.get_all_subhalos_from_halo(haloID)
