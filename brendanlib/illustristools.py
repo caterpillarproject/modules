@@ -9,7 +9,7 @@ import readhalos.readsubfHDF5 as rsub
 import readsnapshots.readsnapHDF5 as rsnap
 
 def loadsnapspacing():
-    filename = './illustris-snapshot-spacing.dat'
+    filename = '/n/home01/bgriffen/work/illustris-snapshot-spacing.dat'
     snapspacing = np.loadtxt(filename)
     snapshots = snapspacing[:,0]
     expfactors = snapspacing[:,1]
@@ -492,7 +492,7 @@ def gettree(fileBase,snapNum,subhaloID,NtreeFiles=4096,verbose=False,getmain=Fal
     else:
         return varlist
 
-def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=False):
+def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields):
     """ Return requested fields for one particle type for all members of group/subgroup. """
  
     groupName = "PartType" + str(partType)
@@ -502,17 +502,14 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=Fa
  
     # load the length (by type) of this group/subgroup from the group catalog
     filePath = fileBase + '/postprocessing/offsets/offsets_' + dsetName.lower() + '_'+str(snapNum)+'.npy'
-    if verbose: print filePath
-
     offsets = np.load(filePath)
  
     offsets = searchID - offsets
     fileNum = np.max( np.where(offsets >= 0) )
     groupOffset = offsets[fileNum]
  
-    filePath = fileBase + 'output/groups_' + str(snapNum).zfill(3) + '/'
+    filePath = fileBase + 'groups_' + str(snapNum).zfill(3) + '/'
     filePath += 'fof_subhalo_tab_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
-    if verbose: print filePath
  
     f = h5py.File(filePath,'r')
     lenType = f[dsetName][dsetName+"LenType"][groupOffset]
@@ -520,7 +517,6 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=Fa
  
     # load the offset (by type) of this group/subgroup within the snapshot chunks
     filePath = fileBase + '/postprocessing/offsets/snap_offsets_' + dsetName.lower() + '_'+str(snapNum)+'.hdf5'
-    if verbose: print filePath
  
     f = h5py.File(filePath,'r')
     offsetType = f["Offsets"][ searchID ]
@@ -528,8 +524,8 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=Fa
  
     # load the offsets for the snapshot chunks
     filePath = fileBase + '/postprocessing/offsets/offsets_snap_'+str(snapNum)+'.npy'
-    if verbose: print filePath
     offsets = np.load(filePath)
+ 
     # determine first snapshot chunk we need to load for this type
     wOffset = 0
     result  = {}
@@ -543,8 +539,8 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=Fa
     while numLeftToRead:
  
         # loop over files, for each load the overlapping chunk into the hdf5 file
-        curSnapFilePath = fileBase + 'output/snapdir_' + str(snapNum).zfill(3) + '/'
-        curSnapFilePath += 'snap_' + str(snapNum) + '.' + str(fileNum) + '.hdf5'
+        curSnapFilePath = fileBase + 'snapdir_' + str(snapNum).zfill(3) + '/'
+        curSnapFilePath += 'snap_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
  
         fSnap = h5py.File(curSnapFilePath,'r')
  
@@ -559,27 +555,17 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields,verbose=Fa
         # loop over each requested field for this particle type
         for fieldName in fields:
             # shape and type
-            dtype = 'float32'
-            ndims = 1
-            if fieldName == 'ParticleIDs' or fieldName == 'ParentID' or fieldName == 'TracerID':
-                dtype = 'int64'
-            if fieldName == 'NumTracers':
-                dtype = 'int32'
-            if fieldName == 'Coordinates' or fieldName == 'Velocities':
-                ndims = 3
-            if fieldName == 'GFM_Metals':
-                ndims = 9
-            if fieldName == 'GFM_StellarPhotometrics':
-                ndims = 8
+            dtype = fSnap[groupName][fieldName].dtype
+            shape = fSnap[groupName][fieldName].shape
  
             # read data local to the current file (allocate dataset if it does not already exist)
-            if ndims == 1:
+            if len(shape) == 1:
                 if fieldName not in result:
                     result[fieldName] = np.zeros( (lenType[partType],), dtype=dtype )
                 result[fieldName][wOffset:wOffset+readLen] = fSnap[groupName][fieldName][fileOffset:fileOffset+readLen]
             else:
                 if fieldName not in result:
-                    result[fieldName] = np.zeros( (lenType[partType],ndims), dtype=dtype )
+                    result[fieldName] = np.zeros( (lenType[partType],shape[1]), dtype=dtype )
                 result[fieldName][wOffset:wOffset+readLen,:] = fSnap[groupName][fieldName][fileOffset:fileOffset+readLen,:]
  
         wOffset += readLen
