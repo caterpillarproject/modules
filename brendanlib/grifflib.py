@@ -16,7 +16,7 @@ import sys,os,time
 import pickle
 import haloutils as htils
 import readsnapshots.readhsml as readhsml
-import viz.SphMap as SphMap
+#import viz.SphMap as SphMap
 import calc.CalcHsml as ca
 from matplotlib.colors import LogNorm
 
