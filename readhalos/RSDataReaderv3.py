@@ -98,9 +98,9 @@ class RSDataReader:
         file_num = 0
 	digits = 3
         if sub:
-            file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+            file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".fullbin"
         else:
-            file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
+            file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".fullbin"
         
         if (file_num == 0 and not os.path.exists(file_name)):
             print "ERROR: file not found", file_name
@@ -138,9 +138,9 @@ class RSDataReader:
         #reset file name
         file_num = 0
         if sub:
-            file_name = dir+ '/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            file_name = dir+ '/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".fullbin"
         else:
-            file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+            file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".fullbin"
         
         #print file_name
         #file_name = dir+ '/' + base + str(snap_num).zfill(digits) +'/'+base+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
@@ -199,10 +199,10 @@ class RSDataReader:
             file_num += 1
             if sub:
                 #file_name = dir + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
-                file_name = dir+ "/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+                file_name = dir+ "/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".fullbin"
             else:
                 #file_name = dir + '/' + base + str(snap_num).zfill(digits) + '/' + base + str(snap_num).zfill(digits) + "." + str(file_num) + ".bin"
-                file_name = dir+ '/' + base + str(snap_num).zfill(digits)+"/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".bin"
+                file_name = dir+ '/' + base + str(snap_num).zfill(digits)+"/halos_"+str(snap_num).zfill(digits)+"."+str(file_num)+".fullbin"
 
         sortedIndices = data[:,mvir].argsort()[::-1]
         data = data[sortedIndices]

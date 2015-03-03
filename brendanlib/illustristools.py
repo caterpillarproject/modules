@@ -508,9 +508,9 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields):
     fileNum = np.max( np.where(offsets >= 0) )
     groupOffset = offsets[fileNum]
  
-    filePath = fileBase + 'groups_' + str(snapNum).zfill(3) + '/'
+    filePath = fileBase + '/output/groups_' + str(snapNum).zfill(3) + '/'
     filePath += 'fof_subhalo_tab_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
- 
+
     f = h5py.File(filePath,'r')
     lenType = f[dsetName][dsetName+"LenType"][groupOffset]
     f.close()
@@ -539,7 +539,7 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields):
     while numLeftToRead:
  
         # loop over files, for each load the overlapping chunk into the hdf5 file
-        curSnapFilePath = fileBase + 'snapdir_' + str(snapNum).zfill(3) + '/'
+        curSnapFilePath = fileBase + '/output/snapdir_' + str(snapNum).zfill(3) + '/'
         curSnapFilePath += 'snap_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
  
         fSnap = h5py.File(curSnapFilePath,'r')
@@ -577,3 +577,34 @@ def loadSnapSubset(fileBase,snapNum,searchID,getGroup,partType,fields):
  
     # reads across all files done, for all fields of this type
     return result
+
+def loadGroupCatSingle(fileBase,snapNum,searchID,getGroup):
+    """ Return complete subhalo (subfind) information on one group. 
+        Search for subhalo/subgroup if getGroup==0, else search for halo/fof group. """
+ 
+    dsetName = "Subhalo"
+    if getGroup > 0:
+        dsetName = "Group"
+ 
+    # load groupcat offsets, calculate target file and offset
+    filePath = fileBase + '/postprocessing/offsets/offsets_'+dsetName.lower()+'_'+str(snapNum)+'.npy'
+    offsets = np.load(filePath)
+ 
+    offsets = searchID - offsets
+    fileNum = np.max( np.where(offsets >= 0) )
+    groupOffset = offsets[fileNum]
+ 
+    # load subhalo fields into a dict
+    filePath = fileBase + 'groups_' + str(snapNum).zfill(3) + '/'
+    filePath += 'fof_subhalo_tab_' + str(snapNum).zfill(3) + '.' + str(fileNum) + '.hdf5'
+ 
+    result = {}
+ 
+    f = h5py.File(filePath,'r')
+ 
+    for haloProp in f[dsetName].keys():
+        result[haloProp] = f[dsetName][haloProp][groupOffset]
+ 
+    f.close()
+    return result
+
