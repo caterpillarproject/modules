@@ -738,7 +738,7 @@ class MTCatalogue:
                     counter=0
                     self.HostLocs = []
                 for file_loc,haloid in itertools.izip(file_locs,haloids):
-                    print haloid
+#                    print haloid
                     f.seek(file_loc)
                     tag = f.read(8)
                     halotype,nrow = struct.unpack("ii",tag)
