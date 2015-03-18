@@ -599,6 +599,8 @@ class RSDataReader:
 
     def __getitem__(self,key):
         return self.data[key]
+    def __setitem__(self,key, item):
+        self.data[key] = item
     def __len__(self):
         return len(self.data)
     def __repr__(self):
