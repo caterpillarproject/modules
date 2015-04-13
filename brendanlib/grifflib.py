@@ -20,6 +20,71 @@ import readsnapshots.readhsml as readhsml
 import calc.CalcHsml as ca
 from matplotlib.colors import LogNorm
 import readhalos.RSDataReader as RS
+import viz.SphMap as SphMap
+
+fig_for_talks = {  'lines.color': 'white',
+            'patch.edgecolor': 'white',
+            'text.color': 'white',
+            'axes.facecolor': 'black',
+            'axes.edgecolor': 'white',
+            'axes.labelcolor': 'white',
+            'xtick.color': 'white',
+            'ytick.color': 'white',
+            'grid.color': 'white',
+            'figure.facecolor':  'white',
+            'figure.edgecolor':  'white',
+            'savefig.facecolor': 'white',
+            'savefig.edgecolor': 'white',
+            
+            'axes.linewidth': 4,
+            'font.size' : 24,
+            'xtick.labelsize': 20,
+            'ytick.labelsize': 20,
+
+            'ytick.major.width':3,
+            'ytick.minor.width':3,
+            'xtick.major.width':3,
+            'xtick.minor.width':3,
+
+            'xtick.major.size':10,
+            'xtick.minor.size':5,
+            'ytick.major.size':10,
+            'ytick.minor.size':5,
+
+            'figure.figsize': (11,7),
+            'legend.framealpha':1,
+            'font.weight': 'bold',
+            'axes.labelweight':'bold',
+            'savefig.transparent':True,
+            'savefig.bbox': 'tight'}
+
+fig_for_papers = {  
+            
+            'axes.linewidth': 3,
+            'font.size' : 28,
+            'xtick.labelsize': 22,
+            'ytick.labelsize': 22,
+
+            'xtick.major.size':12,
+            'xtick.minor.size':8,
+            'ytick.major.size':12,
+            'ytick.minor.size':8,
+
+            'ytick.major.width':4,
+            'xtick.major.width':4,
+            'ytick.minor.width':3,
+            'xtick.minor.width':3,
+
+            'figure.figsize': (10,10),
+            'legend.fontsize': 16,
+            'legend.frameon': False,
+            #'font.weight': 'bold',
+            #'axes.labelweight':'bold',
+
+            'savefig.bbox': 'tight',
+            'savefig.dpi':300,
+            'text.latex.preamble': r"\usepackage{amsmath}"}
+
 
 def getRSCat(label, lx, hid):
     snap_num = 255
@@ -65,22 +130,30 @@ def angle_between(v1, v2):
     
     return angle
 
-def get_filesize_of_list(glob_list):
+def get_size_of_files(file_list):
     total_size = 0
 
-    for filei in glob_list:
+    for filei in file_list:
         total_size += os.path.getsize(filei)
     
     return total_size
 
-def getFolderSize(folder):
+def get_size_of_folder(folder):
     total_size = os.path.getsize(folder)
     for item in os.listdir(folder):
         itempath = os.path.join(folder, item)
         if os.path.isfile(itempath):
             total_size += os.path.getsize(itempath)
         elif os.path.isdir(itempath):
-            total_size += getFolderSize(itempath)
+            total_size += get_size_of_folder(itempath)
+    return total_size
+
+def get_size_of_folders(folders):
+    total_size = 0
+
+    for filei in folders:
+        total_size += get_size_of_folder(filei)
+    
     return total_size
 
 def first_twelve():
@@ -236,11 +309,11 @@ def make_music_submission_script(runpath,cfgname,job_name):
     f.write("#SBATCH -N 1\n")
     f.write("#SBATCH --exclusive\n")
     
-    if "LX11" in runpath:
-        f.write('#SBATCH -p HyperNodes\n')
-        ncores = 24
+    #if "LX11" in runpath:
+    #    f.write('#SBATCH -p AMD64\n')
+    #    ncores = 24
 	    
-    if "LX12" in runpath or "LX13" in runpath or "LX14" in runpath:
+    if "LX11" in runpath or "LX12" in runpath or "LX13" in runpath or "LX14" in runpath:
         f.write('#SBATCH -p AMD64\n')
         ncores = 64
 
@@ -276,15 +349,23 @@ def make_gadget_submission_script(runpath,job_name,restart_flag):
     f.write('#SBATCH -e gadget.e%j\n')
     f.write('#SBATCH -J '+ job_name + '\n')
 
-    if "LX11" in runpath or "LX12" in runpath:
+    if "LX11" in runpath:
         queue = "HyperNodes"
         ncores = 24
         core_setup = '-n ' + str(ncores)
+
+    if "LX12" in runpath:
+        queue = "AMD64"
+        ncores = 64
+        core_setup = '-n ' + str(ncores)
         
     if "LX13" in runpath:
-        queue = "HyperNodes"
-        ncores = 144
-        core_setup = '-N 6 -n ' + str(ncores)
+        queue = "AMD64"
+        ncores = 64
+        core_setup = '-n ' + str(ncores)
+        #queue = "HyperNodes"
+        #ncores = 144
+        #core_setup = '-N 6 -n ' + str(ncores)
 
     if "LX14" in runpath:
         queue = "AMD64"
@@ -327,15 +408,23 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
                 print "COPYING GADGET FILES...",folder_single
                 mkdir_outputs = "mkdir -p " + folder + "/outputs/"
                 
-                if "LX11" in folder or "LX12" in folder:
-                    queue = "RegNodes"
-                    ncores = 16
+                if "LX11" in folder:
+                    ncores = 24
                     pmgrid = 256
+                    queue = "HyperNodes"
+
+                if "LX12" in folder:
+                    ncores = 64
+                    pmgrid = 256
+                    queue = "AMD64"
 
                 if "LX13" in folder:
-                    queue = "HyperNodes"
-                    ncores = 144
-                    pmgrid = 512
+                    ncores = 64
+                    pmgrid = 256
+                    queue = "AMD64"
+                    #queue = "HyperNodes"
+                    #ncores = 144
+                    #pmgrid = 512
                     
                 if "LX14" in folder:
                     queue = "AMD64"
@@ -462,18 +551,34 @@ def run_music(suite_paths,music_path,lagr_path,lx_list):
 
 def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_list):
     #print halo_geometries
+    #special_attention = glob.glob(base_path+"special_attention/*")
+    major_mergers = glob.glob(base_path+"massive_mergers/*")
+
+    skip_list = []
+
+    #for halo in special_attention:
+    #    skip_list.append(halo.split("/")[-1])
+
+    for halo in major_mergers:
+        skip_list.append(halo.split("/")[-1])
+
+    #print skip_list
     for halo_name,ic_info in halo_geometries.iteritems():
-        geometry = ic_info.split("_")[0]
-        nvir = ic_info.split("_")[1]
-        
-        for LX in ["11","12","13","14"]:
-	    if LX[1] in lx_list:
-                folder = base_path + halo_name + "/" + halo_name +  "_"+geometry+"_Z127_P7_LN7_LX"+LX+"_O4_NV"+nvir
-                cmd_make_next_level = "mkdir -p " + folder
-                subprocess.call([cmd_make_next_level],shell=True)
-        
-        sub_suite_paths = glob.glob(base_path + "/"+halo_name+"/H*")
-        run_music(sub_suite_paths,music_path,lagr_path,lx_list)
+        if halo_name in ["H861036","H1599902","H1232127"]:
+            geometry = ic_info.split("_")[0]
+            nvir = ic_info.split("_")[1]
+            
+            for LX in ["11","12","13","14"]:
+                if LX[1] in lx_list and halo_name not in skip_list:
+                    folder = base_path + halo_name + "/" + halo_name +  "_"+geometry+"_Z127_P7_LN7_LX"+LX+"_O4_NV"+nvir
+                    if not os.path.isdir(folder):
+                        #print halo_name
+                        cmd_make_next_level = "mkdir -p " + folder
+                        print cmd_make_next_level
+                        subprocess.call([cmd_make_next_level],shell=True)
+            
+            sub_suite_paths = glob.glob(base_path + "/"+halo_name+"/H*")
+            run_music(sub_suite_paths,music_path,lagr_path,lx_list)
 
 def constructresimconf(confname,boxlength,zstart,lmin,lTF,lmax,padding,overlap,refcentx,refcenty,refcentz, \
                         refextx,refexty,refextz,align,baryons,use2LPT,useLLA,omegam,omegal,omegab,hubble, \
@@ -712,17 +817,29 @@ def make_destination_folders_clean(base_path,suite_names,lx,nrvir):
             subprocess.call([cmd_make_folder],shell=True)
 
 def make_destination_folders(base_path,suite_names,lx,nrvir):
+    # special_attention = glob.glob(base_path+"special_attention/*")
+    major_mergers = glob.glob(base_path+"massive_mergers/*")
+
+    skip_list = []
+
+    #for halo in special_attention:
+    #    skip_list.append(halo.split("/")[-1])
+
+    for halo in major_mergers:
+        skip_list.append(halo.split("/")[-1])
+
     for folder in glob.glob(base_path+"H*"):
         haloid = folder.split("halos/")[-1].split("_")[0]
         #folder_single = folder.split("/")[-1]
         for suite in suite_names:
-            new_folder_name = haloid + "_" + suite + "_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
-            #old_folder_name = haloid + "_BB_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
-            #print new_folder_name
-            #cmd_rm_folder = "rm -rf " + folder +  "/contamination_suite/" + old_folder_name + "_" + suite 
-            #subprocess.call([cmd_rm_folder],shell=True)
-            cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + new_folder_name
-            subprocess.call([cmd_make_folder],shell=True)
+            if haloid not in skip_list:
+                new_folder_name = haloid + "_" + suite + "_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
+                #old_folder_name = haloid + "_BB_Z127_P7_LN7_LX"+str(lx)+"_O4_NV"+str(nrvir)
+                #print new_folder_name
+                #cmd_rm_folder = "rm -rf " + folder +  "/contamination_suite/" + old_folder_name + "_" + suite 
+                #subprocess.call([cmd_rm_folder],shell=True)
+                cmd_make_folder = "mkdir -p " + folder + "/contamination_suite/" + new_folder_name
+                subprocess.call([cmd_make_folder],shell=True)
 
 
 def construct_music_cfg(lagr_file,master_music_cfg_orig,master_music_cfg_dest,typeic):
@@ -1754,7 +1871,7 @@ def create_mt_image(hpath,header,zoomid,parentid,image_path):
     fig2.savefig(image_path + 'all_stacked_mvir_vmax.png',bbox_inches='tight')
     
 def get_subhalo_mass_fraction(halodata,haloid):
-    mhost = float(halodata.ix[haloid]['mvir'])
+    mhost = float(halodata.ix[haloid]['mgrav'])
     subhalos = halodata.get_all_subhalos_within_halo(haloid)
     if len(subhalos) > 0:
         submass = np.array(subhalos['mvir']).sum()
@@ -2006,11 +2123,11 @@ def get_projection_bool(projection):
     p_use = pabs[p_mask]
     return p_use[0],p_use[1]
 
-def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo=0,want_just_img_width=False,halodir='halos'):
+def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo=0,want_just_img_width=False):
 
     header = htils.get_halo_header(hpath,snap=snapshot)
 
-    halos = htils.load_rscat(hpath,snapshot,halodir=halodir)
+    halos = htils.load_rscat(hpath,snapshot)
     pos_host = np.array([halos.ix[zoomid]['posX'],halos.ix[zoomid]['posY'],halos.ix[zoomid]['posZ']])
 
     img_width = img_width_nrvir*2.*float(halos.ix[zoomid]['rvir'])/1000.
@@ -2059,10 +2176,24 @@ def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo
     print "[ > adjusting positions: %3.2f minutes ]" % ((t1-t0)/60.)
 
     t0 = time.clock()
-    hsml = readhsml.hsml_file(hpath+"/outputs/",255)
-    hsmlvals = hsml.Hsml[ids]
+    print "Do smoothing lengths exist?",os.path.isdir(hpath+"/outputs/hsmldir_255")
+    if os.path.isdir(hpath+"/outputs/hsmldir_255"):
+        hsml = readhsml.hsml_file(hpath+"/outputs/",255)
+        hsmlvals = hsml.Hsml[ids]
+    else:
+        if not os.path.isdir(hpath+"/analysis/hsmls.dat"):
+            print "Calculating smoothing lengths..."
+            hsmlvals=ca.CalcHsml(pos, mass, 4, float(0), float(0.0), float(1.0), float(1.0), float(0.0))
+            np.save(hpath+"/analysis/hsmls.dat",hsmlvals)
+        else:
+            print "Loading them from file: analysis/hsml.dat"
+            hsmlvals = np.load(hpath+"/analysis/hsmls.dat")
+        
+
     t1 = time.clock()
 
+
+    
     #print "LEN(pos)",len(pos)
     #print "LEN(mass)",len(mass)
     #print "LEN(hsmlvals)",len(hsmlvals)
@@ -2074,11 +2205,11 @@ def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo
 
     return pos,mass,hsmlvals,img_width
 
-def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=True,halodir='halos'):
+def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=True):
 
     px,py = get_projection_bool(projection)
 
-    halos = htils.load_rscat(hpath,snapshot,halodir=halodir)
+    halos = htils.load_rscat(hpath,snapshot)
     #rsid = htils.load_zoomid(hpath)
 
     x = np.array(halos['posX'])
@@ -2096,7 +2227,7 @@ def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img
 
     #if img_width == 0:
 
-    halos = htils.load_rscat(hpath,snapshot,halodir=halodir)
+    halos = htils.load_rscat(hpath,snapshot)
     #img_width = img_width_nrvir*2.*float(halos.ix[rsid]['rvir'])/1000.
 
     if nth_halo == 0:
@@ -2149,9 +2280,9 @@ def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img
 
     return ax1
 
-def overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=False,halodir='halos'):
+def overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=False):
 
-    halos = htils.load_rscat(hpath,snapshot,halodir=halodir)
+    halos = htils.load_rscat(hpath,snapshot)
     #rsid = htils.load_zoomid(hpath)
 
     x = np.array(halos['posX'])
@@ -2243,7 +2374,7 @@ def overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth
 
     return ax1,ax2,ax3
 
-def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_projection.png',snapshot=255,cmap_name='hot',img_width_nrvir=1,img_width_force=0,img_res=512,render_type='single',projection='xy',resolution_list=[11,12,13,14],include_rockstar=False,include_subfind=False,halodir='halos',want_label_on_halos=False):
+def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_projection.png',snapshot=255,cmap_name='hot',img_width_nrvir=1,img_width_force=0,img_res=512,render_type='single',projection='xy',resolution_list=[11,12,13,14],include_rockstar=False,include_subfind=False,want_label_on_halos=False):
     
     if "cat" in cmap_name:
         cmap = makecolormap()
@@ -2265,7 +2396,7 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
     print "Render Type:",render_type
     print "Projection:",projection
     print "Forced Image Width [kpc]:",img_width_force
-    print "Using halosdir:",halodir+"/"
+    print "Using halosdir: halos_bound/"
     print "Overlay Rockstar?",include_rockstar
     print "Overlay Rockstar Labels?",want_label_on_halos
     print "Overlay SUBFIND?",include_subfind
@@ -2279,10 +2410,10 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         fig, ax1 = plt.subplots(1, 1, figsize=(12,12))
         px,py = get_projection_bool(projection)
 
-        file_name = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P"+str(int(px))+str(int(py))+".dat"
+        file_name = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P"+str(int(px))+str(int(py))+"_SN"+str(snapshot)+".dat"
 
         if not os.path.isfile(file_name): make_map(file_name,pos,hsmlvals,mass,img_res,img_width,px,py,cmap)
-
+ 
         map = np.loadtxt(file_name)
         render(ax1,map,cmap,img_width)
 
@@ -2304,15 +2435,15 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         hpath = htils.get_hpath_lx(pid,lx)
         #zoomid = htils.load_zoomid(hpath)
 
-        img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True,halodir=halodir)
-        file_name_xy = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01.dat"
-        file_name_xz = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02.dat"
-        file_name_yz = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12.dat"
+        img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True)
+        file_name_xy = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot)+".dat"
+        file_name_xz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot)+".dat"
+        file_name_yz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot)+".dat"
 
         t0 = time.clock()
         
-        if not os.path.isfile(file_name_xy) or not os.path.isfile(file_name_xz) or not os.path.isfile(file_name_yz):
-            pos,mass,hsmlvals,img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,halodir=halodir)
+        #if not os.path.isfile(file_name_xy) or not os.path.isfile(file_name_xz) or not os.path.isfile(file_name_yz):
+        pos,mass,hsmlvals,img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo)
 
         t1 = time.clock()
         
@@ -2322,7 +2453,7 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         if not os.path.isfile(file_name_xy): make_map(file_name_xy,pos,hsmlvals,mass,img_res,img_width,0,1,cmap) # xy
         if not os.path.isfile(file_name_xz): make_map(file_name_xz,pos,hsmlvals,mass,img_res,img_width,0,2,cmap) # xz
         if not os.path.isfile(file_name_yz): make_map(file_name_yz,pos,hsmlvals,mass,img_res,img_width,1,2,cmap) # yz
-        
+
         map_xy = np.loadtxt(file_name_xy)
         render(ax1,map_xy,cmap,img_width)
         map_xz = np.loadtxt(file_name_xz)
@@ -2343,8 +2474,8 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         ax2.set_yticks([])
         ax3.set_yticks([])
 
-        if include_rockstar: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos,halodir=halodir)
-        if include_subfind: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',halodir=halodir)
+        if include_rockstar: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos)
+        if include_subfind: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax')
 
         ax1.text(0.9, 0.05,'XY', horizontalalignment='left',verticalalignment='center',transform = ax1.transAxes,weight='bold',fontsize=14,color='w')
         ax2.text(0.9, 0.05,'XZ', horizontalalignment='left',verticalalignment='center',transform = ax2.transAxes,weight='bold',fontsize=14,color='w')
@@ -2366,16 +2497,16 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             hpath = htils.get_hpath_lx(pid,lx)
             zoomid = htils.load_zoomid(hpath)
 
-            img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True,halodir=halodir)
+            img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True)
 
-            file_name_xy = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01.dat"
-            file_name_xz = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02.dat"
-            file_name_yz = hpath+"analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12.dat"
+            file_name_xy = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot)+".dat"
+            file_name_xz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot)+".dat"
+            file_name_yz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot)+".dat"
 
             t0 = time.clock()
 
             if not os.path.isfile(file_name_xy) or not os.path.isfile(file_name_xz) or not os.path.isfile(file_name_yz):
-                pos,mass,hsmlvals,img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,halodir=halodir)
+                pos,mass,hsmlvals,img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo)
 
             t1 = time.clock()
             print "[ reading positions, masses, smoothing lengths: %3.2f minutes ]" % ((t1-t0)/60.)
@@ -2414,8 +2545,8 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             ax3.set_yticklabels([])
             
             t0 = time.clock()
-            if include_rockstar: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos,halodir=halodir)
-            if include_subfind: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos,halodir=halodir)
+            if include_rockstar: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos)
+            if include_subfind: overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos)
             t1 = time.clock()
             print "[ overlaying halos: %3.2f minutes ]" % ((t1-t0)/60.)
 
@@ -2424,8 +2555,8 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             ax3.text(0.9, 0.05,'YZ', horizontalalignment='left',verticalalignment='center',transform = ax3.transAxes,weight='bold',fontsize=14,color='w')
             ax1.text(0.05, 0.9,'LX:'+str(lx), horizontalalignment='left',verticalalignment='center',transform = ax1.transAxes,weight='bold',fontsize=14,color='w')
     
-    img_path = "/nfs/blank/h4231/bgriffen/Dropbox/caterpillar_plots/zoom/density_projections/static/convergence_issues/"
-    img_filename = "H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_KPC"+str(int(img_width*1000.))+"_CM"+cmap_name.upper()+"_"+render_type.upper()+"_"+halodir.upper()+".png"
+    img_path = "/nfs/blank/h4231/bgriffen/Dropbox/work/projects/caterpillar/convergence/"
+    img_filename = "H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_KPC"+str(int(img_width*1000.))+"_CM"+cmap_name.upper()+"_"+render_type.upper()+".png"
     print "writing out:",img_filename
     img_writeout = img_path + img_filename
     fig.savefig(img_writeout,bbox_inches='tight')
