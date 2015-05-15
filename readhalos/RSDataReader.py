@@ -220,13 +220,14 @@ class RSDataReader:
                         ('b_to_a','<f8'),('c_to_a','<f8'),('A[x]','<f8'),('A[y]','<f8'),('A[z]','<f8'),\
                         ('b_to_a2','<f8'),('c_to_a2','<f8'),('A2[x]','<f8'),('A2[y]','<f8'),('A2[z]','<f8'),\
                         ('spin_bullock','<f8'),('T/|U|','<f8'),\
-                        ('m_pe_b','<f8'),('m_pe_d','<f8'),\
+                        ('m_pe_b','<f8'),('m_pe_d','<f8'),('halfmassrad','<f8'),\
                         ('npart','<i8'),('num_cp','<i8'),('numstart','<i8'),\
                         ('desc','<i8'),('flags','<i8'),('n_core','<i8'),\
                         ('min_pos_err','<f8'),('min_vel_err','<f8'),('min_bulkvel_err','<f8'),\
                         ('num_bound','<i8'),('num_iter','<i8'),\
                         ('hostID','<i8'),('offset','<i8'),('particle_offset','<i8')])
-            datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffqq"
+            datatypesstr = "qffffffffffffffffffffffffffffffffffffffffffffffffqqqqqqfffqq"
+            #datatypesstr = "qfffffffffffffffffffffffffffffffffffffffffffffffqqqqqqxxxxfffqq"
             numbytes = struct.calcsize(datatypesstr) #264
 
         self.datatypesstr = datatypesstr
@@ -594,8 +595,62 @@ class RSDataReader:
             return "Version 7: Rockstar 0.99.9 RC3 with full particles on"
         if self.version == 8:
             return "Version 8: Rockstar 0.99.9 RC3+/4 with full particles on"
+        if self.version == 9:
+            return "Version 9: Rockstar 0.99.9 RC3+/4 with only bound particles (NOT USED ANYMORE)"
+        if self.version == 10:
+            return "Version 10: Rockstar 0.99.9 RC3+/4 with only bound particles"
         return "ERROR: Not a valid version number!"
 
+
+    def to_ascii(self,filename):
+        assert self.version==10
+        with open(filename,'w') as f:
+            # print first line to match rockstar
+            f.write("#id num_p mvir mbound_vir rvir vmax rvmax vrms x y z vx vy vz Jx Jy Jz E Spin PosUncertainty VelUncertainty bulk_vx bulk_vy bulk_vz BulkVelUnc n_core m200b m200c m500c m2500c Xoff Voff spin_bullock b_to_a c_to_a A[x] A[y] A[z] b_to_a(500c) c_to_a(500c) A[x](500c) A[y](500c) A[z](500c) Rs Rs_Klypin T/|U| M_pe_Behroozi M_pe_Diemer Halfmass_Radius idx i_so i_ph num_cp mmetric\n")
+            # First line for modified version
+            #f.write("#id num_p mvir mbound_vir rvir vmax rvmax vrms x y z vx vy vz Jx Jy Jz E Spin PosUncertainty VelUncertainty bulk_vx bulk_vy bulk_vz BulkVelUnc n_core m200b m200c m500c m2500c Xoff Voff spin_bullock b_to_a c_to_a A[x] A[y] A[z] b_to_a(500c) c_to_a(500c) A[x](500c) A[y](500c) A[z](500c) Rs Rs_Klypin T/|U| M_pe_Behroozi M_pe_Diemer Halfmass_Radius num_cp num_bound num_iter \n")
+
+            # print header info
+            f.write("#a = {0}\n".format(self.scale))
+            f.write("#FOF linking length: 0.28\n")
+            f.write("#Om = {0}; Ol = {1}; h = {2}\n".format(self.Om,self.Ol,self.h0))
+            f.write("#Unbound Threshold: NA; FOF Refinement Threshold: 0.7\n")
+            f.write("#Particle mass: {0:.5e} Msun/h\n".format(self.particle_mass))
+            f.write("#Box size: {0} Mpc/h\n".format(self.boxsize))
+            #f.write("#Total particles processed: NA\n")
+            #f.write("#Force resolution assumed: NA Mpc/h\n")
+            f.write("#Units: Masses in Msun / h\n")
+            f.write("#Units: Positions in Mpc / h (comoving)\n")
+            f.write("#Units: Velocities in km / s (physical, peculiar)\n")
+            f.write("#Units: Halo Distances, Lengths, and Radii in kpc / h (comoving)\n")
+            f.write("#Units: Angular Momenta in (Msun/h) * (Mpc/h) * km/s (physical)\n")
+            f.write("#Units: Spins are dimensionless\n")
+            f.write("#Units: Total energy in (Msun/h)*(km/s)^2 (physical)\n")
+
+            # loop through and print halos
+            # These are to match rockstar directly, including the unsaved debug quantities. Note I haven't taken the sqrt of the uncertainties.
+            cols = ['id','npart','mvir','mgrav','rvir','vmax','rvmax','vrms','posX','posY','posZ','pecVX','pecVY','pecVZ','Jx','Jy','Jz','Epot','spin','min_pos_err','min_vel_err','bulkvelx','bulkvely','bulkvelz','min_bulkvel_err','n_core','altm1','altm2','altm3','altm4','Xoff','Voff','spin_bullock','b_to_a','c_to_a','A[x]','A[y]','A[z]','b_to_a2','c_to_a2','A2[x]','A2[y]','A2[z]','rs','rs_klypin','T/|U|','m_pe_b','m_pe_d','halfmassrad','num_cp']
+            fmt = "%i %i %.3e %.3e %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i %e %e %e %e %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f 0 0 0 %i 0\n"
+            # These are to match the modified version
+            #cols = ['id','npart','mvir','mgrav','rvir','vmax','rvmax','vrms','posX','posY','posZ','pecVX','pecVY','pecVZ','Jx','Jy','Jz','Epot','spin','min_pos_err','min_vel_err','bulkvelx','bulkvely','bulkvelz','min_bulkvel_err','n_core','altm1','altm2','altm3','altm4','Xoff','Voff','spin_bullock','b_to_a','c_to_a','A[x]','A[y]','A[z]','b_to_a2','c_to_a2','A2[x]','A2[y]','A2[z]','rs','rs_klypin','T/|U|','m_pe_b','m_pe_d','halfmassrad','num_cp','num_bound','num_iter']
+            #fmt = "%i %i %.3e %.3e %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i %e %e %e %e %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i %i %i\n"
+
+            for i in range(self.num_halos):
+                halo = self.data.iloc[i]
+                data = tuple(np.array(halo[cols]))
+                f.write(fmt % data)
+            #        id+id_offset,
+            #        th->num_p, th->m, th->mgrav, th->r, th->vmax, th->rvmax, th->vrms,
+            #        th->pos[0], th->pos[1], th->pos[2], th->pos[3], th->pos[4],
+            #        th->pos[5], th->J[0], th->J[1], th->J[2], th->energy, th->spin,
+            #        sqrt(th->min_pos_err), sqrt(th->min_vel_err), th->bulkvel[0],
+            #        th->bulkvel[1], th->bulkvel[2], sqrt(th->min_bulkvel_err),
+            #        th->n_core, th->alt_m[0], th->alt_m[1], th->alt_m[2], th->alt_m[3],
+            #        th->Xoff, th->Voff, th->bullock_spin, th->b_to_a, th->c_to_a,
+            #        th->A[0], th->A[1], th->A[2], th->b_to_a2, th->c_to_a2,
+            #        th->A2[0], th->A2[1], th->A2[2], th->rs, th->klypin_rs, th->kin_to_pot,
+            #        th->m_pe_b, th->m_pe_d, th->halfmass_radius,
+            #        i, extra_info[i].sub_of, extra_info[i].ph, th->num_child_particles, extra_info[i].max_metric);
 
     def __getitem__(self,key):
         return self.data[key]
