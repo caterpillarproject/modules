@@ -14,7 +14,7 @@ class RSDataReader:
     """
     Alex's 10/4/13 rewrite of RSDataReader, combining v2 and v3 and cleaning everything up
     """
-    def __init__(self, dir, snap_num, version=2, sort_by='mvir', base='halos_', digits=2, noparents=False, AllParticles=False, unboundfrac=None, minboundpart=None):
+    def __init__(self, dir, snap_num, version=2, sort_by='mgrav', base='halos_', digits=2, noparents=False, AllParticles=False, unboundfrac=None, minboundpart=None):
         self.dir = dir
         self.snap_num = snap_num
         self.base = base
