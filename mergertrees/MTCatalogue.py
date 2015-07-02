@@ -50,8 +50,9 @@ import pydot
 import subprocess
 import glob
 import functools
+import asciitable
 
-def getScaleFactors(path,minsnap=0,digits=3,sub=False,returnminsnap=False):
+def getScaleFactors(path,minsnap=0,digits=3,returnminsnap=False):
     scalefile = path+'/outputs/scales.txt'
 
     f = open(scalefile)
@@ -453,7 +454,8 @@ class MTCatalogueTree:
     Or from a file that is already pointing to the right place (e.g. from MTCatalogue)
     """
     def __init__(self,scale_list=[],datatable=np.array([]),
-                 f=None,halotype=-1,nrow=-1,fmt="",fmttype=np.dtype([])):
+                 f=None,halotype=-1,nrow=-1,fmt="",fmttype=np.dtype([]),
+                 readtxt=False,txtheader=None):
         self.scale_list = scale_list
         if datatable != np.array([]):
             self.fileloc = -1
@@ -462,18 +464,32 @@ class MTCatalogueTree:
             self.data = datatable
             self.rockstar_id = self.data[0]['origid']
         else:
-            if f==None or halotype==-1 or nrow==-1 or fmt=="" or fmttype==np.dtype([]):
-                print "ERROR: must specify all of these variables:"
-                print "f,halotype,nrow,fmt,fmttype"
-                raise RuntimeError("Didn't specify all variables")
-            self.fileloc = f.tell()
-            self.halotype=halotype #0 or 1
-            self.nrow = nrow
-            self.data = np.zeros(self.nrow,dtype=fmttype)
-            fmtsize = struct.calcsize(fmt)
-            for i in xrange(nrow):
-                self.data[i] = struct.unpack(fmt,f.read(fmtsize))
-            self.rockstar_id = self.data[0]['origid']
+            if readtxt:
+                assert txtheader != None
+                self.fileloc = f.tell()
+                line = f.readline() #first row of the MT
+                mtlist = []
+                while line != "" and line[0:5] != "#tree":
+                    mtlist.append(line.split())
+                    line = f.readline()
+                self.data = asciitable.read(mtlist,Reader=asciitable.Memory,names=txtheader)
+                self.data = self.data.astype(fmttype)
+                self.halotype = halotype
+                self.nrow = len(self.data)
+                self.rockstar_id = self.data[0]['origid']
+            else:
+                if f==None or halotype==-1 or nrow==-1 or fmt=="" or fmttype==np.dtype([]):
+                    print "ERROR: must specify all of these variables:"
+                    print "f,halotype,nrow,fmt,fmttype"
+                    raise RuntimeError("Didn't specify all variables")
+                self.fileloc = f.tell()
+                self.halotype=halotype #0 or 1
+                self.nrow = nrow
+                self.data = np.zeros(self.nrow,dtype=fmttype)
+                fmtsize = struct.calcsize(fmt)
+                for i in xrange(nrow):
+                    self.data[i] = struct.unpack(fmt,f.read(fmtsize))
+                self.rockstar_id = self.data[0]['origid']
 
     def plottree(self,filename='mytree',makepdf=True,savedot=False,mask=None):
         """
@@ -593,7 +609,7 @@ class MTCatalogue:
     """
     Read in the binary file created by convertmt
 
-    Two ways of creating this object.
+    Three ways of creating this object.
     The first way is to read in the first N hosts (and their subs).
     Specify numHosts = N (default reads in everything) to read N hosts.
     Also specify indexbyrsid=True to access trees by rsid instead of mass order
@@ -602,14 +618,18 @@ class MTCatalogue:
     The second way is to specify the indexfile (csv file) and a haloid.
     This will use indexfile to pinpoint the location in datafile corresponding
     to haloid and read in that host halo with all the subhalos as the catalogue.
+
+    The third way is to use version=5, which reads the txt files and parses trees 
+    using the locations.dat files to read in the haloids you give it.
+
     """
 
-    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False,sub=False):
+    def __init__(self,dir,haloids=[],version=2,numHosts=np.infty,indexbyrsid=False,verbose=False):
         self.dir = dir
         self.Trees = {} #key: rockstar halo ID; value: MT file
         self.indexbyrsid = indexbyrsid
-        self.scale_list = getScaleFactors(dir+'/../',sub=sub) #assumes /trees is current
-                                                     #folder in dir
+        self.scale_list = getScaleFactors(dir+'/../') #assumes /trees is current
+                                                      #folder in dir
         if version==1:
             self.fmt = "fiiiiifffffiffffffffffffiii"
             self.fmttype = np.dtype([('scale','<f8'),('id','<i8'),('desc_id','<i8'),
@@ -690,8 +710,11 @@ class MTCatalogue:
                                      ('b_to_a(500c)','<f8'),('c_to_a(500c)','<f8'),
                                      ('A[x](500c)','<f8'),('A[y](500c)','<f8'),('A[z](500c)','<f8'),
                                      ('T/|U|','<f8'),('snap','<i8')])
+        elif version==5:
+            self._readtxt(dir,haloids,indexbyrsid,verbose)
+            return #don't do the rest of init since it's already done!
         else:
-            print "ERROR, version must be 1, 2, 3, or 4"
+            print "ERROR, version must be 1, 2, 3, 4, or 5"
             sys.exit()
         self.fmtsize = struct.calcsize(self.fmt)
         ## NOTE: the reason I have separated the while loops is to speed up
@@ -788,6 +811,99 @@ class MTCatalogue:
                 print "or did not point to a host halo that corresponded to the input halo"
                 print "(Catalogue object is still created but empty)"
         f.close()
+
+    def _readtxt(self,tpath,haloids,indexbyrsid,verbose):
+        """
+        Used with version=5 to read in text files
+        """
+        assert len(haloids)>0,'version=5 Requires nonzero number of haloids to create catalogue'
+        if verbose: print "Using text files to read %i halos" % len(haloids)
+        if not os.path.exists(tpath+'/origtreeindex.dat'):
+            self._create_origtreeindex(tpath)
+        origtreetab = asciitable.read(tpath+'/origtreeindex.dat')
+        self.origtreeindex = dict(zip(origtreetab['origid'],origtreetab['treeid']))
+        loctab = asciitable.read(tpath+'/locations.dat')
+        self.locations = dict(zip(loctab['TreeRootID'],zip(loctab['FileID'],loctab['Offset'])))
+        
+        # create allfilenames based on consistenttrees mapping
+        # open files beforehand so you don't have to open a file for every tree
+        numfiles = len(glob.glob(tpath+'/tree_*.dat'))
+        box_divisions = numfiles**(1./3)
+        assert box_divisions == int(box_divisions)
+        box_divisions = int(box_divisions)
+        allfilenames = [tpath+'/tree_%i_%i_%i.dat' % (i/(box_divisions*box_divisions),
+                                                      (i % (box_divisions*box_divisions))/box_divisions,
+                                                      i % box_divisions) for i in range(numfiles)]
+        filelist = [open(f,'r') for f in allfilenames]
+
+        ## TODO make fmttype and headers
+        header = ['scale','id','desc_scale','desc_id','num_prog','pid','upid','desc_pid','phantom',
+                  'sam_mvir','mvir','rvir','rs','vrms','mmp','scale_of_last_MM','vmax','posX','posY','posZ',
+                  'pecVX','pecVY','pecVZ','Jx','Jy','Jz','spin','bfid','dfid','treerootid','origid',
+                  'snapnum','nextcoprog_dfid','lastprog_dfid','rs_klypin',
+                  'm200c_all','m200b','m200c','m500c','m2500c','xoff','voff','spin_bullock',
+                  'b_to_a','c_to_a','A[x]','A[y]','A[z]',
+                  'b_to_a(500c)','c_to_a(500c)','A[x](500c)','A[y](500c)','A[z](500c)',
+                  'T/|U|','m_pe_b','m_pe_d','halfmassrad']
+        types = ['<f8','<i8','<f8','<i8','<i8','<i8','<i8','<i8','<i8',
+                 '<f8','<f8','<f8','<f8','<f8','<i8','<f8','<f8','<f8','<f8','<f8',
+                 '<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                 '<i8','<i8','<i8','<i8','<i8','<i8','<i8','<f8',
+                 '<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                 '<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                 '<f8','<f8','<f8','<f8']
+        self.fmttype = np.dtype({'names':header,'formats':types})
+        line = filelist[0].readline()
+        assert len(line.split())==len(header),'number of columns in file is not same as in MTCatalogue'
+
+        counter = 0
+        for haloid in haloids:
+            treeid = self.origtreeindex[haloid]
+            fileid,loc = self.locations[treeid]
+            f = filelist[fileid]
+            f.seek(loc)
+            thistree = MTCatalogueTree(f=f,scale_list=self.scale_list,fmttype=self.fmttype,readtxt=True,txtheader=header)
+            if indexbyrsid:
+                rsid = thistree.rockstar_id
+                self.Trees[rsid] = thistree
+            else:
+                self.Trees[counter] = thistree
+                counter+=1
+        for f in filelist:
+            f.close()
+
+    def _create_origtreeindex(self,tpath,stoponrooted=True):
+        start = time.time()
+        print "creating origtreeindex (may take some time)..."
+        outfile = tpath+'/origtreeindex.dat'
+        infiles = glob.glob(tpath+'/tree_*.dat')
+        origids = []
+        treeids = []
+        skipcount=1
+        for filename in infiles:
+            treecount=0
+            with open(filename,'r') as f:
+                line = f.readline()
+                while True:
+                    if line=="": break
+                    elif line[0:5]=="#tree":
+                        line = f.readline()
+                        s = line.split()
+                        if float(s[0]) != 1.0: 
+                            if stoponrooted: raise IOError("Tree not rooted at a=1")
+                            else: continue
+                        # get ids
+                        origids.append(int(s[30])); treeids.append(int(s[1]))
+                        treecount += 1
+                        # skip to next tree
+                        while line != "" and line[0:5] != "#tree":
+                            line = f.readline()
+                    elif line[0]=="#": line = f.readline()
+                    elif skipcount>0: skipcount -= 1; numtrees = int(line); line = f.readline()
+                    else: raise IOError("Didn't read the tree files preperly")
+                assert treecount == numtrees
+        asciitable.write({'origid':origids,'treeid':treeids},outfile,names=['origid','treeid'])
+        print "done! Time: {0:.1f}".format(time.time()-start)
 
     def getSubTrees(self,treenum):
         """
