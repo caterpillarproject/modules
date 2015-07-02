@@ -549,6 +549,62 @@ class RSDataReader:
         boundsort = np.argsort(Etot)
         return pids[boundsort]
 
+    def get_bound_subhalos_from_halo(self, hpath,haloID):
+        subids = np.array(self.get_all_subhalos_from_halo(haloID)['id'])
+        #print subids
+        pos = np.array(self.ix[subids][['posX','posY','posZ']])
+        vel = np.array(self.ix[subids][['corevelx','corevely','corevelz']])
+        halopos = np.array(self.ix[haloID][['posX','posY','posZ']])
+        halovel = np.array(self.ix[haloID][['corevelx','corevely','corevelz']])
+        
+        peculiarVel = vel-halovel
+        Hflow = self.H()*(pos-halopos)*self.scale/self.h0
+        physicalVel = peculiarVel+Hflow
+        T = .5*sum((physicalVel**2).T)    
+
+        drhalos = distance(pos,halopos,boxsize=self.boxsize)*self.scale/self.h0#in Mpc physical
+
+        pids = self.get_all_particles_from_halo(haloID)
+        path = hpath+'/outputs/snapdir_'+str(self.snap_num).zfill(3)+'/snap_'+str(self.snap_num).zfill(3)
+    
+        ppos = rsg.read_block(path, "POS ", parttype=1, ids=np.sort(pids))
+        drp = distance(ppos,halopos,boxsize=self.boxsize)*self.scale/self.h0#in Mpc physical
+        mask = drp==0
+        drp=drp[~mask]
+        U = self.PotentialE_halos(drp,drhalos)
+
+        Etot = T + U
+        boundsort = np.argsort(Etot)
+        return T[boundsort],U[boundsort],Etot[boundsort],subids[boundsort]
+
+    def PotentialE_halos(self, dr,drhalos):
+        from scipy import interpolate
+        from scipy.integrate import quad
+        G = 1.326*10**11 # in km^3/s^2/Msun
+        mpc_to_km = 3.086*10**19
+        
+        rarr = 10**np.linspace(np.log10(min(dr))-.01, np.log10(max(dr))+.01,70) # in Mpc
+        h_r, x_r = np.histogram(dr, bins=np.concatenate(([0],rarr)))
+        m_lt_r = np.cumsum(h_r)*self.particle_mass/self.h0
+        tck = interpolate.splrep(rarr,m_lt_r) # gives mass in Msun
+        def Ufunc(x):
+            return interpolate.splev(x,tck)/(x**2)
+    
+        # do it even faster by using an interpolative function
+        # for computing potential energy
+        # pick 60 - 100 data points
+        # compute potential for all, then use an interpolation scheme
+        U = np.zeros(len(rarr))
+        for i in range(len(rarr)):
+            r = rarr[i]
+            if r > max(dr)+.05:
+                print 'warning - particle outside of halo. likely inaccurate PE'
+                U[i] = -G*m_lt_r[-1]/(r*mpc_to_km)
+            else:
+                tmp = -G*m_lt_r[-1]/(max(dr)*mpc_to_km)
+                U[i] = tmp+G*quad(Ufunc,max(dr),r,full_output=1)[0]/mpc_to_km
+        tck2 = interpolate.splrep(rarr,U)
+        return interpolate.splev(drhalos,tck2)
 
     def PotentialE(self, dr):
         from scipy import interpolate
