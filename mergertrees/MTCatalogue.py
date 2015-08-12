@@ -851,7 +851,25 @@ class MTCatalogue:
                  '<f8','<f8','<f8','<f8']
         self.fmttype = np.dtype({'names':header,'formats':types})
         line = filelist[0].readline()
-        assert len(line.split())==len(header),'number of columns in file is not same as in MTCatalogue'
+        # kludge for the new last_mainleaf_dfid
+        if len(line.split())==len(header)+1:
+            header = ['scale','id','desc_scale','desc_id','num_prog','pid','upid','desc_pid','phantom',
+                      'sam_mvir','mvir','rvir','rs','vrms','mmp','scale_of_last_MM','vmax','posX','posY','posZ',
+                      'pecVX','pecVY','pecVZ','Jx','Jy','Jz','spin','bfid','dfid','treerootid','origid',
+                      'snapnum','nextcoprog_dfid','lastprog_dfid','lastmainleaf_dfid','rs_klypin',
+                      'm200c_all','m200b','m200c','m500c','m2500c','xoff','voff','spin_bullock',
+                      'b_to_a','c_to_a','A[x]','A[y]','A[z]',
+                      'b_to_a(500c)','c_to_a(500c)','A[x](500c)','A[y](500c)','A[z](500c)',
+                      'T/|U|','m_pe_b','m_pe_d','halfmassrad']
+            types = ['<f8','<i8','<f8','<i8','<i8','<i8','<i8','<i8','<i8',
+                     '<f8','<f8','<f8','<f8','<f8','<i8','<f8','<f8','<f8','<f8','<f8',
+                     '<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                     '<i8','<i8','<i8','<i8','<i8','<i8','<i8','<i8','<f8',
+                     '<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                     '<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8','<f8',
+                     '<f8','<f8','<f8','<f8']
+            self.fmttype = np.dtype({'names':header,'formats':types})
+        assert len(line.split())==len(header),'number of columns in file {} is not same as in MTCatalogue {}'.format(len(line.split()),len(header))
 
         counter = 0
         for haloid in haloids:
@@ -876,7 +894,7 @@ class MTCatalogue:
         infiles = glob.glob(tpath+'/tree_*.dat')
         origids = []
         treeids = []
-        skipcount=1
+        skipcount=len(infiles)
         for filename in infiles:
             treecount=0
             with open(filename,'r') as f:
@@ -897,7 +915,7 @@ class MTCatalogue:
                             line = f.readline()
                     elif line[0]=="#": line = f.readline()
                     elif skipcount>0: skipcount -= 1; numtrees = int(line); line = f.readline()
-                    else: raise IOError("Didn't read the tree files preperly")
+                    else: raise IOError("Didn't read the tree files properly, {}".format(line))
                 assert treecount == numtrees
         asciitable.write({'origid':origids,'treeid':treeids},outfile,names=['origid','treeid'])
         print "done! Time: {0:.1f}".format(time.time()-start)
