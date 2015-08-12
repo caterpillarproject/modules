@@ -526,13 +526,16 @@ class MTCatalogueTree:
 
         graph = pydot.Dot(graph_type='graph',size="8, 8")
         for row in reversed(xrange(len(plotdata))):
-            nodesize = 100.0*(plotdata[row]['rvir']/maxvalue)
+            nodesize = (plotdata[row]['rvir']/maxvalue)
             if nodesize < 0.01: continue #skip over things too small to plot
+            #plotdata[row]['scale'],
+            label = "%i \n %i" % (plotdata[row]['id'],plotdata[row]['lastprog_dfid'])
             graph.add_node(pydot.Node(plotdata[row]['id'],
                                       shape='circle',fixedsize="true",
-                                      width=nodesize,#height=nodesize,
-                                      label=" "
-                                      #label=str(getsnap(plotdata[row]['scale']))+": "+str(plotdata[row]['origid'])
+                                      width=nodesize,#label=str(plotdata[row]['id'])
+                                      #,#height=nodesize,
+                                      #label=" "
+                                      label=label #,fontsize=str(nodesize)
                                       ))
             graph.add_edge(pydot.Edge(plotdata[row]['id'],plotdata[row]['desc_id']))
         #Delete the extra last node

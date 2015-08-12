@@ -35,7 +35,7 @@ fig_for_talks = {  'lines.color': 'white',
             'figure.edgecolor':  'white',
             'savefig.facecolor': 'white',
             'savefig.edgecolor': 'white',
-            
+	    'savefig.dpi':300,            
             'axes.linewidth': 4,
             'font.size' : 24,
             'xtick.labelsize': 20,
@@ -50,9 +50,14 @@ fig_for_talks = {  'lines.color': 'white',
             'xtick.minor.size':5,
             'ytick.major.size':10,
             'ytick.minor.size':5,
-
-            'figure.figsize': (11,7),
+            'xtick.major.pad':10,
+            'xtick.minor.pad':10,
+            'ytick.major.pad':10,
+            'ytick.minor.pad':10,
+            'figure.figsize': (12.5,7.5),
             'legend.framealpha':1,
+	    'legend.frameon': False,
+	    'legend.borderpad':1,
             'font.weight': 'bold',
             'axes.labelweight':'bold',
             'savefig.transparent':True,
@@ -60,7 +65,7 @@ fig_for_talks = {  'lines.color': 'white',
 
 fig_for_papers = {  
             
-            'axes.linewidth': 3,
+            'axes.linewidth': 4,
             'font.size' : 28,
             'xtick.labelsize': 22,
             'ytick.labelsize': 22,
@@ -74,17 +79,77 @@ fig_for_papers = {
             'xtick.major.width':4,
             'ytick.minor.width':3,
             'xtick.minor.width':3,
-
+            'xtick.major.pad':10,
+            'xtick.minor.pad':10,
+            'ytick.major.pad':10,
+            'ytick.minor.pad':10,
             'figure.figsize': (10,10),
             'legend.fontsize': 16,
             'legend.frameon': False,
             #'font.weight': 'bold',
             #'axes.labelweight':'bold',
-
+            'legend.borderpad':1,
             'savefig.bbox': 'tight',
             'savefig.dpi':300,
             'text.latex.preamble': r"\usepackage{amsmath}"}
 
+fig_for_normal = {
+	    'axes.linewidth': 3,
+            'font.size' : 18,
+	    'xtick.major.size':12,
+            'xtick.minor.size':8,
+            'ytick.major.size':12,
+            'ytick.minor.size':8,
+
+            'ytick.major.width':3,
+            'xtick.major.width':3,
+            'ytick.minor.width':2,
+            'xtick.minor.width':2,
+
+            'xtick.major.pad':10,
+            'xtick.minor.pad':10,
+            'ytick.major.pad':10,
+            'ytick.minor.pad':10,
+	    
+            'figure.figsize': (8,6),
+            'legend.fontsize': 16,
+	    'legend.borderpad':1,
+            'legend.frameon': True,
+            'savefig.bbox': 'tight',
+            'savefig.dpi':300,
+            'text.latex.preamble': r"\usepackage{amsmath}"}
+
+def savefig(fname, quant, pixel, vmin = None, vmax = None, cmap = None, hires = None, text = None, xtext = None, ytext = None, textsize = None, textcolor = None,nrvir=None):
+    fig,ax = plt.subplots(1,1,frameon=False,figsize=(5,5))
+#    ax.set_axis_off()
+
+#    fig.add_axes(ax)
+    im=ax.imshow(quant, vmin=vmin, vmax=vmax, origin='lower', interpolation='nearest', aspect='auto', cmap=cmap)                   
+    if (text != None):
+        print "adding text:", text
+        ax.text(xtext, ytext, text, horizontalalignment='left', verticalalignment='center', transform = ax.transAxes, size=textsize, color=textcolor,weight='bold') #, bbox=dict(facecolor='gray', alpha=0.8, boxstyle="round, pad=0.25", edgecolor="pink"))
+
+    if (nrvir!=None):
+	xcirc,ycirc = drawcircle(float(pixel)/2.,float(pixel)/2.,(1/(nrvir*2.))*pixel)
+	ax.plot(xcirc,ycirc,'w-',linewidth=0.5)
+
+    ax.set_xlim([0,pixel])
+    ax.set_ylim([0,pixel])
+    ax.set_axis_off()
+    ax.xaxis.set_major_locator(plt.NullLocator())
+    ax.yaxis.set_major_locator(plt.NullLocator())
+
+    
+    
+    if hires: 
+        if ".png" in fname: 
+            fig.savefig(fname.replace(".png","_hires.png"), bbox_inches='tight', dpi=pixel, pad_inches=0)
+        elif ".pdf" in fname:
+            fig.savefig(fname.replace(".pdf","_hires.pdf"), bbox_inches='tight', dpi=pixel, pad_inches=0)
+    else:
+        fig.savefig(fname, bbox_inches='tight', dpi=pixel/8., pad_inches=0)
+        
+    plt.close(fig)
 
 def getRSCat(label, lx, hid):
     snap_num = 255
@@ -342,22 +407,35 @@ def get_sim_info_from_lx(lx,ncores,queue):
 
     return pmgrid,queue,ncores	
 
-def make_gadget_submission_script(runpath,job_name,restart_flag):
+def make_gadget_submission_script(runpath,job_name,restart_flag,gadget3):
     f = open(runpath + "/sgadget",'w')
     f.write('#!/bin/bash\n')
-    f.write('#SBATCH -o gadget.o%j\n')
-    f.write('#SBATCH -e gadget.e%j\n')
+    
+    if gadget3:
+        f.write('#SBATCH -o gadget3.o%j\n')
+        f.write('#SBATCH -e gadget3.e%j\n')
+        
+    if not gadget3:
+        f.write('#SBATCH -o gadget4.o%j\n')
+        f.write('#SBATCH -e gadget4.e%j\n')
+
     f.write('#SBATCH -J '+ job_name + '\n')
 
     if "LX11" in runpath:
         queue = "HyperNodes"
         ncores = 24
         core_setup = '-n ' + str(ncores)
+        #queue = "AMD64"
+        #ncores = 64
+        #core_setup = '-n ' + str(ncores)
 
     if "LX12" in runpath:
-        queue = "AMD64"
-        ncores = 64
+        queue = "HyperNodes"
+        ncores = 24
         core_setup = '-n ' + str(ncores)
+        #queue = "AMD64"
+        #ncores = 64
+        #core_setup = '-n ' + str(ncores)
         
     if "LX13" in runpath:
         queue = "AMD64"
@@ -380,30 +458,54 @@ def make_gadget_submission_script(runpath,job_name,restart_flag):
     f.write("\n")
     
     if not restart_flag:
-        if queue != "HyperNodes":
-            f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+        if gadget3:
+            if queue != "HyperNodes":
+                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+            else:
+                f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
         else:
-            f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+            if queue != "HyperNodes":
+                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./Gadget4 param.txt 1>OUTPUT 2>ERROR\n')
+            else:
+                f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1>OUTPUT 2>ERROR\n')
     else:
-        if queue != "HyperNodes":
-            f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>OUTPUT 2>ERROR\n')
+        if gadget3:
+            if queue != "HyperNodes":
+                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>>OUTPUT 2>ERROR\n')
+            else:
+                f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>>OUTPUT 2>ERROR\n')
         else:
-            f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>OUTPUT 2>ERROR\n')
-
+            if queue != "HyperNodes":
+                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./Gadget4 param.txt 1 1>>OUTPUT 2>ERROR\n')
+            else:
+                f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1 1>>OUTPUT 2>ERROR\n')
     f.close()
 
 def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
     job_name_list = []
     current_jobs,jobids,jobstatus = getcurrentjobs()
     for folder in suite_paths:
+        topfolder = "/".join(folder.split("/")[:8])
+        #print topfolder
         folder_single = folder.split("/")[-1]
         halo_label = folder_single.split("_")[0]
         nrvir_label = folder_single.split("NV")[1][0]
         lx_label = folder_single.split("LX")[1][1:2]
         job_name = halo_label+"X"+lx_label+"N"+nrvir_label+folder_single.split(halo_label+"_")[1][:2]
+        
+        if os.path.isfile(topfolder+"/.gadget3"):
+            gadget3 = True
+            lastsnap = '255'
+            job_name += 'G3'
+        elif os.path.isfile(topfolder+"/.gadget4"):
+            gadget3 = False
+            lastsnap = '319'
+            job_name += 'G4'
+
+      
         if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") > 0 and \
             job_name not in current_jobs and job_name not in job_name_list:
-            if not os.path.isdir(folder + "/outputs/snapdir_255") and lx_label in lx_list:
+            if not os.path.isdir(folder + "/outputs/snapdir_"+lastsnap) and lx_label in lx_list:
                 print
                 print "COPYING GADGET FILES...",folder_single
                 mkdir_outputs = "mkdir -p " + folder + "/outputs/"
@@ -412,15 +514,21 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
                     ncores = 24
                     pmgrid = 256
                     queue = "HyperNodes"
+                    #ncores = 64
+                    #pmgrid = 256
+                    #queue = "AMD64"
 
                 if "LX12" in folder:
-                    ncores = 64
+                    ncores = 24
                     pmgrid = 256
-                    queue = "AMD64"
+                    queue = "HyperNodes"
+                    #ncores = 64
+                    #pmgrid = 256
+                    #queue = "AMD64"
 
                 if "LX13" in folder:
                     ncores = 64
-                    pmgrid = 256
+                    pmgrid = 512
                     queue = "AMD64"
                     #queue = "HyperNodes"
                     #ncores = 144
@@ -430,34 +538,47 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
                     queue = "AMD64"
                     ncores = 512
                     pmgrid = 512
-
-                if "contamination" in folder:
-                    file_times  = "cp " + gadget_file_path + "ExpansionList_256contam " + folder + "/ExpansionList"
-                else:
-                    file_times  = "cp " + gadget_file_path + "ExpansionList_256 " + folder + "/ExpansionList"
                 
-                if len(glob.glob(folder+"/outputs/snapdir*")) > 0 and len(glob.glob(folder+"/restartfiles/*.bak")) == ncores:
+                if gadget3:
+                    if "contamination" in folder:
+                        file_times  = "cp " + gadget_file_path + "/gadget3/ExpansionList_contam " + folder + "/ExpansionList"
+                    else:
+                        file_times  = "cp " + gadget_file_path + "/gadget3/ExpansionList " + folder + "/ExpansionList"
+                else:
+                    if "contamination" in folder:
+                        file_times  = "cp " + gadget_file_path + "/gadget4/ExpansionList_contam_hi " + folder + "/ExpansionList"
+                    else:
+                        file_times  = "cp " + gadget_file_path + "/gadget4/ExpansionList_hi " + folder + "/ExpansionList"
+
+                if len(glob.glob(folder+"/outputs/snapdir*")) > 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == ncores:
                     restart_flag = True
                 else:
                     restart_flag = False
 
-                if len(glob.glob(folder+"/outputs/snapdir*")) == 0 and len(glob.glob(folder+"/restartfiles/*.bak")) == 0:
+                if len(glob.glob(folder+"/outputs/snapdir*")) == 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == 0:
                     print "OUTPUTS/ IS CLEAN > STARTING AT START!"
                     skip_flag = False
-                elif len(glob.glob(folder+"/outputs/snapdir*")) != 0 and len(glob.glob(folder+"/restartfiles/*.bak")) == ncores:
+                elif len(glob.glob(folder+"/outputs/snapdir*")) != 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == ncores:
                     print "RESTARTING FROM RESTART FILES > " + glob.glob(folder+"/outputs/snapdir*")[-1].split("/")[-1]
                     skip_flag = False
-                elif len(glob.glob(folder+"/outputs/snapdir*")) != 0 and len(glob.glob(folder+"/restartfiles/*.bak")) != ncores:
+                elif len(glob.glob(folder+"/outputs/snapdir*")) != 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) != ncores:
                     print "WANTED TO RESTART FROM RESTART FILES BUT # RESTART FILES != ncores > " + glob.glob(folder+"/outputs/snapdir*")[-1].split("/")[-1]
                     skip_flag = True
+                    print "# restart files:",len(glob.glob(folder+"/restartfiles/*.bak")),"# cores:",ncores
 
                 if not skip_flag: 
-                    file_exe    = "cp " + gadget_file_path + "P-Gadget3_"+str(pmgrid)+ " "  + folder + "/P-Gadget3"
-                    file_param  = "cp " + gadget_file_path + "param_1"+lx_label+"_" + queue + ".txt " + folder + "/param.txt"
-                    file_config = "cp " + gadget_file_path + "Config_"+str(pmgrid)+".sh " + folder + "/Config.sh"
+                    if gadget3:
+                        file_exe    = "cp " + gadget_file_path + "/gadget3/P-Gadget3_"+str(pmgrid)+ " "  + folder + "/P-Gadget3"
+                        file_param  = "cp " + gadget_file_path + "/gadget3/param_1"+lx_label+"_" + queue + ".txt " + folder + "/param.txt"
+                        file_config = "cp " + gadget_file_path + "/gadget3/Config_"+str(pmgrid)+".sh " + folder + "/Config.sh"
+                    else:
+                        file_exe    = "cp " + gadget_file_path + "/gadget4/Gadget4_"+str(pmgrid)+ " "  + folder + "/Gadget4"
+                        file_param  = "cp " + gadget_file_path + "/gadget4/param_1"+lx_label+"_" + queue + ".txt " + folder + "/param.txt"
+                        file_config = "cp " + gadget_file_path + "/gadget4/Config_"+str(pmgrid)+".sh " + folder + "/Config.sh"
+
                     cmd_copy_all_files = [mkdir_outputs,file_times,file_exe,file_param,file_config]
                     subprocess.call([";".join(cmd_copy_all_files)],shell=True)
-                    make_gadget_submission_script(folder,job_name,restart_flag)
+                    make_gadget_submission_script(folder,job_name,restart_flag,gadget3)
                     cd_folder = "cd " + folder
                     cmd_submit_gadget = "sbatch sgadget"
 
@@ -503,7 +624,6 @@ def run_music(suite_paths,music_path,lagr_path,lx_list):
          job_name = "I"+halo_label[1:]+"X"+lx_label+"N"+nrvir_label+folder_single.split(halo_label+"_")[1][:2]
          job_name_list = []
          current_jobs,jobids,jobstatus = getcurrentjobs()
-
 #         if os.path.isfile(folder + "/ics.0") and os.path.getsize(folder + "/ics.0") == 0:
 #             print "NEED TO RERUN ICS:",job_name
 
@@ -549,6 +669,7 @@ def run_music(suite_paths,music_path,lagr_path,lx_list):
              subprocess.call([cd_folder+"; "+cmd_submit_ics],shell=True)
              job_name_list.append(job_name)
 
+
 def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_list):
     #print halo_geometries
     #special_attention = glob.glob(base_path+"special_attention/*")
@@ -564,10 +685,9 @@ def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_li
 
     #print skip_list
     for halo_name,ic_info in halo_geometries.iteritems():
-        if halo_name in ["H861036","H1599902","H1232127"]:
+        if halo_name not in ["H861036","H1599902","H1232127","H706710"]:
             geometry = ic_info.split("_")[0]
             nvir = ic_info.split("_")[1]
-            
             for LX in ["11","12","13","14"]:
                 if LX[1] in lx_list and halo_name not in skip_list:
                     folder = base_path + halo_name + "/" + halo_name +  "_"+geometry+"_Z127_P7_LN7_LX"+LX+"_O4_NV"+nvir
@@ -817,13 +937,13 @@ def make_destination_folders_clean(base_path,suite_names,lx,nrvir):
             subprocess.call([cmd_make_folder],shell=True)
 
 def make_destination_folders(base_path,suite_names,lx,nrvir):
-    # special_attention = glob.glob(base_path+"special_attention/*")
+    special_attention = glob.glob(base_path+"special_attention/*")
     major_mergers = glob.glob(base_path+"massive_mergers/*")
 
     skip_list = []
 
-    #for halo in special_attention:
-    #    skip_list.append(halo.split("/")[-1])
+    for halo in special_attention:
+        skip_list.append(halo.split("/")[-1])
 
     for halo in major_mergers:
         skip_list.append(halo.split("/")[-1])
@@ -1327,6 +1447,15 @@ def func(x, a, b):
     #x = 10**x/10**14
     #return a + b*x 
     return a*x + b
+
+def getbinned_meanstd(x,y,nbins):
+    n, _ = np.histogram(x, bins=nbins)
+    sy, _ = np.histogram(x, bins=nbins, weights=y)
+    sy2, _ = np.histogram(x, bins=nbins, weights=y*y)
+    color = 'r'
+    mean = sy / n
+    std = np.sqrt(sy2/n - mean*mean)
+    return mean,std
 
 def plotbinwithbestfit(ax,x,y,nbins,x0,color='r',linestyle='-',labelin='data',drawline=True,drawpoints=True):
     x = np.array(x)
@@ -1874,7 +2003,7 @@ def get_subhalo_mass_fraction(halodata,haloid):
     mhost = float(halodata.ix[haloid]['mgrav'])
     subhalos = halodata.get_all_subhalos_within_halo(haloid)
     if len(subhalos) > 0:
-        submass = np.array(subhalos['mvir']).sum()
+        submass = np.array(subhalos['mgrav']).sum()
         fsub = submass/mhost
     else:
         fsub = 0.0
