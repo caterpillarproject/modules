@@ -569,35 +569,67 @@ class MTCatalogueTree:
         mask = np.logical_and(self.data['dfid']>=dfid_base, self.data['dfid']<=dfid_last)
         return MTCatalogueTree(scale_list=self.scale_list,datatable=self.data[mask])
 
-    def getMainBranch(self, row=0):
+
+
+
+    def get_mmp_map(self):
+        mask = self.data['mmp']==1
+        return dict(zip(self.data[mask]['desc_id'], np.arange(len(self.data))[mask]))
+
+    def get_non_mmp_map(self):
+        non_mmp_map={}
+        mask2 = self.data['mmp']==0
+        for key, val in zip(self.data[mask2]['desc_id'], np.arange(len(self.data))[mask2]):
+            non_mmp_map.setdefault(key, []).append(val)
+
+    def getMainBranch(self, row=0, mmp_map=None):
         """
         @param row: row of the halo you want the main branch for. Defaults to row 0
         Uses getSubTree, then finds the smallest dfid that has no progenitors
         @return: all halos that are in the main branch of the halo specified by row (in a np structured array)
         """
-        subtree = self.getSubTree(row)
-        dfid_base = self.data[row]['dfid'] #==subtree[0]['dfid']
-        # Get the smallest dfid of the tree "leaves" (halos with no progenitors)
-        dfid_last = np.min(subtree[subtree['num_prog']==0]['dfid'])
-        return subtree[np.logical_and(subtree['dfid']>=dfid_base,subtree['dfid']<=dfid_last)]
-
-    def getMMP(self, row):
+        if mmp_map is None:
+            subtree = self.getSubTree(row)
+            dfid_base = self.data[row]['dfid'] #==subtree[0]['dfid']
+            # Get the smallest dfid of the tree "leaves" (halos with no progenitors)
+            dfid_last = np.min(subtree[subtree['num_prog']==0]['dfid'])
+            return subtree[np.logical_and(subtree['dfid']>=dfid_base,subtree['dfid']<=dfid_last)]
+        else:
+            rows=[]
+            while not row is None:
+                rows.append(row)
+                row = self.getMMP(row,mmp_map)
+            return self.data[rows]
+            
+    def getMMP(self, row, mmp_map=None):
         """
         @param row: row number (int) of halo considered
         @return: row number of the most massive parent, or None if no parent
         """
-        parent = np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']==1))[0]
-        try:
-            return parent[0]
-        except:
-            return None # if it has no parent
+        if mmp_map is None:
+            parent = np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']==1))[0]
+            try:
+                return parent[0]
+            except:
+                return None # if it has no parent
+        else:
+            try:
+                return mmp_map[self.data[row]['id']]
+            except:
+                return None
 
-    def getNonMMPprogenitors(self,row):
+    def getNonMMPprogenitors(self,row, non_mmp_map=None):
         """
         return row index of all progenitors that are not the most massive
         These are all the subhalos that were destroyed in the interval
         """
-        return np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']!=1))[0]
+        if non_mmp_map is None:
+            return np.where(np.logical_and(self.data[row]['id']==self.data['desc_id'], self.data['mmp']!=1))[0]
+        else:
+            try:
+                return np.array(non_mmp_map[self.data[row]['id']])
+            except:
+                return np.array([])
 
     def __getitem__(self,key):
         return self.data[key]
