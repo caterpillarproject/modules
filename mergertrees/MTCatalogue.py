@@ -576,11 +576,15 @@ class MTCatalogueTree:
         mask = self.data['mmp']==1
         return dict(zip(self.data[mask]['desc_id'], np.arange(len(self.data))[mask]))
 
+    def get_desc_map(self):
+        return dict(zip(self.data['id'], np.arange(len(self.data))))
+
     def get_non_mmp_map(self):
         non_mmp_map={}
         mask2 = self.data['mmp']==0
         for key, val in zip(self.data[mask2]['desc_id'], np.arange(len(self.data))[mask2]):
             non_mmp_map.setdefault(key, []).append(val)
+
 
     def getMainBranch(self, row=0, mmp_map=None):
         """
@@ -600,6 +604,19 @@ class MTCatalogueTree:
                 rows.append(row)
                 row = self.getMMP(row,mmp_map)
             return self.data[rows]
+
+
+    def getDescBranch(self, row, desc_map=None):
+        """
+        @param row: row of the halo you want the descendant branch for.
+        @return: all halos that are in the main branch of the halo specified by row (in a np structured array)
+        """
+        rows=[]
+        while not row is None:
+            rows.append(row)
+            row = self.getDesc(row,desc_map)
+        return self.data[rows]
+
             
     def getMMP(self, row, mmp_map=None):
         """
@@ -617,6 +634,25 @@ class MTCatalogueTree:
                 return mmp_map[self.data[row]['id']]
             except:
                 return None
+
+
+    def getDesc(self, row, desc_map=None):
+        """
+        @param row: row number (int) of halo considered
+        @return: row number of the descendent, or None if no descendent
+        """
+        if desc_map is None:
+            desc = np.where(self.data[row]['desc_id']==self.data['id'])[0]
+            try:
+                return desc[0]
+            except:
+                return None # if it has no descendent
+        else:
+            try:
+                return desc_map[self.data[row]['desc_id']]
+            except:
+                return None
+
 
     def getNonMMPprogenitors(self,row, non_mmp_map=None):
         """
