@@ -287,7 +287,6 @@ class RSDataReader:
                 if num_particles != 0:
                     #assert(len(line)/float(self.particlebytes))/num_particles == 1
                     nppf=int(len(line)/float(self.particlebytes))
-                    print num_particles,nppf
                     self.particles = np.concatenate((self.particles, np.array(struct.unpack("q"*nppf,line))))
                     #self.particles[part_fpos:part_fpos+num_particles]=np.array(struct.unpack("q"*num_particles,line))
             f.close()
