@@ -239,7 +239,7 @@ class RSDataReader:
             
         ## Count total number of particles/halos in all data blocks
         self.num_halos = 0
-        #self.total_particles = 0
+        self.total_particles = 0  #AllParticles
         while os.path.exists(file_name):
             f = open(file_name)
             h = f.read(numheaderbytes)
@@ -248,7 +248,7 @@ class RSDataReader:
              num_halos,num_particles,\
              self.boxsize,self.particle_mass,self.particle_type) = struct.unpack(headerfmt,h)
             self.num_halos += num_halos
-            #self.total_particles += num_particles
+            self.total_particles += num_particles #AllParticles
             f.close()
             file_num += 1
             file_name = getfilename(file_num)
@@ -257,6 +257,7 @@ class RSDataReader:
         files = np.array(['']*self.num_halos, dtype='|S'+str(len(file_name)*2))
         if AllParticles:
             self.particles = np.array([])
+            # self.particles=np.array([-1]*self.total_particles)
 
         ## Now, read in the actual data
         file_num = 0 # reset file name
@@ -284,8 +285,10 @@ class RSDataReader:
                 line = f.read() # read the rest of the file
                 ## DEBUG: this ratio should be 1
                 if num_particles != 0:
-                    assert(len(line)/float(self.particlebytes))/num_particles == 1
-                    self.particles = np.concatenate((self.particles, np.array(struct.unpack("q"*num_particles,line))))
+                    #assert(len(line)/float(self.particlebytes))/num_particles == 1
+                    nppf=int(len(line)/float(self.particlebytes))
+                    self.particles = np.concatenate((self.particles, np.array(struct.unpack("q"*nppf,line))))
+                    #self.particles[part_fpos:part_fpos+num_particles]=np.array(struct.unpack("q"*num_particles,line))
             f.close()
             file_num += 1
             file_name = getfilename(file_num)
