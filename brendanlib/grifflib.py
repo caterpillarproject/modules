@@ -14,13 +14,13 @@ import mergertrees.MTCatalogue as MT
 import asciitable
 import sys,os,time
 import pickle
-import haloutils as htils
+#import haloutils as htils
 import readsnapshots.readhsml as readhsml
 #import viz.SphMap as SphMap
-import calc.CalcHsml as ca
+#import calc.CalcHsml as ca
 from matplotlib.colors import LogNorm
 import readhalos.RSDataReader as RS
-import viz.SphMap as SphMap
+#import viz.SphMap as SphMap
 
 fig_for_talks = {  'lines.color': 'white',
             'patch.edgecolor': 'white',
@@ -54,7 +54,7 @@ fig_for_talks = {  'lines.color': 'white',
             'xtick.minor.pad':10,
             'ytick.major.pad':10,
             'ytick.minor.pad':10,
-            'figure.figsize': (12.5,7.5),
+            'figure.figsize': (13,8.5),
             'legend.framealpha':1,
 	    'legend.frameon': False,
 	    'legend.borderpad':1,
