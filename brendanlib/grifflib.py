@@ -21,8 +21,110 @@ import readsnapshots.readhsml as readhsml
 from matplotlib.colors import LogNorm
 import readhalos.RSDataReader as RS
 #import viz.SphMap as SphMap
+from scipy import interpolate
 
+achcol = 'black'
+mhcol = 'cyan'
+kcol = 'dodgerblue'
+scol = 'darkgreen'
+ccol = 'orangered'
+
+G_grav = 6.67384e-11 #m^3 kg^-1 s^-2
+km_to_Mpc = 3.24077929e-20 # Mpc
+Mpc_to_km = 3.08567758e19 #kilometers
+Msol_to_kgs = 1.9891e30
+Mpc_to_meters = 3.08567758e22
+
+cdict = {
+	'red'  :  ((0., 0., 0.),     (0.3,0,0),     (0.6, 0.8, 0.8), (1., 1., 1.)),
+	'green':  ((0., 0., 0.),     (0.3,0.3,0.3), (0.6, 0.4, 0.4), (1., 1.0, 1.0)),
+	'blue' :  ((0., 0.05, 0.05), (0.3,0.5,0.5), (0.6, 0.6, 0.6), (1.0, 1.0, 1.0))
+	}
+
+dmcmap = plt.matplotlib.colors.LinearSegmentedColormap('dmcmap', cdict, 1024)
+
+def add_legend(ax):
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels,frameon=False,fontsize=10)
+
+def load_mhalo_mbpids(hpath):
+    return np.load(hpath+"/analysis/minihalo_mbpids_array.npy")
+
+def add_legend(ax):
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels,frameon=False)
+
+def find_nearest(array,value):
+    idx = (np.abs(array-value)).argmin()
+    return idx
+
+
+def det_relaxed(hpath,vir_cut=1.35,offset_cut=0.07,fsub_cut=0.1,verbose=False):
+    zoomid = htils.load_zoomid(hpath)
+    snap = htils.get_lastsnap(hpath)
+    halos = htils.load_rscat(hpath,snap,verbose=True)
+    header = htils.get_halo_header(hpath)
+    nparticles = halos.ix[zoomid]['npart']
+    host_mass = halos.ix[zoomid]['mgrav']/header.hubble
+    host_rvir = halos.ix[zoomid]['rvir']
+    subhalos = halos.get_all_subhalos_within_halo(zoomid)
+    total_subhalo_mass = np.array(subhalos['mgrav']).sum()        
+    subhalo_mass_fraction = total_subhalo_mass/host_mass
+    position_offset = halos.ix[zoomid]['Xoff']
+    virial_ratio = 2.*halos.ix[zoomid]['T/|U|']
+
+    
+    if position_offset/host_rvir <= offset_cut and subhalo_mass_fraction <= fsub_cut and virial_ratio <= vir_cut:
+        #print "UNRELAXED HALO FOUND:",pid
+        relaxed = 'yes'
+    else:
+        relaxed = 'no'
+
+    if verbose: print "%3s | %4.3f | %4.3f | %4.3f" % (relaxed,position_offset/host_rvir,subhalo_mass_fraction,virial_ratio)
+    
+    return relaxed
+
+def xyscatter_to_meanwithsigma(x,y,bins):
+    n, _ = np.histogram(x, bins=bins)
+    sy, _ = np.histogram(x, bins=bins, weights=y)
+    sy2, _ = np.histogram(x, bins=bins, weights=y*y)
+    mean = sy / n
+    std = np.sqrt(sy2/n - mean*mean)
+    x = (bins[1:] + bins[:-1])/2
+    return x,mean,std
+
+def get_host_props(hpath,snap):
+    mainbranch = htils.get_main_branch(hpath)
+    header = htils.get_halo_header(hpath)
+    mask = (snap == mainbranch['snap'])
+    hpos = np.array([mainbranch['posX'][mask],mainbranch['posY'][mask],mainbranch['posZ'][mask]])/header.hubble
+    hvel = np.array([mainbranch['pecVX'][mask],mainbranch['pecVY'][mask],mainbranch['pecVZ'][mask]])
+    hrvir = mainbranch['rvir'][mask]/1000./header.hubble
+    hmvir = mainbranch['mvir'][mask]/header.hubble
+    return hpos.T,hvel.T,hrvir[0],hmvir[0]
+
+def get_binding_energy(hpath,snap,dpos,dvel):
+    header = htils.get_halo_header(hpath)
+    mp = header.massarr[1]*1e10/header.hubble
+    hpos,hvel,hrvir,hmvir = get_host_props(hpath,snap)
+
+    ppos = htils.load_partblock(hpath,snap,"POS ",parttype=1)/header.hubble
+    dr_particles = np.sort(distance(ppos,hpos,boxsize=header.boxsize)*header.time)
+    get_enclosed_mass_function = interpolate.interp1d(dr_particles,np.arange(1,len(dr_particles)+1))
+#    print get_enclosed_mass_function    
+    print get_enclosed_mass_function(hrvir)*mp/1e12,hmvir/1e12
+    
+    print "Calculating enclosed mass..."
+    dr = np.sqrt(np.sum(dpos**2.,axis=1))
+    enclosed_mass_at_dr = get_enclosed_mass_function(dr)*mp
+    dV = np.sqrt(np.sum(dvel**2.,axis=1))*1e3 # m/s
+    KE = 0.5*dV**2.      # m/s
+    PE = -(G_grav*enclosed_mass_at_dr*Msol_to_kgs)/(dr*Mpc_to_meters)  # #m^3 kg^-1 s^-2 * (kg / m^2) = m/s^2    
+    
+    return (PE + KE)/1e6 #(PE - KE)/1e6
+    
 fig_for_talks = {  'lines.color': 'white',
+	    'text.usetex': True,
             'patch.edgecolor': 'white',
             'text.color': 'white',
             'axes.facecolor': 'black',
@@ -61,19 +163,22 @@ fig_for_talks = {  'lines.color': 'white',
             'font.weight': 'bold',
             'axes.labelweight':'bold',
             'savefig.transparent':True,
-            'savefig.bbox': 'tight'}
+            'savefig.bbox': 'tight',
+	    'axes.labelsize' : 24}
+
 
 fig_for_papers = {  
-            
+	    'text.usetex': True,            
             'axes.linewidth': 4,
             'font.size' : 28,
-            'xtick.labelsize': 22,
-            'ytick.labelsize': 22,
+            'xtick.labelsize': 28,
+            'ytick.labelsize': 28,
 
             'xtick.major.size':12,
             'xtick.minor.size':8,
             'ytick.major.size':12,
             'ytick.minor.size':8,
+	    'axes.labelsize' : 28,
 
             'ytick.major.width':4,
             'xtick.major.width':4,
@@ -84,7 +189,7 @@ fig_for_papers = {
             'ytick.major.pad':10,
             'ytick.minor.pad':10,
             'figure.figsize': (10,10),
-            'legend.fontsize': 16,
+            'legend.fontsize': 22,
             'legend.frameon': False,
             #'font.weight': 'bold',
             #'axes.labelweight':'bold',
@@ -95,6 +200,7 @@ fig_for_papers = {
 
 fig_for_normal = {
 	    'axes.linewidth': 3,
+	    'text.usetex': True,
             'font.size' : 18,
 	    'xtick.major.size':12,
             'xtick.minor.size':8,
@@ -112,7 +218,7 @@ fig_for_normal = {
             'ytick.minor.pad':10,
 	    
             'figure.figsize': (8,6),
-            'legend.fontsize': 16,
+            'legend.fontsize': 22,
 	    'legend.borderpad':1,
             'legend.frameon': True,
             'savefig.bbox': 'tight',
@@ -194,6 +300,18 @@ def angle_between(v1, v2):
             return np.pi
     
     return angle
+
+def get_last_modified(file_name):
+    if os.path.isfile(file_name):
+        tnow = time.time()
+        #should_time = tnow - (tthresh * 3600)
+        file_mod_time = os.stat(file_name).st_mtime
+        last_modified = round((int(tnow) - file_mod_time) / 3600, 2)
+        last_modified = "%3.2f" % (last_modified)
+    else:
+        last_modified = ""
+        
+    return last_modified
 
 def get_size_of_files(file_list):
     total_size = 0
@@ -407,7 +525,7 @@ def get_sim_info_from_lx(lx,ncores,queue):
 
     return pmgrid,queue,ncores	
 
-def make_gadget_submission_script(runpath,job_name,restart_flag,gadget3):
+def make_gadget_submission_script(runpath,job_name,restart_flag,gadget3,run_amd):
     f = open(runpath + "/sgadget",'w')
     f.write('#!/bin/bash\n')
     
@@ -422,28 +540,35 @@ def make_gadget_submission_script(runpath,job_name,restart_flag,gadget3):
     f.write('#SBATCH -J '+ job_name + '\n')
 
     if "LX11" in runpath:
-        queue = "HyperNodes"
-        ncores = 24
-        core_setup = '-n ' + str(ncores)
-        #queue = "AMD64"
-        #ncores = 64
-        #core_setup = '-n ' + str(ncores)
-
+        if run_amd:
+            queue = "AMD64"
+            ncores = 64
+            core_setup = '-n ' + str(ncores)
+        else:
+            queue = "HyperNodes"
+            ncores = 24
+            core_setup = '-n ' + str(ncores)
+        
     if "LX12" in runpath:
-        queue = "HyperNodes"
-        ncores = 24
-        core_setup = '-n ' + str(ncores)
-        #queue = "AMD64"
-        #ncores = 64
-        #core_setup = '-n ' + str(ncores)
+        if run_amd:
+            queue = "AMD64"
+            ncores = 64
+            core_setup = '-n ' + str(ncores)
+        else:
+            queue = "HyperNodes"
+            ncores = 24
+            core_setup = '-n ' + str(ncores)
+
         
     if "LX13" in runpath:
-        queue = "AMD64"
-        ncores = 64
-        core_setup = '-n ' + str(ncores)
-        #queue = "HyperNodes"
-        #ncores = 144
-        #core_setup = '-N 6 -n ' + str(ncores)
+        if run_amd:
+            queue = "AMD64"
+            ncores = 64
+            core_setup = '-n ' + str(ncores)
+        else:
+            queue = "HyperNodes"
+            ncores = 144
+            core_setup = '-N 6 -n ' + str(ncores)
 
     if "LX14" in runpath:
         queue = "AMD64"
@@ -460,23 +585,23 @@ def make_gadget_submission_script(runpath,job_name,restart_flag,gadget3):
     if not restart_flag:
         if gadget3:
             if queue != "HyperNodes":
-                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
+                f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
             else:
                 f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1>OUTPUT 2>ERROR\n')
         else:
             if queue != "HyperNodes":
-                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./Gadget4 param.txt 1>OUTPUT 2>ERROR\n')
+                f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1>OUTPUT 2>ERROR\n')
             else:
                 f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1>OUTPUT 2>ERROR\n')
     else:
         if gadget3:
             if queue != "HyperNodes":
-                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>>OUTPUT 2>ERROR\n')
+                f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>>OUTPUT 2>ERROR\n')
             else:
                 f.write('mpirun -np ' + str(ncores) +  ' ./P-Gadget3 param.txt 1 1>>OUTPUT 2>ERROR\n')
         else:
             if queue != "HyperNodes":
-                f.write('mpirun --bind-to-core -np ' + str(ncores) +  ' ./Gadget4 param.txt 1 1>>OUTPUT 2>ERROR\n')
+                f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1 1>>OUTPUT 2>ERROR\n')
             else:
                 f.write('mpirun -np ' + str(ncores) +  ' ./Gadget4 param.txt 1 1>>OUTPUT 2>ERROR\n')
     f.close()
@@ -514,30 +639,40 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
                     ncores = 24
                     pmgrid = 256
                     queue = "HyperNodes"
+                    run_amd = False
+
                     #ncores = 64
                     #pmgrid = 256
                     #queue = "AMD64"
+                    #run_amd = True
 
                 if "LX12" in folder:
                     ncores = 24
                     pmgrid = 256
                     queue = "HyperNodes"
+                    run_amd = False
+
                     #ncores = 64
                     #pmgrid = 256
                     #queue = "AMD64"
+                    #run_amd = False
 
                 if "LX13" in folder:
                     ncores = 64
                     pmgrid = 512
                     queue = "AMD64"
+                    run_amd = True
+
                     #queue = "HyperNodes"
                     #ncores = 144
                     #pmgrid = 512
+                    #run_amd = False
                     
                 if "LX14" in folder:
                     queue = "AMD64"
                     ncores = 512
                     pmgrid = 512
+                    run_amd = True
                 
                 if gadget3:
                     if "contamination" in folder:
@@ -555,9 +690,17 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
                 else:
                     restart_flag = False
 
+                #print folder
+
                 if len(glob.glob(folder+"/outputs/snapdir*")) == 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == 0:
                     print "OUTPUTS/ IS CLEAN > STARTING AT START!"
                     skip_flag = False
+                elif len(glob.glob(folder+"/outputs/snapdir*")) == 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == ncores:
+                    print "OUTPUTS/ IS CLEAN > STARTING AT START!"
+                    skip_flag = False
+                elif len(glob.glob(folder+"/outputs/snapdir*")) == 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) != ncores:
+                    print "OUTPUTS/ IS CLEAN > STARTING AT START!"
+                    skip_flag = True
                 elif len(glob.glob(folder+"/outputs/snapdir*")) != 0 and len(glob.glob(folder+"/outputs/restartfiles/*.bak")) == ncores:
                     print "RESTARTING FROM RESTART FILES > " + glob.glob(folder+"/outputs/snapdir*")[-1].split("/")[-1]
                     skip_flag = False
@@ -578,7 +721,7 @@ def run_gadget(suite_paths,gadget_file_path,lx_list,submit=True):
 
                     cmd_copy_all_files = [mkdir_outputs,file_times,file_exe,file_param,file_config]
                     subprocess.call([";".join(cmd_copy_all_files)],shell=True)
-                    make_gadget_submission_script(folder,job_name,restart_flag,gadget3)
+                    make_gadget_submission_script(folder,job_name,restart_flag,gadget3,run_amd)
                     cd_folder = "cd " + folder
                     cmd_submit_gadget = "sbatch sgadget"
 
@@ -670,7 +813,7 @@ def run_music(suite_paths,music_path,lagr_path,lx_list):
              job_name_list.append(job_name)
 
 
-def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_list):
+def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,run_halos,lx_list):
     #print halo_geometries
     #special_attention = glob.glob(base_path+"special_attention/*")
     major_mergers = glob.glob(base_path+"massive_mergers/*")
@@ -685,7 +828,7 @@ def run_music_higher_levels(halo_geometries,base_path,music_path,lagr_path,lx_li
 
     #print skip_list
     for halo_name,ic_info in halo_geometries.iteritems():
-        if halo_name not in ["H861036","H1599902","H1232127","H706710"]:
+	if halo_name in run_halos:
             geometry = ic_info.split("_")[0]
             nvir = ic_info.split("_")[1]
             for LX in ["11","12","13","14"]:
@@ -823,7 +966,6 @@ def make_music_file(master_music_cfg_dest,boxtype,seed,region_point_file,nrvir_l
             hipadding =	1.2      
         if "_ED_" in master_music_cfg_dest:
             hipadding = 1.3  
-
         if "_EX_" in master_music_cfg_dest:
             hipadding = 1.05    
 
@@ -1339,26 +1481,26 @@ def linear_fit(xdata, ydata, ysigma=None):
     """
     
     if ysigma is None:
-        w = ones(len(ydata)) # Each point is equally weighted.
+        w = np.ones(len(ydata)) # Each point is equally weighted.
     else:
         w=1.0/(ysigma**2)
 
-    sw = sum(w)
+    sw =  np.sum(w)
     wx = w*xdata # this product gets used to calculate swxy and swx2
-    swx = sum(wx)
-    swy = sum(w*ydata)
-    swxy = sum(wx*ydata)
-    swx2 = sum(wx*xdata)
+    swx =  np.sum(wx)
+    swy =  np.sum(w*ydata)
+    swxy =  np.sum(wx*ydata)
+    swx2 = np.sum(wx*xdata)
 
     a = (sw*swxy - swx*swy)/(sw*swx2 - swx*swx)
     b = (swy*swx2 - swx*swxy)/(sw*swx2 - swx*swx)
-    sa = sqrt(sw/(sw*swx2 - swx*swx))
-    sb = sqrt(swx2/(sw*swx2 - swx*swx))
+    sa = np.sqrt(sw/(sw*swx2 - swx*swx))
+    sb = np.sqrt(swx2/(sw*swx2 - swx*swx))
 
     if ysigma is None:
-        chi2 = sum(((a*xdata + b)-ydata)**2)
+        chi2 = np.sum(((a*xdata + b)-ydata)**2)
     else:
-        chi2 = sum((((a*xdata + b)-ydata)/ysigma)**2)
+        chi2 = np.sum((((a*xdata + b)-ydata)/ysigma)**2)
     dof = len(ydata) - 2
     rchi2 = chi2/dof
     
@@ -1678,7 +1820,10 @@ def makecolormap():
         rgbg[color,1] = lambda2[color]**gamma - a[color] * 0.29227 * math.cos(phi[color]) - a[color] * 0.90649 * math.sin(phi[color])
         rgbg[color,2] = lambda2[color]**gamma + a[color] * 1.97249 * math.cos(phi[color])
 
-    return col.LinearSegmentedColormap.from_list('newmap',rgbg,N=vals)
+    
+    #newmapi = col.LinearSegmentedColormap.from_list('dmcmap',cdict.values(),N=1024)
+    
+    return newmapi
 
 def cosmoconstant(cosmology):
 #    if cosmology == 'WMAP1':
@@ -2014,8 +2159,9 @@ def get_min_distance_to_contam(halopath,part_type=2):
     halox = htils.get_quant_zoom(halopath,'x')
     haloy = htils.get_quant_zoom(halopath,'y')
     haloz = htils.get_quant_zoom(halopath,'z')
-    pos = rs.read_block(halopath + "/outputs/snapdir_255/snap_255","POS ",parttype=part_type)
-    head = rs.snapshot_header(halopath + "/outputs/snapdir_255/snap_255.0.hdf5")
+    lastsnap = str(htils.get_lastsnap(halopath))
+    pos = rs.read_block(halopath + "/outputs/snapdir_"+lastsnap+"/snap_"+lastsnap,"POS ",parttype=part_type)
+    head = rs.snapshot_header(halopath + "/outputs/snapdir_"+lastsnap+"/snap_"+lastsnap+".0.hdf5")
     dx = halox - pos[:,0]
     dy = haloy - pos[:,1]
     dz = haloz - pos[:,2]
@@ -2180,7 +2326,22 @@ def run_convert_mt(halo_path):
         MT.convertmt(halo_path + 'halos/trees/',version=4)
         print "MERGER TREE READY FOR ACTION!"
 
-def mask_positions(x,y,z,center,delta,want_quad=False):
+def mask_positions(x,y,z,center,delta,want_quad=False,want_z=False):
+    if want_quad:
+        cond1h = (np.array(x) >= 0) & (np.array(x) <= center[0] + delta)
+        cond2h = (np.array(y) >= 0) & (np.array(y) <= center[1] + delta)
+        if want_z: cond3h = (np.array(z) >= 0) & (np.array(z) <= center[2] + delta)
+    else:
+        cond1h = (np.array(x) >= center[0] - delta) & (np.array(x) <= center[0] + delta)
+        cond2h = (np.array(y) >= center[1] - delta) & (np.array(y) <= center[1] + delta)
+        if want_z: cond3h = (np.array(z) >= center[2] - delta) & (np.array(z) <= center[2] + delta)
+
+    if want_z:
+        return cond1h & cond2h & cond3h
+    else:
+        return cond1h & cond2h
+        
+def mask_positions_xyz(x,y,z,center,delta,want_quad=False):
     if want_quad:
         cond1h = (np.array(x) >= 0) & (np.array(x) <= center[0] + delta)
         cond2h = (np.array(y) >= 0) & (np.array(y) <= center[1] + delta)
@@ -2192,20 +2353,22 @@ def mask_positions(x,y,z,center,delta,want_quad=False):
 
     return cond1h & cond2h & cond3h
 
-def adjust_render_map(map):
+def adjust_render_map(mapi):
     #ma=map.max()/2.
     #mi=
     #ma=np.log10(ma)
-
-    map=np.log10(map)
-    ma=map.max()
-    mi=map.min()
+    #mapnotzero = mapi[mapi != 0]
+    #mapi[mapi == 0] = np.min(mapnotzero)
+    print mapi
+    mapi=np.log10(mapi)
+    ma=mapi.max()
+    mi=mapi.min()
     print "Min heatmap:",mi
     print "Max heatmap:",ma
     #floor = ma*0.8
     #map[map>floor] = floor
     #map[map>ma]=ma
-    return np.array(map)
+    return np.array(mapi)
     #map_proj = np.array(map).T
 
 def disigmoidScaling(values, steepnessFactor=1, ref=None):
@@ -2228,15 +2391,43 @@ def disigmoidScaling(values, steepnessFactor=1, ref=None):
     term3 = 1.0 - term2 
     return sgn * term3
 
-def render(ax,map,cmap,img_width):
-    ax.imshow(map,origin='lower',cmap=cmap, aspect='auto',interpolation='gaussian',extent=[-img_width/2., img_width/2., -img_width/2., img_width/2.])
-
-def make_map(filename,pos,hsmlvals,mass,img_res,img_width,px,py,cmap):
+def render(axplot,mapi,cmap,img_width):
+    print np.shape(mapi)
+    axplot.imshow(mapi,origin='lower',cmap=cmap, aspect='auto',interpolation='gaussian',extent=[-img_width/2., img_width/2., -img_width/2., img_width/2.])
+    
+def make_map(filename,pos,hsmlvals,mass,img_res,img_width,px,py,cmap,weight):
 
     center = np.array([0,0,0], dtype="float32")
-    map = SphMap.CalcDensProjection(pos, hsmlvals, mass, mass, img_res, img_res, img_width, img_width, img_width, center[0], center[1], center[2], px, py, 3, 0)
-    map = adjust_render_map(map).T
-    np.savetxt(filename,map)
+    rho  = mass/hsmlvals**3.0
+
+    if weight == 'density':
+        projquant = (rho  * mass)
+    elif weight == 'mass':
+        projquant = mass
+    else:
+        print "You need to specify either density or mass weighted projection! EXITING!"
+        sys.exit()
+
+    mapi = SphMap.CalcDensProjection(pos, hsmlvals, projquant, projquant, img_res, img_res, img_width, img_width, img_width, center[0], center[1], center[2], px, py, 3, 0)
+    mapi = adjust_render_map(mapi).T
+    np.savetxt(filename,mapi)
+
+def make_map_fg(filename,pos,hsmlvals,mass,img_res,img_width,px,py,cmap,weight):
+
+    center = np.array([0,0,0], dtype="float32")
+    rho  = mass/hsmlvals**3.0
+
+    if weight == 'density':
+        projquant = (rho  * mass)
+    elif weight == 'mass':
+        projquant = mass
+    else:
+        print "You need to specify either density or mass weighted projection! EXITING!"
+        sys.exit()
+
+    mapi = SphMap.CalcDensProjection(pos, hsmlvals, projquant, projquant, img_res, img_res, img_width, img_width, img_width, center[0], center[1], center[2], px, py, 3, 0)
+    #mapi = adjust_render_map(mapi).T
+    np.save(filename,mapi.T)
 
     #map = disigmoidScaling(map, steepnessFactor=4)
 
@@ -2252,24 +2443,160 @@ def get_projection_bool(projection):
     p_use = pabs[p_mask]
     return p_use[0],p_use[1]
 
-def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo=0,want_just_img_width=False):
+def get_center_arr(mainbranch,start_pos,end_pos,snapshot):
+#    x1 = start_pos[0]
+#    y1 = start_pos[1]
+#    z1 = start_pos[2]
+#
+#    x2 = end_pos[0]
+#    y2 = end_pos[1]
+#    z2 = end_pos[2]
+#
+#    xlin = np.linspace(x1,x2,320)
+#    ylin = np.linspace(y1,y2,320)
+#    zlin = np.linspace(z1,z2,320)
+
+
+#    nstep = 30
+#    idx = np.arange(15,320,nstep)
+#
+    #centerx = np.array([0]*319,dtype='float')
+    #centery = np.array([0]*319,dtype='float')
+    #centerz = np.array([0]*319,dtype='float')
+##
+#    mins = 50
+#    idi = (mainbranch['snap'] == mins)
+#    centerx[mins:] = mainbranch['posX'][idi]
+#    centery[mins:] = mainbranch['posY'][idi]
+#    centerz[mins:] = mainbranch['posZ'][idi]
+#
+#    
+#    centerx[:mins] = mainbranch['posX'][:mins]
+#    centery[:mins] = mainbranch['posY'][:mins]
+#    centerz[:mins] = mainbranch['posZ'][:mins]
+
+    #centerx[:idx[0]] = mainbranch['posX'][-1]
+    #centery[:idx[0]] = mainbranch['posY'][-1]
+    #centerz[:idx[0]] = mainbranch['posZ'][-1]
+#    
+#    for i in np.arange(len(idx)-1):
+#        #idx[i]:idx[i+1]
+#        idi = (mainbranch['snap'] == idx[i])
+#        jdi = (mainbranch['snap'] == idx[i+1])
+#        centerx[idx[i]:idx[i+1]] = np.linspace(mainbranch['posX'][idi],mainbranch['posX'][jdi],nstep)
+#        centery[idx[i]:idx[i+1]] = np.linspace(mainbranch['posY'][idi],mainbranch['posY'][jdi],nstep)
+#        centerz[idx[i]:idx[i+1]] = np.linspace(mainbranch['posZ'][idi],mainbranch['posZ'][jdi],nstep)
+#    
+#    #k = (mainbranch['snap'] == idx[2])
+#    #l = (mainbranch['snap'] == idx[3])
+#
+##    centerx[idx[0]:idx[1]] = np.linspace(mainbranch['posX'][i],mainbranch['posX'][j],nstep)
+##    centery[idx[0]:idx[1]] = np.linspace(mainbranch['posY'][i],mainbranch['posY'][j],nstep)
+##    centerz[idx[0]:idx[1]] = np.linspace(mainbranch['posZ'][i],mainbranch['posZ'][j],nstep)
+##
+##    centerx[idx[1]:idx[2]] = np.linspace(mainbranch['posX'][j],mainbranch['posX'][k],nstep)
+##    centery[idx[1]:idx[2]] = np.linspace(mainbranch['posZ'][j],mainbranch['posZ'][k],nstep)
+##    centerz[idx[1]:idx[2]] = np.linspace(mainbranch['posZ'][j],mainbranch['posZ'][k],nstep)
+##
+##    centerx[idx[2]:idx[3]] = np.linspace(mainbranch['posX'][k],mainbranch['posX'][l],nstep)
+##    centery[idx[2]:idx[3]] = np.linspace(mainbranch['posY'][k],mainbranch['posY'][l],nstep)
+##    centerx[idx[2]:idx[3]] = np.linspace(mainbranch['posZ'][k],mainbranch['posZ'][l],nstep)
+#    
+#    idi = (mainbranch['snap'] == idx[-1])
+#    centerx[idx[-1]:] = np.linspace(mainbranch['posX'][idi],mainbranch['posX'][0],319-idx[-1])
+#    centery[idx[-1]:] = np.linspace(mainbranch['posY'][idi],mainbranch['posY'][0],319-idx[-1])
+#    centerz[idx[-1]:] = np.linspace(mainbranch['posZ'][idi],mainbranch['posZ'][0],319-idx[-1])
+#
+    snapshots = np.array(mainbranch['snap'])
+    x = np.array(mainbranch['posX'])
+    y = np.array(mainbranch['posY'])
+    z = np.array(mainbranch['posZ'])
+    #t = mainbranch['snap']
+    mask = (snapshot == snapshots)
+    if mask.any():
+        centerx = x[mask]
+        centery = y[mask]
+        centerz = z[mask]
+    else:
+        centerx = x[0]
+        centery = y[0]
+        centerz = z[0]
+    
+    center_arr = np.array([centerx,centery,centerz]).T
+    print center_arr
+    #center_arr = np.flipud(center_arr)
+    return center_arr 
+
+def get_pos_mass_hsml_render(hpath,zoomid,idlist,snapshot):
 
     header = htils.get_halo_header(hpath,snap=snapshot)
+    mainbranch = htils.get_main_branch(hpath)
+    mask = (mainbranch['snap'] == snapshot)
+    pos_host = np.array([float(mainbranch['posX'][mask]),float(mainbranch['posY'][mask]),float(mainbranch['posZ'][mask])])
+    start_pos = np.array([float(mainbranch['posX'][-1]),float(mainbranch['posY'][-1]),float(mainbranch['posZ'][-1])])
+    end_pos = np.array([float(mainbranch['posX'][0]),float(mainbranch['posY'][0]),float(mainbranch['posZ'][0])])
+    #current_pos = (end_pos-start_pos)/319.
+    center_arr = get_center_arr(mainbranch,start_pos,end_pos,snapshot)
+    
 
-    halos = htils.load_rscat(hpath,snapshot)
-    pos_host = np.array([halos.ix[zoomid]['posX'],halos.ix[zoomid]['posY'],halos.ix[zoomid]['posZ']])
+    print "Number of particles in snapshot",snapshot,"is",header.npart[1]
+    #print "Number of particles in fg/mh to render for this snapshot",len(idlist)
+    pos = htils.load_partblock(hpath,snapshot,"POS ",parttype=1,ids=idlist).astype('float32')
+    pos -= center_arr
+    mass = htils.load_partblock(hpath,snapshot,"MASS",parttype=1,ids=idlist).astype('float32')*1e10/header.hubble
+    ids = htils.load_partblock(hpath,snapshot,"ID  ",parttype=1,ids=idlist)
+    
+    #if os.path.isdir(hpath+"/outputs/hsmldir_"+str(snapshot).zfill(3)):
+    #    print "Loading them from file: outputs/hsmldir_"+str(snapshot).zfill(3)
+    #    ids = htils.load_partblock(hpath,snapshot,"ID  ",parttype=1)
+    #    #ids = ids[mask_pos]
+    #    hsml = readhsml.hsml_file(hpath+"/outputs/",snapshot)
+    #    print "number of hsml values",len(hsml.Hsml)
+    #    hsmlvals = hsml.Hsml[idlist]
+    #else:
+    #    print "NO HSML FILES EXIST FOR THIS SNAPSHOT:",snapshot,"QUITTING!"
+    #    sys.exit()
 
-    img_width = img_width_nrvir*2.*float(halos.ix[zoomid]['rvir'])/1000.
+    #    print "Loading them from file: analysis/renders/hsmls_"+str(snapshot).zfill(3)+".npy"
+    #    hsmlvals = np.load(hpath+"/analysis/renders/hsmls_"+str(snapshot).zfill(3)+".npy")
+    #    print "number of hsml values",len(hsmlvals)
+    #    hsmlvals = hsmlvals[idlist]
 
+    #hsml = readhsml.hsml_file(hpath+"/outputs/",snapshot)
+    #hsmlvals = hsml.Hsml[ids]
+    #center = np.array([0,0,0], dtype="float32")
+    #mask_pos = mask_positions(pos[:,0],pos[:,1],pos[:,2],center,img_width)
+    hsmlvals = np.array([0.001]*len(idlist))
+    return pos,mass,hsmlvals.astype('float32')
+
+def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo=0,want_just_img_width=False):
+    header = htils.get_halo_header(hpath,snap=snapshot)
+    mainbranch = htils.get_main_branch(hpath)
+    mask = (mainbranch['snap'] == snapshot)
+    #nsnaps = htils.get_numsnaps(hpath)
+    #zoomid = int(np.array(mainbranch['origid'],dtype='int64')[mask])
+    #pos_host = np.array([float(mainbranch['posX'][mask]),float(mainbranch['posY'][mask]),float(mainbranch['posZ'][mask])])
+    #x_start = float(mainbranch['posX'][0])
+    #x_end = float(mainbranch['posX'][-1])
+    #y_start = float(mainbranch['posY'][0])
+    #y_end = float(mainbranch['posY'][-1])
+    #z_start = float(mainbranch['posZ'][0])
+    #z_end = float(mainbranch['posZ'][-1])
+    #pos_host = np.array([np.linspace(x_start,x_end,nsnaps),np.linspace(y_start,y_end,nsnaps),np.linspace(z_start,z_end,nsnaps)])
+    #pos_host = pos_host[snapshot]
+    
+    #print pos_host
+    #img_width = img_width_nrvir*2.*float(halos.ix[zoomid]['rvir'])/1000.
+    img_width = 1.5
     if want_just_img_width:
         return img_width
 
     print "Number of particles: in snapshot",header.npart[1]
-
+    #print pos_host
+    
     t0 = time.clock()
-    pos = htils.load_partblock(hpath,255,"POS ",parttype=1).astype('float32')
-    mass = htils.load_partblock(hpath,255,"MASS",parttype=1).astype('float32')*1e10/header.hubble
-    ids = htils.load_partblock(hpath,255,"ID  ",parttype=1)
+    pos = htils.load_partblock(hpath,snapshot,"POS ",parttype=1).astype('float32')
+    mass = htils.load_partblock(hpath,snapshot,"MASS",parttype=1).astype('float32')*1e10/header.hubble
     t1 = time.clock()
 
     print "[ > reading positions, masses, smoothing lengths: %3.2f minutes ]" % ((t1-t0)/60.)
@@ -2281,48 +2608,50 @@ def get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width=0,nth_halo
         idx = np.argsort(np.array(halos['mvir']))
         zoomid = int(np.array(halos['id'])[idx[-nth_halo]])
 
-    #print "Mvir: %3.2e Msun" % (float(halos.ix[zoomid]['mvir'])/header.hubble)
-    #print "Rvir: %3.2f kpc" % (halos.ix[zoomid]['rvir'])
-    #rint "Npart: %i" % (halos.ix[zoomid]['npart'])
-
-    
 
     print "Getting image width from input..."
 
-    #cat = htils.load_scat(hpath)
-    #pos_host = cat.sub_pos[14]
-    #img_width = 10./1000.
-
     t0 = time.clock()
-    pos -= pos_host
+    start_pos = np.array([float(mainbranch['posX'][-1]),float(mainbranch['posY'][-1]),float(mainbranch['posZ'][-1])])
+    end_pos = np.array([float(mainbranch['posX'][0]),float(mainbranch['posY'][0]),float(mainbranch['posZ'][0])])
+    #print start_pos,end_pos
+
+    center_arr = get_center_arr(mainbranch,start_pos,end_pos,snapshot)
+    #print center_arr
+    pos -= center_arr
+    #print pos
     center = np.array([0,0,0], dtype="float32")
     mask_pos = mask_positions(pos[:,0],pos[:,1],pos[:,2],center,img_width)
-    pos = pos[mask_pos]
-    mass = mass[mask_pos]
-    ids = ids[mask_pos]
+    
+    #print pos
+    
+    
     t1 = time.clock()
     #print "NSUM:",np.sum(mask_pos)
     print "[ > adjusting positions: %3.2f minutes ]" % ((t1-t0)/60.)
 
     t0 = time.clock()
-    print "Do smoothing lengths exist?",os.path.isdir(hpath+"/outputs/hsmldir_255")
-    if os.path.isdir(hpath+"/outputs/hsmldir_255"):
-        hsml = readhsml.hsml_file(hpath+"/outputs/",255)
-        hsmlvals = hsml.Hsml[ids]
+    print "Do smoothing lengths exist?",os.path.isdir(hpath+"/outputs/hsmldir_"+str(snapshot).zfill(3))
+    if os.path.isdir(hpath+"/outputs/hsmldir_"+str(snapshot).zfill(3)):
+        #ids = htils.load_partblock(hpath,snapshot,"ID  ",parttype=1)
+        #ids = ids[mask_pos]
+        hsml = readhsml.hsml_file(hpath+"/outputs/",snapshot)
+        hsmlvals = hsml.Hsml
     else:
-        if not os.path.isdir(hpath+"/analysis/hsmls.dat"):
-            print "Calculating smoothing lengths..."
-            hsmlvals=ca.CalcHsml(pos, mass, 4, float(0), float(0.0), float(1.0), float(1.0), float(0.0))
-            np.save(hpath+"/analysis/hsmls.dat",hsmlvals)
-        else:
-            print "Loading them from file: analysis/hsml.dat"
-            hsmlvals = np.load(hpath+"/analysis/hsmls.dat")
+        #if not os.path.isdir(hpath+"/analysis/renders/hsmls_"+str(snapshot).zfill(3)+".npy"):
+        print "Calculating smoothing lengths..."
+        hsmlvals=ca.CalcHsml(pos, mass, 4, float(0), float(0.0), float(1.0), float(1.0), float(0.0))
+        np.save(hpath+"/analysis/renders/hsmls_"+str(snapshot).zfill(3)+".npy",hsmlvals)
+        #else:
+        #print "Loading them from file: analysis/renders/hsml_"+str(snapshot).zfill(3)+".npy"
+        #hsmlvals = np.load(hpath+"/analysis/renders/hsmls_"+str(snapshot).zfill(3)+".npy")
         
 
     t1 = time.clock()
 
-
-    
+    pos = pos[mask_pos]
+    hsmlvals = hsmlvals[mask_pos]
+    mass = mass[mask_pos]
     #print "LEN(pos)",len(pos)
     #print "LEN(mass)",len(mass)
     #print "LEN(hsmlvals)",len(hsmlvals)
@@ -2338,7 +2667,7 @@ def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img
 
     px,py = get_projection_bool(projection)
 
-    halos = htils.load_rscat(hpath,snapshot)
+    halos = htils.load_rscat(hpath,snapshot,rmaxcut=False)
     #rsid = htils.load_zoomid(hpath)
 
     x = np.array(halos['posX'])
@@ -2348,7 +2677,7 @@ def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img
    # mask_pos = mask_positions(x,y,z,center,img_width)
 
     rvir = np.array(halos['rvir'])/1000.
-    header = htils.get_halo_header(hpath,snap=snapshot)
+    header = htils.get_halo_header(hpath,snapshot)
 
     if sorted_by=='vmax': circles_cut = np.array(halos['vmax'])
 
@@ -2356,7 +2685,7 @@ def overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img
 
     #if img_width == 0:
 
-    halos = htils.load_rscat(hpath,snapshot)
+    #halos = htils.load_rscat(hpath,snapshot)
     #img_width = img_width_nrvir*2.*float(halos.ix[rsid]['rvir'])/1000.
 
     if nth_halo == 0:
@@ -2503,15 +2832,24 @@ def overlay_rockstar(ax1,ax2,ax3,hpath,zoomid,snapshot,render_type,img_width,nth
 
     return ax1,ax2,ax3
 
-def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_projection.png',snapshot=255,cmap_name='hot',img_width_nrvir=1,img_width_force=0,img_res=512,render_type='single',projection='xy',resolution_list=[11,12,13,14],include_rockstar=False,include_subfind=False,want_label_on_halos=False):
+def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_projection.png',snapshot=319,cmap_name='hot',img_width_nrvir=1,img_width_force=0,img_res=512,render_type='single',projection='xy',weight='density',resolution_list=[11,12,13,14],include_rockstar=False,include_subfind=False,want_label_on_halos=False,img_path="./"):
     
-    if "cat" in cmap_name:
-        cmap = makecolormap()
+    #cmap = makecolormap()
+    if cmap_name == 'cat':
+        cdict = {
+                'red'  :  ((0., 0., 0.),     (0.3,0,0),     (0.6, 0.8, 0.8), (1., 1., 1.)),
+                'green':  ((0., 0., 0.),     (0.3,0.3,0.3), (0.6, 0.4, 0.4), (1., 1.0, 1.0)),
+                'blue' :  ((0., 0.05, 0.05), (0.3,0.5,0.5), (0.6, 0.6, 0.6), (1.0, 1.0, 1.0))
+                }
+    
+        cmap = plt.matplotlib.colors.LinearSegmentedColormap('cat', cdict, 1024)
     else:
         cmap = cmap_name
-
+        
     t0_total =  time.clock()
-    pid = int(hpath.split("/")[-2][1:])
+    pid = htils.get_parent_hid(hpath)
+    
+    #img_width_nrvir = 1500.
     
     print
     print "==============================="
@@ -2523,35 +2861,43 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
     print "X*Rvir:",img_width_nrvir
     print "Image Resolution:",img_res
     print "Render Type:",render_type
+    print "Weight Type",weight
     print "Projection:",projection
     print "Forced Image Width [kpc]:",img_width_force
     print "Using halosdir: halos_bound/"
     print "Overlay Rockstar?",include_rockstar
     print "Overlay Rockstar Labels?",want_label_on_halos
     print "Overlay SUBFIND?",include_subfind
-    print "Image Output:",img_filename
+    if render_type != "single": print "Image Output:",img_filename
     print "==============================="
 
-    header = htils.get_halo_header(hpath,snap=snapshot)
+    header = htils.get_halo_header(hpath,snapshot)
 
     if render_type == 'single':
         pos,mass,hsmlvals,img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo)
         fig, ax1 = plt.subplots(1, 1, figsize=(12,12))
         px,py = get_projection_bool(projection)
 
-        file_name = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P"+str(int(px))+str(int(py))+"_SN"+str(snapshot)+".dat"
-
-        if not os.path.isfile(file_name): make_map(file_name,pos,hsmlvals,mass,img_res,img_width,px,py,cmap)
- 
-        map = np.loadtxt(file_name)
-        render(ax1,map,cmap,img_width)
-
-        if include_rockstar: overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos)
- 
+        file_name = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P"+str(int(px))+str(int(py))+"_SN"+str(snapshot).zfill(3)+".dat"
+        #print "Checking filename 1"
+        #if not os.path.isfile(file_name): 
+        make_map(file_name,pos,hsmlvals,mass,img_res,img_width,px,py,cmap,weight)
+        #print "Checking filename 2"
+        maps = np.loadtxt(file_name)
+        #print maps
+        render(ax1,maps,cmap,img_width)
+        #render(ax,mapi,cmap,img_width):
+        #print "Checking filename 3"
+        if include_rockstar: 
+            overlay_rockstar_single(ax1,projection,hpath,zoomid,snapshot,render_type,img_width,nth_halo,sorted_by='vmax',want_label_on_halos=want_label_on_halos)
+        #print "Checking filename 4"
         ax1.set_xlabel(projection[0] + " [Mpc]")
         ax1.set_ylabel(projection[1] + " [Mpc]")
-        ax1.text(0.05, 0.95,'LX:'+str(lx), horizontalalignment='left',verticalalignment='center',transform = ax1.transAxes,weight='bold',fontsize=14,color='w')
-        
+        #ax1.text(0.05, 0.95,'LX:'+str(lx), horizontalalignment='left',verticalalignment='center',transform = ax1.transAxes,weight='bold',fontsize=14,color='w')
+
+        ax1.xaxis.set_visible(False)
+        ax1.yaxis.set_visible(False)
+
     elif render_type == 'multi':
  
         fig, axs = plt.subplots(1, 3, figsize=(15,5))
@@ -2565,9 +2911,9 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         #zoomid = htils.load_zoomid(hpath)
 
         img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True)
-        file_name_xy = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot)+".dat"
-        file_name_xz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot)+".dat"
-        file_name_yz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot)+".dat"
+        file_name_xy = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot).zfill(3)+".dat"
+        file_name_xz = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot).zfill(3)+".dat"
+        file_name_yz = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot).zfill(3)+".dat"
 
         t0 = time.clock()
         
@@ -2579,9 +2925,9 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
         print "[ reading positions, masses, smoothing lengths: %3.2f minutes ]" % ((t1-t0)/60.)            
         
         t0 = time.clock()
-        if not os.path.isfile(file_name_xy): make_map(file_name_xy,pos,hsmlvals,mass,img_res,img_width,0,1,cmap) # xy
-        if not os.path.isfile(file_name_xz): make_map(file_name_xz,pos,hsmlvals,mass,img_res,img_width,0,2,cmap) # xz
-        if not os.path.isfile(file_name_yz): make_map(file_name_yz,pos,hsmlvals,mass,img_res,img_width,1,2,cmap) # yz
+        if not os.path.isfile(file_name_xy): make_map(file_name_xy,pos,hsmlvals,mass,img_res,img_width,0,1,cmap,weight) # xy
+        if not os.path.isfile(file_name_xz): make_map(file_name_xz,pos,hsmlvals,mass,img_res,img_width,0,2,cmap,weight) # xz
+        if not os.path.isfile(file_name_yz): make_map(file_name_yz,pos,hsmlvals,mass,img_res,img_width,1,2,cmap,weight) # yz
 
         map_xy = np.loadtxt(file_name_xy)
         render(ax1,map_xy,cmap,img_width)
@@ -2625,12 +2971,15 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             
             hpath = htils.get_hpath_lx(pid,lx)
             zoomid = htils.load_zoomid(hpath)
+            mainbranch = htils.get_main_branch(hpath)
+            mask = (mainbranch['snap'] == snapshot)
+            zoomid = int(np.array(mainbranch['origid'],dtype='int64')[mask])
 
             img_width = get_pos_mass_hsml(hpath,zoomid,snapshot,img_width_nrvir,img_width_force,nth_halo,want_just_img_width=True)
 
-            file_name_xy = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot)+".dat"
-            file_name_xz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot)+".dat"
-            file_name_yz = hpath+"/analysis/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot)+".dat"
+            file_name_xy = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P01_SN"+str(snapshot).zfill(3)+".dat"
+            file_name_xz = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P02_SN"+str(snapshot).zfill(3)+".dat"
+            file_name_yz = hpath+"/analysis/renders/H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width*1000.))+"_P12_SN"+str(snapshot).zfill(3)+".dat"
 
             t0 = time.clock()
 
@@ -2643,9 +2992,9 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             
             t0 = time.clock()
 
-            if not os.path.isfile(file_name_xy): make_map(file_name_xy,pos,hsmlvals,mass,img_res,img_width,0,1,cmap) # xy
-            if not os.path.isfile(file_name_xz): make_map(file_name_xz,pos,hsmlvals,mass,img_res,img_width,0,2,cmap) # xz
-            if not os.path.isfile(file_name_yz): make_map(file_name_yz,pos,hsmlvals,mass,img_res,img_width,1,2,cmap) # yz
+            if not os.path.isfile(file_name_xy): make_map(file_name_xy,pos,hsmlvals,mass,img_res,img_width,0,1,cmap,weight) # xy
+            if not os.path.isfile(file_name_xz): make_map(file_name_xz,pos,hsmlvals,mass,img_res,img_width,0,2,cmap,weight) # xz
+            if not os.path.isfile(file_name_yz): make_map(file_name_yz,pos,hsmlvals,mass,img_res,img_width,1,2,cmap,weight) # yz
 
             map_xy = np.loadtxt(file_name_xy)
             render(ax1,map_xy,cmap,img_width)
@@ -2684,8 +3033,12 @@ def create_zoom_render(hpath,zoomid,lx=11,nth_halo=0,img_filename='density_proje
             ax3.text(0.9, 0.05,'YZ', horizontalalignment='left',verticalalignment='center',transform = ax3.transAxes,weight='bold',fontsize=14,color='w')
             ax1.text(0.05, 0.9,'LX:'+str(lx), horizontalalignment='left',verticalalignment='center',transform = ax1.transAxes,weight='bold',fontsize=14,color='w')
     
-    img_path = "/nfs/blank/h4231/bgriffen/Dropbox/work/projects/caterpillar/convergence/"
-    img_filename = "H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_KPC"+str(int(img_width*1000.))+"_CM"+cmap_name.upper()+"_"+render_type.upper()+".png"
+
+    #img_path = "/nfs/blank/h4231/bgriffen/Dropbox/work/projects/caterpillar/convergence/"
+    #img_path = "./"+"H"+str(pid)+"/"
+    #img_filename = "H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_KPC"+str(int(img_width*1000.))+"_CM"+cmap_name.upper()+"_W"+weight[0].upper()+"_"+render_type.upper()+".png"
+    img_filename = "H"+str(pid)+"_LX"+str(lx)+"_DIM"+str(img_res)+"_W"+weight[0].upper()+"_MAP_KPC"+str(int(img_width))+"_"+render_type.upper()+"_SN"+str(snapshot).zfill(3)+".png"
+            
     print "writing out:",img_filename
     img_writeout = img_path + img_filename
     fig.savefig(img_writeout,bbox_inches='tight')
@@ -2698,13 +3051,13 @@ def create_fullbox_render(sim_path,snapshot=127,img_res=2048,lx=14,projection='a
 
     header = htils.get_halo_header(sim_path,snap=snapshot)
 
-    pos = htils.load_partblock(sim_path,127,"POS ",parttype=1).astype('float32')
-    mass = htils.load_partblock(sim_path,127,"MASS",parttype=1).astype('float32')*1e10/header.hubble
-    ids = htils.load_partblock(sim_path,127,"ID  ",parttype=1)
+    pos = htils.load_partblock(sim_path,snapshot,"POS ",parttype=1).astype('float32')
+    mass = htils.load_partblock(sim_path,snapshot,"MASS",parttype=1).astype('float32')*1e10/header.hubble
+    ids = htils.load_partblock(sim_path,snapshot,"ID  ",parttype=1)
 
     center = np.array([header.boxwidth/2.,header.boxwidth/2.,header.boxwidth/2.], dtype="float32")
 
-    hsml = readhsml.hsml_file(sub_diri+"/outputs/",255)
+    hsml = readhsml.hsml_file(sub_diri+"/outputs/",snapshot)
     hsmlvals = hsml.Hsml[ids]
 
     #(ax1,file_name+"XY.dat",pos,mass,hsmlvals,nbins,box_width,0,1,mode,periodic_bool,center,want_quad=WANT_QUAD)
@@ -2741,3 +3094,39 @@ def transform_coordinates(x,y,z,vx,vy,vz,theta,phi):
 
     return x_,y_,z_,vx_,vy_,vz_
  
+def customaxis(ax, c_left='k', c_bottom='k', c_right='none', c_top='none',
+               lw=3, size=12, pad=8):
+
+    for c_spine, spine in zip([c_left, c_bottom, c_right, c_top],
+                              ['left', 'bottom', 'right', 'top']):
+        if c_spine != 'none':
+            ax.spines[spine].set_color(c_spine)
+            ax.spines[spine].set_linewidth(lw)
+        else:
+            ax.spines[spine].set_color('none')
+    if (c_bottom == 'none') & (c_top == 'none'): # no bottom and no top
+        ax.xaxis.set_ticks_position('none')
+    elif (c_bottom != 'none') & (c_top != 'none'): # bottom and top
+        ax.tick_params(axis='x', direction='out', width=lw, length=7,
+                      color=c_bottom, labelsize=size, pad=pad)
+    elif (c_bottom != 'none') & (c_top == 'none'): # bottom but not top
+        ax.xaxis.set_ticks_position('bottom')
+        ax.tick_params(axis='x', direction='out', width=lw, length=7,
+                       color=c_bottom, labelsize=size, pad=pad)
+    elif (c_bottom == 'none') & (c_top != 'none'): # no bottom but top
+        ax.xaxis.set_ticks_position('top')
+        ax.tick_params(axis='x', direction='out', width=lw, length=7,
+                       color=c_top, labelsize=size, pad=pad)
+    if (c_left == 'none') & (c_right == 'none'): # no left and no right
+        ax.yaxis.set_ticks_position('none')
+    elif (c_left != 'none') & (c_right != 'none'): # left and right
+        ax.tick_params(axis='y', direction='out', width=lw, length=7,
+                       color=c_left, labelsize=size, pad=pad)
+    elif (c_left != 'none') & (c_right == 'none'): # left but not right
+        ax.yaxis.set_ticks_position('left')
+        ax.tick_params(axis='y', direction='out', width=lw, length=7,
+                       color=c_left, labelsize=size, pad=pad)
+    elif (c_left == 'none') & (c_right != 'none'): # no left but right
+        ax.yaxis.set_ticks_position('right')
+        ax.tick_params(axis='y', direction='out', width=lw, length=7,
+                       color=c_right, labelsize=size, pad=pad)

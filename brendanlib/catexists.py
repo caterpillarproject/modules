@@ -8,6 +8,8 @@ from brendanlib.grifflib import getcurrentjobs,get_folder_size
 
 currentjobs,jobids,statusjobs = getcurrentjobs()
 
+print currentjobs
+
 tthresh = 6
 
 if platform.node() == "bigbang.mit.edu":
