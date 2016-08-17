@@ -431,7 +431,8 @@ class GK16_grow(AMbase):
         return self.alphaAM0
     def delta(self):
         return self.delta0
-    def gamma(self):        self.gamma0=0.316
+    def gamma(self):        
+        self.gamma0=0.316
         self.gammaa=1.319
         self.gammaz=0.279
 
