@@ -48,7 +48,7 @@ def load_minihalos(hpath,pandas=True):
     fileout = "all_minihalo_array.npy"
     return get_processed_data(hpath,fileout,pandas)
 
-def load_ricotti_minihalos(rval,pandas=True):
+def load_ricotti_minihalos(hpath,rval,pandas=True):
     fileout = "modified_ricotti_minihalo_array_"+str(rval)+".npy"
     return get_processed_data(hpath,fileout,pandas)
 
