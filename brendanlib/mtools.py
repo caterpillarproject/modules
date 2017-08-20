@@ -50,7 +50,6 @@ def load_minihalos(hpath,pandas=True):
 
 def load_ricotti_minihalos(hpath,imf,pandas=True):
     fileout = "modified_ricotti_minihalo_array_"+str(imf)+".npy"
-    print(fileout)
     return get_processed_data(hpath,fileout,pandas)
 
 def load_firstgal(hpath,pandas=True):
