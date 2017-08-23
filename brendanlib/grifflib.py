@@ -28,6 +28,7 @@ mhcol = 'cyan'
 kcol = 'dodgerblue'
 scol = 'darkgreen'
 ccol = 'orangered'
+rcol = 'coral'
 
 G_grav = 6.67384e-11 #m^3 kg^-1 s^-2
 km_to_Mpc = 3.24077929e-20 # Mpc
